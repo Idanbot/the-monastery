@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://the-monastery.local/task.schema.json",
+  "title": "TheMonastery Tasks Export",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "exportedAt", "tasks"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "exportedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/task"
+      }
+    }
+  },
+  "$defs": {
+    "timeLog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start"],
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "activityEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "text", "timestamp"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["system", "note"]
+        },
+        "text": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "subtask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "status", "logs", "activeLogStart", "tags"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["new", "done", "rejected"]
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/timeLog"
+          }
+        },
+        "activeLogStart": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "status",
+        "urgency",
+        "tags",
+        "scheduledDate",
+        "scheduledStart",
+        "scheduledEnd",
+        "recurrence",
+        "recurrenceRootId",
+        "subtasks",
+        "logs",
+        "activeLogStart",
+        "activity"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["new", "done", "rejected"]
+        },
+        "urgency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scheduledDate": {
+          "type": "string"
+        },
+        "scheduledStart": {
+          "type": "string"
+        },
+        "scheduledEnd": {
+          "type": "string"
+        },
+        "recurrence": {
+          "type": "string",
+          "enum": ["none", "daily", "weekly", "monthly"]
+        },
+        "recurrenceRootId": {
+          "type": ["string", "null"]
+        },
+        "subtasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/subtask"
+          }
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/timeLog"
+          }
+        },
+        "activeLogStart": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "activity": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/activityEntry"
+          }
+        }
+      }
+    }
+  }
+}

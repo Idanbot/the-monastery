@@ -1,0 +1,37 @@
+services:
+  the-monastery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: the-monastery
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      THE_MONASTERY_DATA_DIR: /data
+      LOG_LEVEL: info
+    ports:
+      - '3000:3000'
+    volumes:
+      - the-monastery-data:/data
+    logging:
+      driver: local
+      options:
+        max-size: '10m'
+        max-file: '5'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  the-monastery-data:

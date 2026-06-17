@@ -1,0 +1,259 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: read
+  security-events: write
+
+jobs:
+  verify:
+    name: Lint, Security, Test, Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Setup Node
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare artifact directory
+        run: mkdir -p artifacts
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: coverage
+          path: coverage
+          if-no-files-found: ignore
+
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v5.0.0
+        with:
+          fail-on-severity: high
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E test
+        run: npm run test:e2e
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: playwright
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+
+      - name: npm audit
+        run: npm audit --audit-level=high --json > artifacts/npm-audit.json
+
+      - name: Upload npm audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: npm-audit
+          path: artifacts/npm-audit.json
+          if-no-files-found: ignore
+
+      - name: Build
+        run: npm run build:all
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: artifacts/trivy-fs.sarif
+          severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Upload Trivy filesystem SARIF
+        if: always() && hashFiles('artifacts/trivy-fs.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4.36.2
+        with:
+          sarif_file: artifacts/trivy-fs.sarif
+
+      - name: Upload Trivy filesystem artifact
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: trivy-filesystem
+          path: artifacts/trivy-fs.sarif
+          if-no-files-found: ignore
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4.36.2
+        with:
+          languages: javascript-typescript
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4.36.2
+
+      - name: Analyze
+        continue-on-error: true
+        uses: github/codeql-action/analyze@v4.36.2
+
+  docker:
+    name: Docker Buildx
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.3
+
+      - name: Setup Node
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 24
+
+      - name: Prepare artifact directory
+        run: mkdir -p artifacts
+
+      - name: Prepare image name
+        id: image
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Hadolint Dockerfile
+        uses: hadolint/hadolint-action@v3.3.0
+        with:
+          dockerfile: Dockerfile
+          format: sarif
+          output-file: artifacts/hadolint.sarif
+          failure-threshold: warning
+
+      - name: Upload Hadolint SARIF
+        if: always() && hashFiles('artifacts/hadolint.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4.36.2
+        with:
+          sarif_file: artifacts/hadolint.sarif
+
+      - name: Upload Dockerfile lint artifact
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: hadolint
+          path: artifacts/hadolint.sarif
+          if-no-files-found: ignore
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6.1.0
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
+            type=sha,prefix=sha-,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v4.1.0
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v4.1.0
+
+      - name: Build smoke image
+        uses: docker/build-push-action@v7.2.0
+        with:
+          context: .
+          load: true
+          tags: the-monastery-smoke:${{ github.sha }}
+          cache-from: type=gha
+
+      - name: Smoke test Docker image
+        run: node scripts/docker-smoke.mjs the-monastery-smoke:${{ github.sha }}
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v7.2.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}:buildcache', steps.image.outputs.name) || 'type=gha' }}
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=registry,ref={0}:buildcache,mode=max', steps.image.outputs.name) || 'type=gha,mode=max' }}
+
+      - name: Trivy image scan
+        if: github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.image.outputs.name }}:sha-${{ github.sha }}
+          format: sarif
+          output: artifacts/trivy-image.sarif
+          severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Upload Trivy image SARIF
+        if: always() && github.event_name != 'pull_request' && hashFiles('artifacts/trivy-image.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4.36.2
+        with:
+          sarif_file: artifacts/trivy-image.sarif
+
+      - name: Upload Trivy image artifact
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: trivy-image
+          path: artifacts/trivy-image.sarif
+          if-no-files-found: ignore
