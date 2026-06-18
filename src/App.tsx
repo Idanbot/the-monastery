@@ -7,12 +7,10 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
-  EyeOff,
   Filter,
   LayoutDashboard,
   ListTodo,
   Menu,
-  Minus,
   PanelRightClose,
   PanelRightOpen,
   Play,
@@ -358,13 +356,6 @@ export default function App() {
     }));
   };
 
-  const adjustClockTextScale = (delta) => {
-    setSettings((prev) => ({
-      ...prev,
-      clockTextScale: Math.min(1.4, Math.max(0.7, Number(prev.clockTextScale || 1) + delta))
-    }));
-  };
-
   const currentTask = useMemo(() => {
     const activeTask = tasks.find((task) => task.status === 'new' && task.activeLogStart);
     if (activeTask) return activeTask;
@@ -682,29 +673,34 @@ export default function App() {
         >
           <div className="relative h-[1440px] w-full">
             {/* 1 Hour Grid Markers Full Width Transparent */}
-            {Array.from({ length: 24 }).map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-full flex items-center pointer-events-none z-0"
-                style={{ top: `${i * 60}px` }}
-              >
-                <div className="w-20 text-[10px] font-medium text-slate-400 dark:text-slate-500 text-right pr-3 whitespace-nowrap">
-                  {formatTime(new Date(new Date().setHours(i, 0, 0, 0)), settings.clockFormat)}
+            {settings.timelineHourLinesVisible !== false &&
+              Array.from({ length: 24 }).map((_, i) => (
+                <div
+                  key={i}
+                  data-testid="timeline-hour-line"
+                  className="absolute w-full flex items-center pointer-events-none z-0"
+                  style={{ top: `${i * 60}px` }}
+                >
+                  <div className="w-20 text-[10px] font-medium text-slate-400 dark:text-slate-500 text-right pr-3 whitespace-nowrap">
+                    {formatTime(new Date(new Date().setHours(i, 0, 0, 0)), settings.clockFormat)}
+                  </div>
+                  <div className="flex-1 border-t border-slate-300/30 dark:border-slate-600/30 w-full h-px"></div>
                 </div>
-                <div className="flex-1 border-t border-slate-300/30 dark:border-slate-600/30 w-full h-px"></div>
-              </div>
-            ))}
+              ))}
 
             {/* Current Time Red Line */}
-            <div
-              className="absolute w-full flex items-center z-20 pointer-events-none"
-              style={{ top: `${currentMinutes}px` }}
-            >
-              <div className="w-20 text-[10px] font-bold text-red-500 text-right pr-3 whitespace-nowrap">
-                {formatTime(now, settings.clockFormat)}
+            {settings.timelineNowLineVisible !== false && (
+              <div
+                data-testid="timeline-now-line"
+                className="absolute w-full flex items-center z-20 pointer-events-none"
+                style={{ top: `${currentMinutes}px` }}
+              >
+                <div className="w-20 text-[10px] font-bold text-red-500 text-right pr-3 whitespace-nowrap">
+                  {formatTime(now, settings.clockFormat)}
+                </div>
+                <div className="flex-1 h-px bg-red-500/50 shadow-[0_0_4px_rgba(239,68,68,0.5)]"></div>
               </div>
-              <div className="flex-1 h-px bg-red-500/50 shadow-[0_0_4px_rgba(239,68,68,0.5)]"></div>
-            </div>
+            )}
 
             {/* Task Blocks */}
             <div className="absolute top-0 bottom-0 left-20 right-2 z-10">
@@ -884,10 +880,14 @@ export default function App() {
       data-visual-theme={settings.visualTheme}
       data-monk-mode={settings.monkMode ? 'true' : 'false'}
       data-animations-enabled={settings.animationsEnabled === false ? 'false' : 'true'}
+      data-resize-bars={settings.resizeHandleVisible === false ? 'false' : 'true'}
       style={
         {
           ...themeStyle,
-          ...modalEffectStyle
+          ...modalEffectStyle,
+          '--resize-handle-thickness': String(settings.resizeHandleThickness || 4) + 'px',
+          '--resize-handle-length': String(settings.resizeHandleLength || 48) + 'px',
+          '--resize-handle-color': settings.resizeHandleColor || '#94a3b8'
         } as React.CSSProperties
       }
     >
@@ -1356,14 +1356,16 @@ export default function App() {
             )}
           </div>
 
-          <div
-            data-testid="main-sidebar-resizer"
-            className={`resize-handle resize-handle-vertical hidden md:flex w-1 cursor-col-resize shrink-0 items-center justify-center hover:bg-indigo-500/10 group rounded ${isSidebarVisible ? '' : 'md:hidden'}`}
-            onMouseDown={() => startResize('main-sidebar')}
-            title="Resize sidebar"
-          >
-            <div className="resize-grip resize-grip-vertical w-px h-12 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
-          </div>
+          {settings.resizeHandleVisible !== false && (
+            <div
+              data-testid="main-sidebar-resizer"
+              className={`resize-handle resize-handle-vertical hidden md:flex w-1 cursor-col-resize shrink-0 items-center justify-center hover:bg-indigo-500/10 group rounded ${isSidebarVisible ? '' : 'md:hidden'}`}
+              onMouseDown={() => startResize('main-sidebar')}
+              title="Resize sidebar"
+            >
+              <div className="resize-grip resize-grip-vertical w-px h-12 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
+            </div>
+          )}
 
           {}
           <div
@@ -1389,44 +1391,27 @@ export default function App() {
               {settings.sidebarWidgets.includes('clock') && (
                 <div
                   data-material="widget"
-                  className="clock-widget bg-slate-900 dark:bg-black rounded-2xl p-4 flex flex-col items-center justify-center text-white shadow-inner relative overflow-hidden shrink-0"
-                  style={{ height: `${settings.clockHeight || 160}px` }}
+                  data-clock-background={settings.clockBackgroundVisible === false ? 'false' : 'true'}
+                  className="clock-widget rounded-2xl border p-4 flex flex-col items-center justify-center relative overflow-hidden shrink-0"
+                  style={{
+                    height: String(settings.clockHeight || 160) + 'px',
+                    background:
+                      settings.clockBackgroundVisible === false ? 'transparent' : 'var(--theme-surface)',
+                    borderColor:
+                      settings.clockBackgroundVisible === false ? 'transparent' : 'var(--theme-border)',
+                    color: 'var(--theme-text)',
+                    boxShadow: settings.clockBackgroundVisible === false ? 'none' : undefined
+                  }}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/10 pointer-events-none"></div>
-                  <div className="clock-widget-controls absolute top-2 right-2 z-20 flex items-center gap-1 rounded-lg bg-white/10 p-1 backdrop-blur-sm">
+                  <div className="clock-widget-controls absolute top-2 right-2 z-20 flex items-center gap-1 rounded-lg border border-[color:var(--theme-border)] bg-[color:var(--theme-muted-surface)] p-1 backdrop-blur-sm">
                     <button
                       type="button"
                       aria-label="Open clock settings"
                       onClick={() => openSettings('time')}
-                      className="grid h-6 w-6 place-items-center rounded-md text-white/80 hover:bg-white/15 hover:text-white"
+                      className="grid h-6 w-6 place-items-center rounded-md text-[color:var(--theme-muted-text)] hover:bg-[color:var(--theme-muted-surface)] hover:text-[color:var(--theme-text)]"
                     >
                       <Settings size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Hide clock"
-                      onClick={() => toggleSidebarWidget('clock')}
-                      className="grid h-6 w-6 place-items-center rounded-md text-white/80 hover:bg-white/15 hover:text-white"
-                    >
-                      <EyeOff size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Decrease clock text size"
-                      onClick={() => adjustClockTextScale(-0.1)}
-                      disabled={(settings.clockTextScale || 1) <= 0.7}
-                      className="grid h-6 w-6 place-items-center rounded-md text-white/80 hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
-                    >
-                      <Minus size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="Increase clock text size"
-                      onClick={() => adjustClockTextScale(0.1)}
-                      disabled={(settings.clockTextScale || 1) >= 1.4}
-                      className="grid h-6 w-6 place-items-center rounded-md text-white/80 hover:bg-white/15 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
-                    >
-                      <Plus size={13} />
                     </button>
                   </div>
                   <div
@@ -1441,7 +1426,7 @@ export default function App() {
                   >
                     {formatTime(now, settings.clockFormat, settings.showSeconds)}
                   </div>
-                  <div className="text-sm font-medium text-slate-400 relative z-10">
+                  <div className="text-sm font-medium text-[color:var(--theme-muted-text)] relative z-10">
                     {new Intl.DateTimeFormat('en-US', {
                       weekday: 'long',
                       month: 'long',
@@ -1451,15 +1436,17 @@ export default function App() {
                 </div>
               )}
 
-              {settings.sidebarWidgets.includes('clock') && settings.sidebarWidgets.includes('agenda') && (
-                <div
-                  className="resize-handle resize-handle-horizontal h-2 w-full cursor-row-resize shrink-0 flex items-center justify-center hover:bg-indigo-500/10 group rounded"
-                  onMouseDown={() => startResize('sidebar-clock')}
-                  title="Resize clock and timeline"
-                >
-                  <div className="resize-grip resize-grip-horizontal h-px w-12 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
-                </div>
-              )}
+              {settings.resizeHandleVisible !== false &&
+                settings.sidebarWidgets.includes('clock') &&
+                settings.sidebarWidgets.includes('agenda') && (
+                  <div
+                    className="resize-handle resize-handle-horizontal h-2 w-full cursor-row-resize shrink-0 flex items-center justify-center hover:bg-indigo-500/10 group rounded"
+                    onMouseDown={() => startResize('sidebar-clock')}
+                    title="Resize clock and timeline"
+                  >
+                    <div className="resize-grip resize-grip-horizontal h-px w-12 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
+                  </div>
+                )}
 
               {settings.sidebarWidgets.includes('agenda') && (
                 <div className="min-h-0 flex-1 overflow-hidden">{renderAgendaTimeline()}</div>

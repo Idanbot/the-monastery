@@ -106,6 +106,45 @@ test('opens settings and exposes backup/import controls', async ({ page }) => {
   await expect(page.getByRole('button', { name: /import/i })).toBeVisible();
 });
 
+test('customizes clock, resize handles, and timeline guides from settings', async ({ page }) => {
+  await page.goto('/');
+
+  const clock = page.locator('.clock-widget');
+  await expect(clock).toBeVisible();
+  await expect(clock.locator('button')).toHaveCount(1);
+
+  await page.getByLabel('New task').click();
+  await page.getByLabel('Title').fill('Timeline settings task');
+  await page.getByLabel('Date').fill(new Date().toISOString().slice(0, 10));
+  await page.getByLabel('Start').fill('09:00');
+  await page.getByRole('button', { name: /save task/i }).click();
+
+  await expect(page.locator('[data-testid=timeline-hour-line]').first()).toBeVisible();
+  await expect(page.locator('[data-testid=timeline-now-line]')).toBeVisible();
+  await expect(page.getByTestId('main-sidebar-resizer')).toBeVisible();
+
+  await page.getByRole('button', { name: /open settings/i }).click();
+  await page.getByRole('button', { name: 'Appearance' }).click();
+  await page.getByLabel('Clock background').uncheck();
+  await page.getByLabel('Resize bars').uncheck();
+  await page.getByLabel('Hourly timeline guide lines').uncheck();
+  await page.getByLabel('Current time red line').uncheck();
+  await page.getByLabel('Resize bar thickness').fill('12');
+  await page.getByLabel('Resize bar length').fill('88');
+  await page.getByLabel('Resize bar color').fill('#ff2d55');
+  await page.getByRole('button', { name: /close settings/i }).click();
+
+  await expect(clock).toHaveAttribute('data-clock-background', 'false');
+  await expect(page.getByTestId('main-sidebar-resizer')).toHaveCount(0);
+  await expect(page.locator('[data-testid=timeline-hour-line]')).toHaveCount(0);
+  await expect(page.locator('[data-testid=timeline-now-line]')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /open clock settings/i }).click();
+  await expect(page.getByRole('heading', { name: /preferences/i })).toBeVisible();
+  await page.getByRole('button', { name: /increase clock text size/i }).click();
+  await expect(page.getByTestId('clock-time')).toBeVisible();
+});
+
 test('customizes Liquid Glass colors and exposes material surfaces', async ({ page }) => {
   await page.goto('/');
 
@@ -317,6 +356,7 @@ test('adjusts clock text size with sidebar controls', async ({ page }) => {
     Number.parseFloat(getComputedStyle(element).fontSize)
   );
 
+  await page.getByRole('button', { name: /open clock settings/i }).click();
   await page.getByRole('button', { name: /increase clock text size/i }).click();
   await expect
     .poll(async () => clock.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize)))

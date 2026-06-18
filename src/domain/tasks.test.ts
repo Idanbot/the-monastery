@@ -52,4 +52,24 @@ describe('task domain helpers', () => {
 
     expect(settings.roles[0]).toEqual({ id: 'r', name: 'Role', tags: ['x'], weeklyTargetHours: 0 });
   });
+
+  it('normalizes visual control settings with safe defaults and bounds', () => {
+    const settings = mergeSettings({
+      clockBackgroundVisible: false,
+      resizeHandleVisible: false,
+      resizeHandleThickness: 99,
+      resizeHandleLength: -1,
+      resizeHandleColor: '  #ff2d55  ',
+      timelineHourLinesVisible: false,
+      timelineNowLineVisible: false
+    });
+
+    expect(settings.clockBackgroundVisible).toBe(false);
+    expect(settings.resizeHandleVisible).toBe(false);
+    expect(settings.resizeHandleThickness).toBe(16);
+    expect(settings.resizeHandleLength).toBe(24);
+    expect(settings.resizeHandleColor).toBe('#ff2d55');
+    expect(settings.timelineHourLinesVisible).toBe(false);
+    expect(settings.timelineNowLineVisible).toBe(false);
+  });
 });

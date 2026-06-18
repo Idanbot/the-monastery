@@ -126,11 +126,18 @@ export const defaultSettings: AppSettings = {
   sidebarWidth: 320,
   clockHeight: 160,
   clockTextScale: 1,
+  clockBackgroundVisible: true,
   modalTransparency: 88,
   layoutPreset: 'compact',
   textSize: 'medium',
   roles: [],
   collapseTasks: false,
+  resizeHandleVisible: true,
+  resizeHandleThickness: 4,
+  resizeHandleLength: 48,
+  resizeHandleColor: '#94a3b8',
+  timelineHourLinesVisible: true,
+  timelineNowLineVisible: true,
   columnWidths: { new: 33.33, done: 33.33, rejected: 33.33 },
   compactColumnWidths: { left: 50, right: 50 },
   compactHeights: { done: 50, rejected: 50 }
@@ -144,6 +151,11 @@ export const normalizeStringArray = (value) =>
 const normalizeThemeColor = (value) => {
   const color = typeof value === 'string' ? value.trim() : '';
   return color.length > 0 ? color : '';
+};
+
+const clampNumber = (value, min, max, fallback) => {
+  const number = Number(value);
+  return Math.min(max, Math.max(min, Number.isFinite(number) ? number : fallback));
 };
 
 const normalizeRoles = (roles) => {
@@ -178,11 +190,35 @@ export const mergeSettings = (saved) => ({
     1.4,
     Math.max(0.7, Number(saved?.clockTextScale) || defaultSettings.clockTextScale)
   ),
+  clockBackgroundVisible:
+    saved?.clockBackgroundVisible === undefined
+      ? defaultSettings.clockBackgroundVisible
+      : Boolean(saved.clockBackgroundVisible),
   modalTransparency: Math.min(
     100,
     Math.max(0, Number(saved?.modalTransparency ?? defaultSettings.modalTransparency))
   ),
   roles: normalizeRoles(saved?.roles),
+  resizeHandleVisible:
+    saved?.resizeHandleVisible === undefined
+      ? defaultSettings.resizeHandleVisible
+      : Boolean(saved.resizeHandleVisible),
+  resizeHandleThickness: clampNumber(
+    saved?.resizeHandleThickness,
+    2,
+    16,
+    defaultSettings.resizeHandleThickness
+  ),
+  resizeHandleLength: clampNumber(saved?.resizeHandleLength, 24, 160, defaultSettings.resizeHandleLength),
+  resizeHandleColor: normalizeThemeColor(saved?.resizeHandleColor) || defaultSettings.resizeHandleColor,
+  timelineHourLinesVisible:
+    saved?.timelineHourLinesVisible === undefined
+      ? defaultSettings.timelineHourLinesVisible
+      : Boolean(saved.timelineHourLinesVisible),
+  timelineNowLineVisible:
+    saved?.timelineNowLineVisible === undefined
+      ? defaultSettings.timelineNowLineVisible
+      : Boolean(saved.timelineNowLineVisible),
   columnWidths: { ...defaultSettings.columnWidths, ...(saved?.columnWidths || {}) },
   compactColumnWidths: { ...defaultSettings.compactColumnWidths, ...(saved?.compactColumnWidths || {}) },
   compactHeights: { ...defaultSettings.compactHeights, ...(saved?.compactHeights || {}) }

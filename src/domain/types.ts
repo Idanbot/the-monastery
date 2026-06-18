@@ -73,11 +73,18 @@ export type AppSettings = {
   sidebarWidth: number;
   clockHeight: number;
   clockTextScale: number;
+  clockBackgroundVisible: boolean;
   modalTransparency: number;
   layoutPreset: 'standard' | 'compact';
   textSize: 'small' | 'medium' | 'large';
   roles: RoleDefinition[];
   collapseTasks: boolean;
+  resizeHandleVisible: boolean;
+  resizeHandleThickness: number;
+  resizeHandleLength: number;
+  resizeHandleColor: string;
+  timelineHourLinesVisible: boolean;
+  timelineNowLineVisible: boolean;
   columnWidths: { new: number; done: number; rejected: number };
   compactColumnWidths: { left: number; right: number };
   compactHeights: { done: number; rejected: number };

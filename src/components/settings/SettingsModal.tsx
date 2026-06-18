@@ -307,6 +307,87 @@ export function SettingsModal({
                       />
                     </label>
                   </div>
+                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
+                    <span>Clock background</span>
+                    <input
+                      type="checkbox"
+                      checked={settings.clockBackgroundVisible !== false}
+                      onChange={(e) => setSettings({ ...settings, clockBackgroundVisible: e.target.checked })}
+                      className="h-4 w-4 accent-indigo-600"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
+                    <span>Resize bars</span>
+                    <input
+                      type="checkbox"
+                      checked={settings.resizeHandleVisible !== false}
+                      onChange={(e) => setSettings({ ...settings, resizeHandleVisible: e.target.checked })}
+                      className="h-4 w-4 accent-indigo-600"
+                    />
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                      <span>Resize bar thickness</span>
+                      <input
+                        type="number"
+                        min="2"
+                        max="16"
+                        value={settings.resizeHandleThickness || 4}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            resizeHandleThickness: Math.min(16, Math.max(2, Number(e.target.value) || 4))
+                          })
+                        }
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                      <span>Resize bar length</span>
+                      <input
+                        type="number"
+                        min="24"
+                        max="160"
+                        value={settings.resizeHandleLength || 48}
+                        onChange={(e) =>
+                          setSettings({
+                            ...settings,
+                            resizeHandleLength: Math.min(160, Math.max(24, Number(e.target.value) || 48))
+                          })
+                        }
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                      <span>Resize bar color</span>
+                      <input
+                        type="color"
+                        value={settings.resizeHandleColor || '#94a3b8'}
+                        onChange={(e) => setSettings({ ...settings, resizeHandleColor: e.target.value })}
+                        className="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1"
+                      />
+                    </label>
+                  </div>
+                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
+                    <span>Hourly timeline guide lines</span>
+                    <input
+                      type="checkbox"
+                      checked={settings.timelineHourLinesVisible !== false}
+                      onChange={(e) =>
+                        setSettings({ ...settings, timelineHourLinesVisible: e.target.checked })
+                      }
+                      className="h-4 w-4 accent-indigo-600"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
+                    <span>Current time red line</span>
+                    <input
+                      type="checkbox"
+                      checked={settings.timelineNowLineVisible !== false}
+                      onChange={(e) => setSettings({ ...settings, timelineNowLineVisible: e.target.checked })}
+                      className="h-4 w-4 accent-indigo-600"
+                    />
+                  </label>
                   <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <span className="flex items-center justify-between">
                       <span>Modal transparency</span>
@@ -364,15 +445,32 @@ export function SettingsModal({
                     <option value="12h">12 hour</option>
                     <option value="24h">24 hour</option>
                   </select>
-                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
-                    <span>Show seconds</span>
-                    <input
-                      type="checkbox"
-                      checked={settings.showSeconds}
-                      onChange={(e) => setSettings({ ...settings, showSeconds: e.target.checked })}
-                      className="h-4 w-4 accent-indigo-600"
-                    />
-                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSettings({
+                          ...settings,
+                          clockTextScale: Math.max(0.7, Number(settings.clockTextScale || 1) - 0.1)
+                        })
+                      }
+                      className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 text-sm font-medium"
+                    >
+                      Decrease clock text size
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSettings({
+                          ...settings,
+                          clockTextScale: Math.min(1.4, Number(settings.clockTextScale || 1) + 0.1)
+                        })
+                      }
+                      className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 text-sm font-medium"
+                    >
+                      Increase clock text size
+                    </button>
+                  </div>
                 </SettingSection>
               )}
 
