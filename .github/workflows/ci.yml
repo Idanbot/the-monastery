@@ -10,6 +10,7 @@ on:
       - 'v*'
 
 permissions:
+  actions: read
   contents: read
   packages: write
   pull-requests: read
@@ -49,7 +50,7 @@ jobs:
 
       - name: Upload coverage artifact
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: coverage
           path: coverage
@@ -69,7 +70,7 @@ jobs:
 
       - name: Upload Playwright artifacts
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: playwright
           path: |
@@ -82,7 +83,7 @@ jobs:
 
       - name: Upload npm audit artifact
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: npm-audit
           path: artifacts/npm-audit.json
@@ -112,7 +113,7 @@ jobs:
 
       - name: Upload Trivy filesystem artifact
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: trivy-filesystem
           path: artifacts/trivy-fs.sarif
@@ -122,6 +123,7 @@ jobs:
     name: CodeQL
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       security-events: write
     steps:
@@ -177,7 +179,7 @@ jobs:
 
       - name: Upload Dockerfile lint artifact
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: hadolint
           path: artifacts/hadolint.sarif
@@ -252,7 +254,7 @@ jobs:
 
       - name: Upload Trivy image artifact
         if: always() && github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: trivy-image
           path: artifacts/trivy-image.sarif

@@ -116,6 +116,7 @@ export const defaultTasks: Task[] = [];
 export const defaultSettings: AppSettings = {
   theme: 'system',
   visualTheme: 'default',
+  colorScheme: { main: '', secondary: '' },
   monkMode: false,
   sidebarVisible: true,
   animationsEnabled: true,
@@ -140,6 +141,11 @@ export const cloneTask = (task) => JSON.parse(JSON.stringify(task));
 export const normalizeStringArray = (value) =>
   Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
 
+const normalizeThemeColor = (value) => {
+  const color = typeof value === 'string' ? value.trim() : '';
+  return color.length > 0 ? color : '';
+};
+
 const normalizeRoles = (roles) => {
   const source = Array.isArray(roles) ? roles : defaultSettings.roles;
   return source.map((role) => ({
@@ -155,6 +161,10 @@ export const mergeSettings = (saved) => ({
   ...(saved || {}),
   theme: ['system', 'light', 'dark'].includes(saved?.theme) ? saved.theme : defaultSettings.theme,
   visualTheme: visualThemeIds.includes(saved?.visualTheme) ? saved.visualTheme : defaultSettings.visualTheme,
+  colorScheme: {
+    main: normalizeThemeColor(saved?.colorScheme?.main),
+    secondary: normalizeThemeColor(saved?.colorScheme?.secondary)
+  },
   monkMode: Boolean(saved?.monkMode),
   animationsEnabled:
     saved?.animationsEnabled === undefined

@@ -10,6 +10,11 @@ export type VisualTheme =
   | 'terminal-white'
   | 'terminal-clean-white';
 
+export type ThemeColorScheme = {
+  main: string;
+  secondary: string;
+};
+
 export type TimeLog = {
   start: string;
   end: string | null;
@@ -58,6 +63,7 @@ export type RoleDefinition = {
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';
   visualTheme: VisualTheme;
+  colorScheme: ThemeColorScheme;
   monkMode: boolean;
   sidebarVisible: boolean;
   animationsEnabled: boolean;

@@ -106,6 +106,39 @@ test('opens settings and exposes backup/import controls', async ({ page }) => {
   await expect(page.getByRole('button', { name: /import/i })).toBeVisible();
 });
 
+test('customizes Liquid Glass colors and exposes material surfaces', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByRole('button', { name: /open settings/i }).click();
+  await page.getByRole('button', { name: 'Appearance' }).click();
+  await page.getByRole('combobox').first().selectOption('theme:liquid-glass');
+  await page.getByLabel('Main color').fill('#ff2d55');
+  await page.getByLabel('Secondary color').fill('#34c759');
+  await page.getByRole('button', { name: /close settings/i }).click();
+
+  const shell = page.locator('.app-shell');
+  await expect(shell).toHaveAttribute('data-visual-theme', 'liquid-glass');
+  await expect(page.getByTestId('app-sidebar')).toHaveAttribute('data-material', 'sidebar');
+  await expect(page.locator('.app-header')).toHaveAttribute('data-material', 'control');
+
+  const tokens = await shell.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      main: style.getPropertyValue('--theme-main').trim(),
+      secondary: style.getPropertyValue('--theme-secondary').trim(),
+      glassBlur: style.getPropertyValue('--theme-glass-blur').trim(),
+      radiusPanel: style.getPropertyValue('--theme-radius-panel').trim()
+    };
+  });
+
+  expect(tokens).toEqual({
+    main: '#ff2d55',
+    secondary: '#34c759',
+    glassBlur: '34px',
+    radiusPanel: '28px'
+  });
+});
+
 test('creates, resets, and removes a synced profile', async ({ page }) => {
   const profileName = `E2E Profile ${Date.now()}`;
 
@@ -319,7 +352,7 @@ test('enables monk mode and switches visual theme', async ({ page }) => {
   await expect(page.getByRole('button', { name: /analytics/i })).toHaveCount(0);
 
   await page.getByRole('button', { name: /open settings/i }).click();
-  await page.getByRole('button', { name: /^appearance$/i }).click();
+  await page.getByRole('button', { name: 'Appearance' }).click();
   const appearanceSection = page.locator('section').filter({ hasText: 'Appearance' });
   await appearanceSection.getByRole('combobox').first().selectOption('theme:terminal-clean');
   await expect(page.locator('[data-monk-mode][data-visual-theme="terminal-clean"]')).toBeVisible();

@@ -14,6 +14,20 @@ type ThemeTokens = {
   modalSurfaceRgb: string;
   modalBorderRgb: string;
   motionDuration: string;
+  main?: string;
+  mainContrast?: string;
+  secondary?: string;
+  secondaryContrast?: string;
+  glassTint?: string;
+  glassHighlight?: string;
+  glassEdge?: string;
+  glassShadow?: string;
+  glassBlur?: string;
+  glassSaturation?: string;
+  radiusControl?: string;
+  radiusPanel?: string;
+  motionEase?: string;
+  fontUi?: string;
 };
 
 export type ThemeContract = {
@@ -28,6 +42,7 @@ export type ThemeContract = {
     glass?: boolean;
     terminal?: boolean;
     minimalBorders?: boolean;
+    materialVariants?: Array<'control' | 'panel' | 'sidebar' | 'modal' | 'widget'>;
   };
 };
 
@@ -114,7 +129,7 @@ export const themeContracts: Record<VisualTheme, ThemeContract> = {
     id: 'liquid-glass',
     label: 'Liquid Glass',
     preferredMode: 'light',
-    features: { glass: true },
+    features: { glass: true, materialVariants: ['control', 'panel', 'sidebar', 'modal', 'widget'] },
     tokens: {
       light: {
         bgColor: '#edf4ff',
@@ -127,8 +142,22 @@ linear-gradient(135deg, #f8fbff 0%, #edf4ff 42%, #ffffff 100%)`,
         text: '#152033',
         mutedText: '#66758e',
         border: 'rgb(255 255 255 / 0.78)',
-        accent: '#6f88b7',
+        accent: '#007aff',
         accentContrast: '#ffffff',
+        main: '#007aff',
+        mainContrast: '#ffffff',
+        secondary: '#af52de',
+        secondaryContrast: '#ffffff',
+        glassTint: 'rgb(255 255 255 / 0.58)',
+        glassHighlight: 'rgb(255 255 255 / 0.92)',
+        glassEdge: 'rgb(255 255 255 / 0.74)',
+        glassShadow:
+          '0 24px 72px rgb(84 105 138 / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.78), inset 0 -1px 0 rgb(92 112 140 / 0.12)',
+        glassBlur: '34px',
+        glassSaturation: '1.8',
+        radiusControl: '18px',
+        radiusPanel: '28px',
+        motionEase: 'cubic-bezier(0.22, 1, 0.36, 1)',
         modalSurfaceRgb: '255 255 255',
         modalBorderRgb: '255 255 255',
         motionDuration: '90ms'
@@ -236,25 +265,78 @@ export const getThemeContract = (visualTheme: VisualTheme, isDarkMode: boolean) 
   return isDarkMode && contract.tokens.dark ? contract.tokens.dark : contract.tokens.light;
 };
 
+export type ThemeColorOverrides = {
+  main?: string;
+  secondary?: string;
+};
+
+const usableColor = (value?: string) => {
+  const color = typeof value === 'string' ? value.trim() : '';
+  return color.length > 0 ? color : undefined;
+};
+
+const resolveThemeTokens = (tokens: ThemeTokens, colorOverrides: ThemeColorOverrides = {}) => {
+  const main = usableColor(colorOverrides.main) || tokens.main || tokens.accent;
+  const secondary = usableColor(colorOverrides.secondary) || tokens.secondary || tokens.mutedText;
+
+  return {
+    ...tokens,
+    main,
+    mainContrast: tokens.mainContrast || tokens.accentContrast,
+    secondary,
+    secondaryContrast: tokens.secondaryContrast || tokens.accentContrast,
+    glassTint: tokens.glassTint || 'color-mix(in srgb, var(--theme-surface) 72%, transparent)',
+    glassHighlight: tokens.glassHighlight || 'rgb(255 255 255 / 0.22)',
+    glassEdge: tokens.glassEdge || tokens.border,
+    glassShadow: tokens.glassShadow || '0 18px 48px rgb(15 23 42 / 0.16)',
+    glassBlur: tokens.glassBlur || '18px',
+    glassSaturation: tokens.glassSaturation || '1.24',
+    radiusControl: tokens.radiusControl || '12px',
+    radiusPanel: tokens.radiusPanel || '16px',
+    motionEase: tokens.motionEase || 'cubic-bezier(0.22, 1, 0.36, 1)',
+    fontUi:
+      tokens.fontUi ||
+      "Inter, ui-rounded, 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  };
+};
+
 export const getThemeStyle = (
   visualTheme: VisualTheme,
   isDarkMode: boolean,
-  animationsEnabled = true
-): CSSProperties =>
-  ({
-    '--motion-duration': animationsEnabled ? getThemeContract(visualTheme, isDarkMode).motionDuration : '0ms',
-    '--theme-bg-color': getThemeContract(visualTheme, isDarkMode).bgColor,
-    '--theme-bg': getThemeContract(visualTheme, isDarkMode).bg,
-    '--theme-surface': getThemeContract(visualTheme, isDarkMode).surface,
-    '--theme-muted-surface': getThemeContract(visualTheme, isDarkMode).mutedSurface,
-    '--theme-text': getThemeContract(visualTheme, isDarkMode).text,
-    '--theme-muted-text': getThemeContract(visualTheme, isDarkMode).mutedText,
-    '--theme-border': getThemeContract(visualTheme, isDarkMode).border,
-    '--theme-accent': getThemeContract(visualTheme, isDarkMode).accent,
-    '--theme-accent-contrast': getThemeContract(visualTheme, isDarkMode).accentContrast,
-    '--modal-surface-rgb': getThemeContract(visualTheme, isDarkMode).modalSurfaceRgb,
-    '--modal-border-rgb': getThemeContract(visualTheme, isDarkMode).modalBorderRgb
-  }) as CSSProperties;
+  animationsEnabled = true,
+  colorOverrides: ThemeColorOverrides = {}
+): CSSProperties => {
+  const tokens = resolveThemeTokens(getThemeContract(visualTheme, isDarkMode), colorOverrides);
+
+  return {
+    '--motion-duration': animationsEnabled ? tokens.motionDuration : '0ms',
+    '--theme-bg-color': tokens.bgColor,
+    '--theme-bg': tokens.bg,
+    '--theme-surface': tokens.surface,
+    '--theme-muted-surface': tokens.mutedSurface,
+    '--theme-text': tokens.text,
+    '--theme-muted-text': tokens.mutedText,
+    '--theme-border': tokens.border,
+    '--theme-accent': tokens.main,
+    '--theme-accent-contrast': tokens.mainContrast,
+    '--theme-main': tokens.main,
+    '--theme-main-contrast': tokens.mainContrast,
+    '--theme-secondary': tokens.secondary,
+    '--theme-secondary-contrast': tokens.secondaryContrast,
+    '--theme-glass-tint': tokens.glassTint,
+    '--theme-glass-highlight': tokens.glassHighlight,
+    '--theme-glass-edge': tokens.glassEdge,
+    '--theme-glass-shadow': tokens.glassShadow,
+    '--theme-glass-blur': tokens.glassBlur,
+    '--theme-glass-saturation': tokens.glassSaturation,
+    '--theme-radius-control': tokens.radiusControl,
+    '--theme-radius-panel': tokens.radiusPanel,
+    '--theme-motion-ease': tokens.motionEase,
+    '--theme-font-ui': tokens.fontUi,
+    '--modal-surface-rgb': tokens.modalSurfaceRgb,
+    '--modal-border-rgb': tokens.modalBorderRgb
+  } as CSSProperties;
+};
 
 export const getModalEffectStyle = (modalTransparency = 88): CSSProperties => {
   const transparency = Math.max(0, Math.min(100, Number(modalTransparency) || 0));

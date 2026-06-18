@@ -19,7 +19,21 @@ const requiredStyleVariables = [
   '--theme-accent',
   '--theme-accent-contrast',
   '--modal-surface-rgb',
-  '--modal-border-rgb'
+  '--modal-border-rgb',
+  '--theme-main',
+  '--theme-main-contrast',
+  '--theme-secondary',
+  '--theme-secondary-contrast',
+  '--theme-glass-tint',
+  '--theme-glass-highlight',
+  '--theme-glass-edge',
+  '--theme-glass-shadow',
+  '--theme-glass-blur',
+  '--theme-glass-saturation',
+  '--theme-radius-control',
+  '--theme-radius-panel',
+  '--theme-motion-ease',
+  '--theme-font-ui'
 ];
 
 describe('theme contracts', () => {
@@ -42,6 +56,22 @@ describe('theme contracts', () => {
     expect(getThemeStyle('default', true, true)['--theme-bg-color']).toBe('rgb(2 6 23)');
     expect(getThemeStyle('terminal', true, true)['--motion-duration']).toBe('0ms');
     expect(getThemeStyle('zen', false, false)['--motion-duration']).toBe('0ms');
+  });
+
+  it('allows main and secondary color overrides without changing material tokens', () => {
+    const style = getThemeStyle('liquid-glass', false, true, { main: '#ff2d55', secondary: '#34c759' });
+
+    expect(style['--theme-main']).toBe('#ff2d55');
+    expect(style['--theme-accent']).toBe('#ff2d55');
+    expect(style['--theme-secondary']).toBe('#34c759');
+    expect(style['--theme-glass-tint']).toBe('rgb(255 255 255 / 0.58)');
+  });
+
+  it('marks Liquid Glass as a material-rich theme contract', () => {
+    expect(themeContracts['liquid-glass'].features).toMatchObject({
+      glass: true,
+      materialVariants: ['control', 'panel', 'sidebar', 'modal', 'widget']
+    });
   });
 
   it('maps modal transparency to reusable alpha and blur variables', () => {

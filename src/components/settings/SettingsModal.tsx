@@ -121,10 +121,10 @@ export function SettingsModal({
   const motionEase = settings.visualTheme === 'liquid-glass' ? ([0.22, 1, 0.36, 1] as const) : 'easeOut';
   const themeStyle = useMemo(
     () => ({
-      ...getThemeStyle(settings.visualTheme, isDarkMode, animationsEnabled),
+      ...getThemeStyle(settings.visualTheme, isDarkMode, animationsEnabled, settings.colorScheme),
       ...getModalEffectStyle(settings.modalTransparency)
     }),
-    [animationsEnabled, isDarkMode, settings.modalTransparency, settings.visualTheme]
+    [animationsEnabled, isDarkMode, settings.modalTransparency, settings.visualTheme, settings.colorScheme]
   );
   const roleTagValues = useMemo(
     () => Object.fromEntries((settings.roles || []).map((role) => [role.id, (role.tags || []).join(', ')])),
@@ -157,6 +157,16 @@ export function SettingsModal({
   const setThemeChoice = (value) => {
     const option = themeChoiceOptions.find((item) => item.value === value) || themeChoiceOptions[0];
     setSettings({ ...settings, theme: option.theme, visualTheme: option.visualTheme });
+  };
+
+  const setThemeColor = (key, value) => {
+    setSettings({
+      ...settings,
+      colorScheme: {
+        ...(settings.colorScheme || { main: '', secondary: '' }),
+        [key]: value
+      }
+    });
   };
 
   const addRolePreset = () => {
@@ -277,6 +287,26 @@ export function SettingsModal({
                     <option value="medium">Medium text</option>
                     <option value="large">Large text</option>
                   </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                      <span>Main color</span>
+                      <input
+                        type="color"
+                        value={settings.colorScheme?.main || '#007aff'}
+                        onChange={(e) => setThemeColor('main', e.target.value)}
+                        className="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                      <span>Secondary color</span>
+                      <input
+                        type="color"
+                        value={settings.colorScheme?.secondary || '#af52de'}
+                        onChange={(e) => setThemeColor('secondary', e.target.value)}
+                        className="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1"
+                      />
+                    </label>
+                  </div>
                   <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <span className="flex items-center justify-between">
                       <span>Modal transparency</span>

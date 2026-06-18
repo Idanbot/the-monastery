@@ -23,6 +23,22 @@ body {
   --theme-border: rgb(226 232 240);
   --theme-accent: rgb(79 70 229);
   --theme-accent-contrast: rgb(255 255 255);
+  --theme-main: rgb(79 70 229);
+  --theme-main-contrast: rgb(255 255 255);
+  --theme-secondary: rgb(100 116 139);
+  --theme-secondary-contrast: rgb(255 255 255);
+  --theme-glass-tint: color-mix(in srgb, var(--theme-surface) 72%, transparent);
+  --theme-glass-highlight: rgb(255 255 255 / 0.22);
+  --theme-glass-edge: var(--theme-border);
+  --theme-glass-shadow: 0 18px 48px rgb(15 23 42 / 0.16);
+  --theme-glass-blur: 18px;
+  --theme-glass-saturation: 1.24;
+  --theme-radius-control: 12px;
+  --theme-radius-panel: 16px;
+  --theme-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --theme-font-ui:
+    Inter, ui-rounded, 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
   --modal-surface-rgb: 255 255 255;
   --modal-border-rgb: 226 232 240;
   --modal-alpha: 0.88;
@@ -199,6 +215,54 @@ body {
 [data-visual-theme]:not([data-visual-theme='default']) [class*='border-indigo-'],
 [data-visual-theme]:not([data-visual-theme='default']) [class*='border-emerald-'] {
   border-color: var(--theme-accent) !important;
+}
+
+[data-visual-theme='liquid-glass'] {
+  font-family: var(--theme-font-ui);
+}
+
+[data-visual-theme='liquid-glass'] [data-material] {
+  border-color: var(--theme-glass-edge) !important;
+  -webkit-backdrop-filter: blur(var(--theme-glass-blur)) saturate(var(--theme-glass-saturation))
+    brightness(1.04);
+  backdrop-filter: blur(var(--theme-glass-blur)) saturate(var(--theme-glass-saturation)) brightness(1.04);
+  box-shadow: var(--theme-glass-shadow) !important;
+  isolation: isolate;
+}
+
+[data-visual-theme='liquid-glass'] [data-material='control'],
+[data-visual-theme='liquid-glass'] [data-material='widget'] {
+  border-radius: var(--theme-radius-control) !important;
+  background:
+    radial-gradient(circle at 18% 0%, var(--theme-glass-highlight), transparent 36%),
+    linear-gradient(
+      135deg,
+      var(--theme-glass-tint),
+      rgb(255 255 255 / 0.18) 46%,
+      color-mix(in srgb, var(--theme-secondary) 18%, transparent)
+    ),
+    color-mix(in srgb, var(--theme-surface) 78%, transparent) !important;
+}
+
+[data-visual-theme='liquid-glass'] [data-material='panel'],
+[data-visual-theme='liquid-glass'] [data-material='sidebar'],
+[data-visual-theme='liquid-glass'] [data-material='modal'] {
+  border-radius: var(--theme-radius-panel) !important;
+  background:
+    radial-gradient(circle at 14% 0%, var(--theme-glass-highlight), transparent 32%),
+    linear-gradient(
+      145deg,
+      var(--theme-glass-tint),
+      color-mix(in srgb, var(--theme-main) 10%, transparent) 48%,
+      rgb(255 255 255 / 0.2)
+    ),
+    color-mix(in srgb, var(--theme-surface) 82%, transparent) !important;
+}
+
+[data-visual-theme='liquid-glass'] [data-material='control'] :where(button, input, select),
+[data-visual-theme='liquid-glass'] [data-material='sidebar'] :where(button, input, select) {
+  transition-duration: var(--motion-duration);
+  transition-timing-function: var(--theme-motion-ease);
 }
 
 [data-visual-theme='liquid-glass'] header,

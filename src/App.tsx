@@ -331,8 +331,14 @@ export default function App() {
 
   const isSidebarVisible = settings.sidebarVisible !== false;
   const themeStyle = useMemo(
-    () => getThemeStyle(settings.visualTheme, isDarkMode, settings.animationsEnabled !== false),
-    [isDarkMode, settings.animationsEnabled, settings.visualTheme]
+    () =>
+      getThemeStyle(
+        settings.visualTheme,
+        isDarkMode,
+        settings.animationsEnabled !== false,
+        settings.colorScheme
+      ),
+    [isDarkMode, settings.animationsEnabled, settings.visualTheme, settings.colorScheme]
   );
   const modalEffectStyle = useMemo(
     () => getModalEffectStyle(settings.modalTransparency),
@@ -887,7 +893,10 @@ export default function App() {
     >
       <div className="app-frame h-full w-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans overflow-hidden transition-colors duration-200">
         {/* Header - Fixed Height */}
-        <header className="app-header bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-3 flex justify-between items-center shrink-0 z-[70] shadow-sm">
+        <header
+          data-material="control"
+          className="app-header bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-3 flex justify-between items-center shrink-0 z-[70] shadow-sm"
+        >
           <div className="flex items-center gap-3">
             <button
               aria-label="Toggle sidebar"
@@ -1359,6 +1368,7 @@ export default function App() {
           {}
           <div
             data-testid="app-sidebar"
+            data-material="sidebar"
             className={`
             absolute md:relative top-0 right-0 h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0 shadow-2xl md:shadow-none transition-transform duration-300 z-40 rounded-l-2xl md:rounded-xl overflow-hidden
             ${sidebarOpen && isSidebarVisible ? 'translate-x-0' : 'translate-x-full'}
@@ -1378,6 +1388,7 @@ export default function App() {
 
               {settings.sidebarWidgets.includes('clock') && (
                 <div
+                  data-material="widget"
                   className="clock-widget bg-slate-900 dark:bg-black rounded-2xl p-4 flex flex-col items-center justify-center text-white shadow-inner relative overflow-hidden shrink-0"
                   style={{ height: `${settings.clockHeight || 160}px` }}
                 >
