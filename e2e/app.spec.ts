@@ -52,9 +52,35 @@ const createTask = async (page, title: string) => {
   await page.getByRole('button', { name: /save task/i }).click();
 };
 
+const createScheduledTask = async (page, title: string, date: string, start: string, end = '') => {
+  await page.getByLabel('New task').click();
+  await page.getByLabel('Title').fill(title);
+  await page.getByLabel('Date').fill(date);
+  await page.getByLabel('Start').fill(start);
+  if (end) await page.getByLabel('End').fill(end);
+  await page.getByRole('button', { name: /save task/i }).click();
+};
+
+const openSettingsSection = async (page, sectionName: string | RegExp) => {
+  await page.getByRole('button', { name: /open settings/i }).click();
+  await page.getByRole('button', { name: sectionName }).click();
+};
+
+const chooseTheme = async (page, themeId: string) => {
+  await page.locator(`[data-theme-card="${themeId}"]`).click();
+};
+
 const searchTasks = async (page, query: string) => {
   await page.locator('input[placeholder="Search tasks"]:visible').fill(query);
 };
+
+const browserToday = async (page) =>
+  page.evaluate(() => {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return today.getFullYear() + '-' + month + '-' + day;
+  });
 
 const expectTaskVisible = async (page, title: string) => {
   await expect(page.getByText(title).first()).toBeVisible();
@@ -142,11 +168,7 @@ test('customizes clock, resize handles, and timeline guides from settings', asyn
   await expect(clock).toBeVisible();
   await expect(clock.locator('button')).toHaveCount(1);
 
-  await page.getByLabel('New task').click();
-  await page.getByLabel('Title').fill('Timeline settings task');
-  await page.getByLabel('Date').fill(new Date().toISOString().slice(0, 10));
-  await page.getByLabel('Start').fill('09:00');
-  await page.getByRole('button', { name: /save task/i }).click();
+  await createScheduledTask(page, 'Timeline settings task', await browserToday(page), '09:00');
 
   await expect(page.locator('[data-testid=timeline-hour-line]').first()).toBeVisible();
   await expect(page.locator('[data-testid=timeline-now-line]')).toBeVisible();
@@ -184,16 +206,75 @@ test('customizes clock, resize handles, and timeline guides from settings', asyn
   await expect(page.getByTestId('clock-analog')).toBeVisible();
 });
 
+test('keeps theme gallery readable and stable while switching themes', async ({ page }) => {
+  await page.goto('/');
+
+  await openSettingsSection(page, 'Appearance');
+
+  const gallery = page.getByTestId('theme-gallery');
+  await expect(gallery).toBeVisible();
+  await expect(page.getByTestId('theme-gallery-card')).toHaveCount(16);
+
+  const readability = await page.getByTestId('theme-gallery-label').evaluateAll((labels) => {
+    const parseRgb = (value) => {
+      const match = value.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : [0, 0, 0];
+    };
+    const luminance = ([r, g, b]) => {
+      const channels = [r, g, b].map((channel) => {
+        const value = channel / 255;
+        return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+      });
+      return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    };
+    const contrast = (a, b) => {
+      const light = Math.max(luminance(a), luminance(b));
+      const dark = Math.min(luminance(a), luminance(b));
+      return (light + 0.05) / (dark + 0.05);
+    };
+
+    return labels.map((label) => {
+      const style = getComputedStyle(label);
+      return {
+        text: label.textContent?.trim(),
+        contrast: contrast(parseRgb(style.color), parseRgb(style.backgroundColor)),
+        fits: label.scrollWidth <= label.clientWidth + 1
+      };
+    });
+  });
+
+  expect(readability.every((item) => item.contrast >= 4.5 && item.fits)).toBe(true);
+
+  const shell = page.locator('.app-shell');
+  await expect(shell).toHaveAttribute('data-visual-theme', 'zen');
+  await page.locator('[data-theme-card="dracula"]').hover();
+  await expect(shell).toHaveAttribute('data-visual-theme', 'zen');
+
+  const beforeBox = await page.getByRole('dialog', { name: /preferences/i }).boundingBox();
+  for (const themeId of ['liquid-glass', 'terminal', 'github-light', 'dracula', 'zen']) {
+    await chooseTheme(page, themeId);
+  }
+  const afterBox = await page.getByRole('dialog', { name: /preferences/i }).boundingBox();
+
+  await expect(shell).toHaveAttribute('data-visual-theme', 'zen');
+  await expect(page.locator('[data-testid="theme-gallery-card"][aria-pressed="true"]')).toHaveCount(1);
+  expect(Math.abs((afterBox?.y || 0) - (beforeBox?.y || 0))).toBeLessThan(4);
+
+  const transitionProperties = await page
+    .getByTestId('theme-gallery-card')
+    .evaluateAll((cards) => cards.map((card) => getComputedStyle(card).transitionProperty));
+  expect(transitionProperties.every((property) => property !== 'all')).toBe(true);
+});
+
 test('customizes Liquid Glass colors and exposes material surfaces', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByRole('button', { name: /open settings/i }).click();
-  await page.getByRole('button', { name: 'Appearance' }).click();
-  await page.getByRole('combobox').first().selectOption('theme:liquid-glass');
+  await openSettingsSection(page, 'Appearance');
+  await chooseTheme(page, 'liquid-glass');
   await page.getByLabel('Main color').fill('#ff2d55');
   await page.getByLabel('Secondary color').fill('#34c759');
   await page.getByLabel('Text color').fill('#2c2c2e');
-  await expect(page.getByRole('combobox').first()).not.toContainText('Terminal Clean');
+  await expect(page.getByTestId('theme-gallery')).not.toContainText('Terminal Clean');
   await page.getByRole('button', { name: /close settings/i }).click();
 
   const shell = page.locator('.app-shell');
@@ -267,12 +348,8 @@ test('exports and imports the active profile from settings', async ({ page }) =>
 test('drags scheduled tasks on the timeline to update start time', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByLabel('New task').click();
-  await page.getByLabel('Title').fill('Timeline drag task');
-  await page.getByLabel('Date').fill(new Date().toISOString().slice(0, 10));
-  await page.getByLabel('Start').fill('09:00');
-  await page.getByLabel('End').fill('10:00');
-  await page.getByRole('button', { name: /save task/i }).click();
+  await createScheduledTask(page, 'Timeline drag task', await browserToday(page), '09:00', '10:00');
+  await expect(page.getByText('Timeline drag task').first()).toBeVisible();
 
   const taskBlock = page.getByTestId('timeline-task-Timeline drag task');
   await expect(taskBlock).toBeVisible();
@@ -571,7 +648,7 @@ test('enables monk mode and switches visual theme', async ({ page }) => {
   await page.getByRole('button', { name: /open settings/i }).click();
   await page.getByRole('button', { name: 'Appearance' }).click();
   const appearanceSection = page.locator('section').filter({ hasText: 'Appearance' });
-  await appearanceSection.getByRole('combobox').first().selectOption('theme:terminal-white');
+  await appearanceSection.locator('[data-theme-card="terminal-white"]').click();
   await expect(page.locator('[data-monk-mode][data-visual-theme="terminal-white"]')).toBeVisible();
 });
 
@@ -596,11 +673,11 @@ test('keeps themed modals readable in terminal themes', async ({ page }) => {
   await page.getByRole('button', { name: /open settings/i }).click();
   await page.getByRole('button', { name: /^appearance$/i }).click();
   const appearanceSection = page.locator('section').filter({ hasText: 'Appearance' });
-  await appearanceSection.getByRole('combobox').first().selectOption('theme:terminal');
+  await appearanceSection.locator('[data-theme-card="terminal"]').click();
 
   await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveCSS('color', 'rgb(124, 255, 138)');
 
-  await appearanceSection.getByRole('combobox').first().selectOption('theme:terminal-white');
+  await appearanceSection.locator('[data-theme-card="terminal-white"]').click();
   await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveCSS('color', 'rgb(255, 255, 255)');
 });
 
@@ -612,9 +689,8 @@ test('uses opaque blurred liquid glass dropdowns for readability', async ({ page
   await page
     .locator('section')
     .filter({ hasText: 'Appearance' })
-    .getByRole('combobox')
-    .first()
-    .selectOption('theme:liquid-glass');
+    .locator('[data-theme-card="liquid-glass"]')
+    .click();
   await page.getByRole('button', { name: /close settings/i }).click();
 
   await page.getByRole('button', { name: /filters/i }).click();

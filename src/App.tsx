@@ -5,7 +5,6 @@ import { Bar, BarChart, CartesianGrid, Tooltip as RechartsTooltip, XAxis, YAxis 
 import {
   Activity,
   BarChart2,
-  Calendar,
   CheckCircle2,
   ChevronDown,
   Clock,
@@ -27,6 +26,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { UrgencyBadge } from './components/UrgencyBadge';
+import { AgendaTimeline } from './components/timeline/AgendaTimeline';
 import { KanbanBoard, TaskListView } from './components/board/TaskBoard';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { TaskModal } from './components/task-modal/TaskModal';
@@ -35,13 +35,7 @@ import { ThemedSurface } from './components/ui/ThemedSurface';
 import { calculateAnalytics } from './domain/analytics';
 import { parseIcsTasks } from './domain/calendar';
 import { rolePresets } from './domain/rolePresets';
-import {
-  getModalEffectStyle,
-  getThemeStyle,
-  visualThemeOptions,
-  themeContracts
-} from './domain/themes';
-import { createThemeCss, createThemeRecipe } from './domain/themeStudio';
+import { getModalEffectStyle, getThemeStyle, visualThemeOptions, themeContracts } from './domain/themes';
 import {
   formatDateInputValue,
   formatDurationString,
@@ -50,25 +44,20 @@ import {
   generateId,
   calculateTotalDuration,
   normalizeTasksPayload,
-  normalizeTask,
-  mergeSettings
+  normalizeTask
 } from './domain/tasks';
-import { apiRequest } from './lib/api';
-import { downloadJson } from './lib/download';
-import { backupHistoryStorageKey, parseStoredJson } from './lib/storage';
+import { useBackupActions } from './hooks/useBackupActions';
 import {
   loadInitialLocalSettings,
   loadInitialLocalTasks,
   useLocalFallbackPersistence
 } from './hooks/useLocalFallbackPersistence';
+import { useProfileImportExport } from './hooks/useProfileImportExport';
 import { useProfilesSync } from './hooks/useProfilesSync';
 import { useRecurringTasks } from './hooks/useRecurringTasks';
 import { useResizableLayout } from './hooks/useResizableLayout';
 import { useTaskDraft } from './hooks/useTaskDraft';
 import { useTaskFilters } from './hooks/useTaskFilters';
-import taskSchema from './task.schema.json';
-
-const taskSchemaId = (taskSchema as { $id?: string }).$id || 'https://the-monastery.local/task.schema.json';
 
 export default function App() {
   const [tasks, setTasks] = useState(loadInitialLocalTasks);
@@ -85,18 +74,15 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState(null);
-  const [previewTheme, setPreviewTheme] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
   const [keyboardFocusedTaskId, setKeyboardFocusedTaskId] = useState(null);
   const [importPreview, setImportPreview] = useState(null);
-  const [profileImportPreview, setProfileImportPreview] = useState(null);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine
   );
-  const [localBackups, setLocalBackups] = useState(() => parseStoredJson(backupHistoryStorageKey, []));
 
   const [columnSorts, setColumnSorts] = useState({ new: 'none', done: 'none', rejected: 'none' });
 
@@ -127,6 +113,41 @@ export default function App() {
     resetActiveProfile,
     removeActiveProfile
   } = useProfilesSync({ tasks, setTasks, settings, setSettings, setSelectedTaskId });
+  const {
+    profileImportPreview,
+    setProfileImportPreview,
+    exportActiveProfile,
+    importActiveProfile,
+    confirmProfileImport
+  } = useProfileImportExport({
+    tasks,
+    setTasks,
+    settings,
+    setSettings,
+    activeProfile,
+    activeProfileId,
+    setSelectedTaskId,
+    importProfileInputRef
+  });
+  const {
+    localBackups,
+    restoreLocalBackup,
+    removeLocalBackup,
+    exportTasks,
+    backupData,
+    exportTaskSchema,
+    exportThemeRecipe
+  } = useBackupActions({
+    tasks,
+    setTasks,
+    settings,
+    setSettings,
+    activeProfile,
+    activeProfileId,
+    isBackendAvailable,
+    setSelectedTaskId,
+    setIsSettingsOpen
+  });
   useLocalFallbackPersistence({
     tasks,
     setTasks,
@@ -258,126 +279,6 @@ export default function App() {
     document.addEventListener('pointerdown', closeOnOutsidePointer);
     return () => document.removeEventListener('pointerdown', closeOnOutsidePointer);
   }, [isProfileOpen, profileFloatingNode, profileReferenceNode]);
-
-  const persistLocalBackups = (nextBackups) => {
-    const limited = nextBackups.slice(0, 8);
-    setLocalBackups(limited);
-    localStorage.setItem(backupHistoryStorageKey, JSON.stringify(limited));
-  };
-
-  const saveLocalBackupSnapshot = (label = 'Manual backup') => {
-    const snapshot = {
-      id: generateId(),
-      label,
-      createdAt: new Date().toISOString(),
-      taskCount: tasks.length,
-      profileName: activeProfile?.name || 'Local',
-      settings,
-      tasks
-    };
-    persistLocalBackups([snapshot, ...localBackups]);
-    return snapshot;
-  };
-
-  const restoreLocalBackup = (backupId) => {
-    const backup = localBackups.find((item) => item.id === backupId);
-    if (!backup) return;
-    setSettings(mergeSettings(backup.settings));
-    setTasks(normalizeTasksPayload({ tasks: backup.tasks || [] }));
-    setSelectedTaskId(null);
-    setIsSettingsOpen(false);
-  };
-
-  const removeLocalBackup = (backupId) => {
-    persistLocalBackups(localBackups.filter((item) => item.id !== backupId));
-  };
-
-  const exportTasks = () => {
-    downloadJson('the-monastery-tasks.json', {
-      $schema: taskSchemaId,
-      schemaVersion: 1,
-      exportedAt: new Date().toISOString(),
-      tasks
-    });
-  };
-
-  const backupData = async () => {
-    try {
-      saveLocalBackupSnapshot();
-      if (isBackendAvailable) {
-        const backup = await apiRequest('/api/backup');
-        downloadJson(`the-monastery-backup-${new Date().toISOString().slice(0, 10)}.json`, backup);
-        return;
-      }
-
-      downloadJson(`the-monastery-backup-${new Date().toISOString().slice(0, 10)}.json`, {
-        schemaVersion: 1,
-        exportedAt: new Date().toISOString(),
-        profiles: [
-          {
-            id: activeProfileId || 'local',
-            name: activeProfile?.name || 'Local',
-            settings,
-            tasks
-          }
-        ]
-      });
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not create backup.');
-    }
-  };
-
-  const exportTaskSchema = () => {
-    downloadJson('the-monastery-task.schema.json', taskSchema);
-  };
-
-  const exportActiveProfile = () => {
-    downloadJson('the-monastery-profile-' + (activeProfile?.name || 'profile') + '.json', {
-      schemaVersion: 1,
-      exportedAt: new Date().toISOString(),
-      profile: {
-        id: activeProfileId || 'local',
-        name: activeProfile?.name || 'Local',
-        settings,
-        tasks
-      }
-    });
-  };
-
-  const exportThemeRecipe = () => {
-    const recipe = createThemeRecipe(settings);
-    downloadJson('the-monastery-theme-' + recipe.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', {
-      ...recipe,
-      css: createThemeCss(recipe)
-    });
-  };
-
-  const importActiveProfile = async (file) => {
-    if (!file) return;
-    try {
-      const parsed = JSON.parse(await file.text());
-      const source = parsed.profile || parsed.profiles?.[0] || parsed;
-      const importedTasks = source.tasks ? normalizeTasksPayload({ tasks: source.tasks }) : [];
-      setProfileImportPreview({
-        name: source.name || 'Imported profile',
-        settings: source.settings || null,
-        tasks: importedTasks,
-        currentTaskCount: tasks.length
-      });
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not import profile.');
-    } finally {
-      if (importProfileInputRef.current) importProfileInputRef.current.value = '';
-    }
-  };
-
-  const confirmProfileImport = () => {
-    if (!profileImportPreview) return;
-    if (profileImportPreview.settings) setSettings(profileImportPreview.settings);
-    setTasks(profileImportPreview.tasks || []);
-    setSelectedTaskId(null);
-    setProfileImportPreview(null);
-  };
 
   const importCalendarTasks = async (file) => {
     if (!file) return;
@@ -540,13 +441,20 @@ export default function App() {
   const isSidebarVisible = settings.sidebarVisible !== false;
   const themeStyle = useMemo(
     () =>
-      getThemeStyle(previewTheme || settings.visualTheme, systemIsDark, true, {
+      getThemeStyle(settings.visualTheme, systemIsDark, true, {
         ...settings.colorScheme,
         fontMain: settings.fontMain,
         fontSecondary: settings.fontSecondary,
         fontUI: settings.fontUI
       }),
-    [previewTheme, settings.visualTheme, settings.colorScheme, settings.fontMain, settings.fontSecondary, settings.fontUI, systemIsDark]
+    [
+      settings.visualTheme,
+      settings.colorScheme,
+      settings.fontMain,
+      settings.fontSecondary,
+      settings.fontUI,
+      systemIsDark
+    ]
   );
   const modalEffectStyle = useMemo(
     () => getModalEffectStyle(settings.modalTransparency, settings.modalBlur),
@@ -979,233 +887,6 @@ export default function App() {
           );
         })}
       </svg>
-    );
-  };
-
-  const renderAgendaTimeline = () => {
-    const todayTasks = tasks.filter(
-      (t) =>
-        t.status !== 'done' &&
-        t.status !== 'rejected' &&
-        t.scheduledDate === formatDateInputValue(new Date()) &&
-        t.scheduledStart
-    );
-    const nowObj = new Date(now);
-    const currentMinutes = nowObj.getHours() * 60 + nowObj.getMinutes();
-    const minutesToClockTime = (minutes) => {
-      const clamped = Math.max(0, Math.min(1439, minutes));
-      const hours = Math.floor(clamped / 60)
-        .toString()
-        .padStart(2, '0');
-      const mins = Math.floor(clamped % 60)
-        .toString()
-        .padStart(2, '0');
-      return hours + ':' + mins;
-    };
-
-    const scrollToCurrent = () => {
-      if (agendaContainerRef.current) {
-        const scrollTo = Math.max(0, currentMinutes - 150);
-        agendaContainerRef.current.scrollTo({ top: scrollTo, behavior: 'smooth' });
-      }
-    };
-
-    return (
-      <div className="timeline-panel h-full min-h-0 flex flex-col border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm">
-        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shrink-0 flex items-center justify-between">
-          <h3 className="font-bold text-sm flex items-center gap-2">
-            <Calendar size={14} className="text-indigo-500" /> Today's Timeline
-          </h3>
-          <button
-            onClick={scrollToCurrent}
-            aria-label="Locate current time"
-            className="timeline-current-button grid h-7 w-7 place-items-center rounded-md transition-colors group relative"
-            title="Locate Current Time"
-          >
-            <Target size={14} strokeWidth={2.4} />
-          </button>
-        </div>
-        <div
-          className="flex-1 overflow-y-auto relative bg-slate-50 dark:bg-slate-900 custom-scrollbar"
-          ref={agendaContainerRef}
-          onScroll={(e) => {
-            agendaScrollTopRef.current = e.currentTarget.scrollTop;
-          }}
-        >
-          <div className="relative h-[1440px] w-full">
-            {/* 1 Hour Grid Markers Full Width Transparent */}
-            {settings.timelineHourLinesVisible !== false &&
-              Array.from({ length: 24 }).map((_, i) => (
-                <div
-                  key={i}
-                  data-testid="timeline-hour-line"
-                  className="absolute w-full flex items-center pointer-events-none z-0"
-                  style={{ top: `${i * 60}px` }}
-                >
-                  <div className="w-20 text-[10px] font-medium text-slate-400 dark:text-slate-500 text-right pr-3 whitespace-nowrap">
-                    {formatTime(new Date(new Date().setHours(i, 0, 0, 0)), settings.clockFormat)}
-                  </div>
-                  <div className="flex-1 border-t border-slate-300/30 dark:border-slate-600/30 w-full h-px"></div>
-                </div>
-              ))}
-
-            {/* Current Time Red Line */}
-            {settings.timelineNowLineVisible !== false && (
-              <div
-                data-testid="timeline-now-line"
-                className="absolute w-full flex items-center z-20 pointer-events-none"
-                style={{ top: `${currentMinutes}px` }}
-              >
-                <div className="w-20 text-[10px] font-bold text-red-500 text-right pr-3 whitespace-nowrap">
-                  {formatTime(now, settings.clockFormat)}
-                </div>
-                <div className="flex-1 h-px bg-red-500/50 shadow-[0_0_4px_rgba(239,68,68,0.5)]"></div>
-              </div>
-            )}
-
-            {/* Task Blocks */}
-            <div className="absolute top-0 bottom-0 left-20 right-2 z-10">
-              {todayTasks.map((task) => {
-                const [startH, startM] = task.scheduledStart.split(':').map(Number);
-                const top = startH * 60 + startM;
-                let duration = 60;
-                if (task.scheduledEnd) {
-                  const [endH, endM] = task.scheduledEnd.split(':').map(Number);
-                  duration = Math.max(15, endH * 60 + endM - top);
-                }
-                return (
-                  <div
-                    key={task.id}
-                    data-testid={'timeline-task-' + (task.title || 'Untitled')}
-                    data-scheduled-start={task.scheduledStart}
-                    draggable
-                    onDragStart={(event) => {
-                      event.currentTarget.dataset.dragStartY = String(event.clientY);
-                      event.currentTarget.dataset.dragStartTop = String(top);
-                      event.currentTarget.dataset.dragDuration = String(duration);
-                    }}
-                    onDragEnd={(event) => {
-                      const startY = Number(event.currentTarget.dataset.dragStartY || event.clientY);
-                      const startTop = Number(event.currentTarget.dataset.dragStartTop || top);
-                      const savedDuration = Number(event.currentTarget.dataset.dragDuration || duration);
-                      const delta = event.clientY - startY;
-                      const snappedDelta = Math.round(delta / 15) * 15;
-                      if (Math.abs(snappedDelta) >= 15) {
-                        event.currentTarget.dataset.dragMoved = 'true';
-                        const nextStart = Math.max(
-                          0,
-                          Math.min(1439 - savedDuration, startTop + snappedDelta)
-                        );
-                        setTasks((previous) =>
-                          previous.map((item) =>
-                            item.id === task.id
-                              ? {
-                                  ...item,
-                                  scheduledStart: minutesToClockTime(nextStart),
-                                  scheduledEnd: minutesToClockTime(nextStart + savedDuration)
-                                }
-                              : item
-                          )
-                        );
-                      }
-                    }}
-                    onMouseDown={(event) => {
-                      event.currentTarget.dataset.dragStartY = String(event.clientY);
-                      event.currentTarget.dataset.dragStartTop = String(top);
-                      event.currentTarget.dataset.dragDuration = String(duration);
-                      event.currentTarget.dataset.dragMoved = 'false';
-                      timelineDragRef.current = {
-                        taskId: task.id,
-                        startY: event.clientY,
-                        startTop: top,
-                        duration
-                      };
-                    }}
-                    onMouseUp={(event) => {
-                      const startY = Number(event.currentTarget.dataset.dragStartY || event.clientY);
-                      const startTop = Number(event.currentTarget.dataset.dragStartTop || top);
-                      const savedDuration = Number(event.currentTarget.dataset.dragDuration || duration);
-                      const delta = event.clientY - startY;
-                      const snappedDelta = Math.round(delta / 15) * 15;
-                      if (Math.abs(snappedDelta) >= 15) {
-                        event.currentTarget.dataset.dragMoved = 'true';
-                        const nextStart = Math.max(
-                          0,
-                          Math.min(1439 - savedDuration, startTop + snappedDelta)
-                        );
-                        setTasks((previous) =>
-                          previous.map((item) =>
-                            item.id === task.id
-                              ? {
-                                  ...item,
-                                  scheduledStart: minutesToClockTime(nextStart),
-                                  scheduledEnd: minutesToClockTime(nextStart + savedDuration)
-                                }
-                              : item
-                          )
-                        );
-                      }
-                    }}
-                    onPointerDown={(event) => {
-                      event.currentTarget.setPointerCapture(event.pointerId);
-                      event.currentTarget.dataset.dragStartY = String(event.clientY);
-                      event.currentTarget.dataset.dragStartTop = String(top);
-                      event.currentTarget.dataset.dragDuration = String(duration);
-                      event.currentTarget.dataset.dragMoved = 'false';
-                    }}
-                    onPointerUp={(event) => {
-                      const startY = Number(event.currentTarget.dataset.dragStartY || event.clientY);
-                      const startTop = Number(event.currentTarget.dataset.dragStartTop || top);
-                      const savedDuration = Number(event.currentTarget.dataset.dragDuration || duration);
-                      const delta = event.clientY - startY;
-                      const snappedDelta = Math.round(delta / 15) * 15;
-                      if (Math.abs(snappedDelta) >= 15) {
-                        const nextStart = Math.max(
-                          0,
-                          Math.min(1439 - savedDuration, startTop + snappedDelta)
-                        );
-                        setTasks((previous) =>
-                          previous.map((item) =>
-                            item.id === task.id
-                              ? {
-                                  ...item,
-                                  scheduledStart: minutesToClockTime(nextStart),
-                                  scheduledEnd: minutesToClockTime(nextStart + savedDuration)
-                                }
-                              : item
-                          )
-                        );
-                      }
-                    }}
-                    onClick={(event) => {
-                      if (suppressTimelineClickRef.current.has(task.id)) {
-                        suppressTimelineClickRef.current.delete(task.id);
-                        return;
-                      }
-                      if (event.currentTarget.dataset.dragMoved === 'true') {
-                        event.currentTarget.dataset.dragMoved = 'false';
-                        return;
-                      }
-                      setSelectedTaskId(task.id);
-                    }}
-                    className="absolute left-1 right-1 rounded-md p-2 text-xs cursor-pointer overflow-hidden border transition-all shadow-sm group hover:z-30 hover:shadow-md bg-white/95 dark:bg-slate-800/95 border-indigo-200 dark:border-indigo-500/30 hover:border-indigo-400"
-                    style={{ top: `${top}px`, height: `${duration}px` }}
-                  >
-                    <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
-                      {task.title || 'Untitled'}
-                    </div>
-                    {duration >= 45 && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <UrgencyBadge urgency={task.urgency} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
     );
   };
 
@@ -2118,7 +1799,19 @@ export default function App() {
                 )}
 
               {settings.sidebarWidgets.includes('agenda') && (
-                <div className="min-h-0 flex-1 overflow-hidden">{renderAgendaTimeline()}</div>
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <AgendaTimeline
+                    tasks={tasks}
+                    settings={settings}
+                    now={now}
+                    setTasks={setTasks}
+                    setSelectedTaskId={setSelectedTaskId}
+                    agendaContainerRef={agendaContainerRef}
+                    agendaScrollTopRef={agendaScrollTopRef}
+                    timelineDragRef={timelineDragRef}
+                    suppressTimelineClickRef={suppressTimelineClickRef}
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -2252,7 +1945,7 @@ export default function App() {
                         value={`theme ${theme.label}`}
                         onSelect={() => {
                           setIsCommandOpen(false);
-                          setSettings(s => ({
+                          setSettings((s) => ({
                             ...s,
                             visualTheme: theme.id,
                             theme: themeContracts[theme.id]?.preferredMode === 'dark' ? 'dark' : 'light',
@@ -2265,7 +1958,15 @@ export default function App() {
                         }}
                         className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800 flex items-center gap-2"
                       >
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: (themeContracts[theme.id]?.tokens?.light || themeContracts[theme.id]?.tokens?.dark)?.bg }}></div>
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{
+                            backgroundColor: (
+                              themeContracts[theme.id]?.tokens?.light ||
+                              themeContracts[theme.id]?.tokens?.dark
+                            )?.bg
+                          }}
+                        ></div>
                         Theme: {theme.label}
                       </Command.Item>
                     ))}
@@ -2362,7 +2063,6 @@ export default function App() {
             initialSection={settingsInitialSection}
             settings={settings}
             setSettings={setSettings}
-            setPreviewTheme={setPreviewTheme}
             addRole={addRole}
             updateRole={updateRole}
             removeRole={removeRole}

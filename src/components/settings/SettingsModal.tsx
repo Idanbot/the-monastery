@@ -23,6 +23,7 @@ import {
   X
 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { ThemeGallery } from './ThemeGallery';
 import { TagPicker } from '../tag-picker/TagPicker';
 import { themedSurfaceClassName } from '../ui/themedSurfaceStyles';
 import { createRoleFromPreset, rolePresets } from '../../domain/rolePresets';
@@ -33,23 +34,29 @@ import {
   getModalEffectStyle,
   getThemeContract,
   getThemeStyle,
-  visualThemeOptions,
-  themeContracts
+  visualThemeOptions
 } from '../../domain/themes';
 
 const sectionIds = ['appearance', 'time', 'board', 'roles', 'sidebar', 'profiles', 'data'];
 const themeChoiceOptions = [
-  { value: 'system:default', label: 'System Default', theme: 'system', group: 'system', visualTheme: 'default' },
+  {
+    value: 'system:default',
+    label: 'System Default',
+    theme: 'system',
+    group: 'system',
+    visualTheme: 'default'
+  },
   { value: 'light:default', label: 'Light', theme: 'light', group: 'light', visualTheme: 'default' },
   { value: 'dark:default', label: 'Dark', theme: 'dark', group: 'dark', visualTheme: 'default' },
   ...visualThemeOptions
     .filter((theme) => theme.id !== 'default')
     .map((theme) => {
-      let group = 'dark';
-      if (['zen', 'liquid-glass', 'github-light', 'nord'].includes(theme.id)) group = 'light';
-      else if (['terminal', 'terminal-white'].includes(theme.id)) group = 'terminal';
-      else group = 'dark';
-      
+      const group = ['zen', 'liquid-glass', 'github-light', 'nord'].includes(theme.id)
+        ? 'light'
+        : ['terminal', 'terminal-white'].includes(theme.id)
+          ? 'terminal'
+          : 'dark';
+
       return {
         value: `theme:${theme.id}`,
         label: theme.label,
@@ -102,7 +109,6 @@ export function SettingsModal({
   initialSection = null,
   settings,
   setSettings,
-  setPreviewTheme,
   addRole,
   updateRole,
   removeRole,
@@ -175,11 +181,14 @@ export function SettingsModal({
     mode: 'onChange'
   });
   const themeNameField = themeRecipeForm.register('name', {
-    onChange: (event) => setSettings({ ...settings, customThemeName: event.target.value })
+    onChange: (event) => updateSetting('customThemeName', event.target.value)
   });
   const themeStyle = useMemo(
     () => ({
-      ...getThemeStyle(settings.visualTheme, isDarkMode, animationsEnabled, { ...settings.colorScheme, fontFamily: settings.fontFamily }),
+      ...getThemeStyle(settings.visualTheme, isDarkMode, animationsEnabled, {
+        ...settings.colorScheme,
+        fontFamily: settings.fontFamily
+      }),
       ...getModalEffectStyle(settings.modalTransparency, settings.modalBlur)
     }),
     [
@@ -188,7 +197,8 @@ export function SettingsModal({
       settings.modalTransparency,
       settings.modalBlur,
       settings.visualTheme,
-      settings.colorScheme
+      settings.colorScheme,
+      settings.fontFamily
     ]
   );
   const roleTagValues = useMemo(
@@ -219,6 +229,24 @@ export function SettingsModal({
     setOpenSections(Object.fromEntries(sectionIds.map((id) => [id, isOpen])));
   };
 
+  const updateSetting = (key, value) => {
+    setSettings({ ...settings, [key]: value });
+  };
+
+  const updateColorScheme = (key, value) => {
+    setSettings({
+      ...settings,
+      colorScheme: {
+        ...(settings.colorScheme || { main: '', secondary: '', text: '' }),
+        [key]: value
+      }
+    });
+  };
+
+  const updateClockSetting = (key, value) => {
+    updateSetting(key, value);
+  };
+
   const setThemeChoice = (value) => {
     const option = themeChoiceOptions.find((item) => item.value === value) || themeChoiceOptions[0];
     setSettings({
@@ -234,13 +262,7 @@ export function SettingsModal({
   };
 
   const setThemeColor = (key, value) => {
-    setSettings({
-      ...settings,
-      colorScheme: {
-        ...(settings.colorScheme || { main: '', secondary: '', text: '' }),
-        [key]: value
-      }
-    });
+    updateColorScheme(key, value);
   };
 
   const addRolePreset = () => {
@@ -341,158 +363,23 @@ export function SettingsModal({
                   motionDuration={motionDuration}
                   motionEase={motionEase}
                 >
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">System</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {themeChoiceOptions.filter(t => t.group === 'system').map((themeOption) => {
-                          const isSelected = normalizedThemeChoice === themeOption.value;
-                          const contract = themeContracts[themeOption.visualTheme] || themeContracts.default;
-                          const lightTokens = contract.tokens.light;
-                          const darkTokens = contract.tokens.dark || contract.tokens.light;
-                          
-                          return (
-                            <button
-                              key={themeOption.value}
-                              type="button"
-                              onClick={() => setThemeChoice(themeOption.value)}
-                              onMouseEnter={() => setPreviewTheme?.(themeOption.visualTheme)}
-                              onMouseLeave={() => setPreviewTheme?.(null)}
-                              className={`flex items-center justify-between gap-3 p-3 rounded-xl border-2 text-left transition-all overflow-hidden ${
-                                isSelected ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-400'
-                              }`}
-                              style={{
-                                background: `linear-gradient(135deg, ${lightTokens.bg} 50%, ${darkTokens.bg} 50%)`,
-                                color: lightTokens.text
-                              }}
-                            >
-                              <span className="text-sm font-semibold break-words whitespace-normal leading-tight flex-1 z-10 mix-blend-difference text-white">
-                                {themeOption.label}
-                              </span>
-                              <div
-                                className="w-16 h-10 rounded-md border border-black/10 dark:border-white/10 flex items-center justify-center shadow-inner overflow-hidden relative shrink-0"
-                                style={{ background: `linear-gradient(135deg, ${lightTokens.surface} 50%, ${darkTokens.surface} 50%)` }}
-                              >
-                                <div className="absolute inset-0 flex items-center justify-center gap-1.5">
-                                  <div className="w-2 h-2 rounded-full shadow-sm z-10" style={{ backgroundColor: lightTokens.accent }}></div>
-                                  <div className="w-2 h-2 rounded-full shadow-sm z-10" style={{ backgroundColor: darkTokens.mutedText }}></div>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Light Themes</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {themeChoiceOptions.filter(t => t.group === 'light').map((themeOption) => {
-                          const isSelected = normalizedThemeChoice === themeOption.value;
-                          const contract = themeContracts[themeOption.visualTheme] || themeContracts.default;
-                          const tokens = contract.tokens.light;
-                          
-                          return (
-                            <button
-                              key={themeOption.value}
-                              type="button"
-                              onClick={() => setThemeChoice(themeOption.value)}
-                              onMouseEnter={() => setPreviewTheme?.(themeOption.visualTheme)}
-                              onMouseLeave={() => setPreviewTheme?.(null)}
-                              className={`flex items-center justify-between gap-3 p-3 rounded-xl border-2 text-left transition-all ${
-                                isSelected ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-400'
-                              }`}
-                              style={{ backgroundColor: tokens.bg, color: tokens.text }}
-                            >
-                              <span className="text-sm font-semibold break-words whitespace-normal leading-tight flex-1">{themeOption.label}</span>
-                              <div className="w-16 h-10 rounded-md border border-black/10 dark:border-white/10 flex items-center justify-center shadow-inner shrink-0" style={{ backgroundColor: tokens.surface }}>
-                                <div className="flex gap-1.5">
-                                  <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: tokens.accent }}></div>
-                                  <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: tokens.mutedText }}></div>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Terminal Themes</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {themeChoiceOptions.filter(t => t.group === 'terminal').map((themeOption) => {
-                          const isSelected = normalizedThemeChoice === themeOption.value;
-                          const contract = themeContracts[themeOption.visualTheme] || themeContracts.default;
-                          const tokens = contract.tokens.dark || contract.tokens.light;
-                          
-                          return (
-                            <button
-                              key={themeOption.value}
-                              type="button"
-                              onClick={() => setThemeChoice(themeOption.value)}
-                              onMouseEnter={() => setPreviewTheme?.(themeOption.visualTheme)}
-                              onMouseLeave={() => setPreviewTheme?.(null)}
-                              className={`flex items-center justify-between gap-3 p-3 rounded-xl border-2 text-left transition-all ${
-                                isSelected ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-400'
-                              }`}
-                              style={{ backgroundColor: tokens.bg, color: tokens.text }}
-                            >
-                              <span className="text-sm font-semibold break-words whitespace-normal leading-tight flex-1">{themeOption.label}</span>
-                              <div className="w-16 h-10 rounded-md border border-black/10 dark:border-white/10 flex items-center justify-center shadow-inner shrink-0" style={{ backgroundColor: tokens.surface }}>
-                                <div className="flex gap-1.5">
-                                  <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: tokens.accent }}></div>
-                                  <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: tokens.mutedText }}></div>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Dark Themes</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {themeChoiceOptions.filter(t => t.group === 'dark').map((themeOption) => {
-                          const isSelected = normalizedThemeChoice === themeOption.value;
-                          const contract = themeContracts[themeOption.visualTheme] || themeContracts.default;
-                          const tokens = contract.tokens.dark || contract.tokens.light;
-                          
-                          return (
-                            <button
-                              key={themeOption.value}
-                              type="button"
-                              onClick={() => setThemeChoice(themeOption.value)}
-                              onMouseEnter={() => setPreviewTheme?.(themeOption.visualTheme)}
-                              onMouseLeave={() => setPreviewTheme?.(null)}
-                              className={`flex items-center justify-between gap-3 p-3 rounded-xl border-2 text-left transition-all ${
-                                isSelected ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-400'
-                              }`}
-                              style={{ backgroundColor: tokens.bg, color: tokens.text }}
-                            >
-                              <span className="text-sm font-semibold truncate flex-1">{themeOption.label}</span>
-                              <div className="w-16 h-10 rounded-md border border-black/10 dark:border-white/10 flex items-center justify-center shadow-inner shrink-0" style={{ backgroundColor: tokens.surface }}>
-                                <div className="flex gap-1.5">
-                                  <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: tokens.accent }}></div>
-                                  <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: tokens.mutedText }}></div>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                  <ThemeGallery
+                    options={themeChoiceOptions}
+                    normalizedThemeChoice={normalizedThemeChoice}
+                    setThemeChoice={setThemeChoice}
+                  />
 
                   <div className="mt-8 mb-4 border-t border-slate-200 dark:border-slate-700"></div>
 
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Typography</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                    Typography
+                  </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
                       <span className="font-semibold text-xs">Base text size</span>
                       <select
                         value={settings.textSize}
-                        onChange={(e) => setSettings({ ...settings, textSize: e.target.value })}
+                        onChange={(e) => updateSetting('textSize', e.target.value)}
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
                       >
                         <option value="small">Small text</option>
@@ -504,12 +391,16 @@ export function SettingsModal({
                       <span className="font-semibold text-xs">Main Text Font</span>
                       <select
                         value={settings.fontMain || ''}
-                        onChange={(e) => setSettings({ ...settings, fontMain: e.target.value })}
+                        onChange={(e) => updateSetting('fontMain', e.target.value)}
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
                       >
                         <option value="">Default Main Font</option>
-                        <option value="San Francisco, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Apple Inspired</option>
-                        <option value="'FiraCode Nerd Font', 'Fira Code', monospace">Terminal Nerd Font</option>
+                        <option value="San Francisco, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+                          Apple Inspired
+                        </option>
+                        <option value="'FiraCode Nerd Font', 'Fira Code', monospace">
+                          Terminal Nerd Font
+                        </option>
                         <option value="Inter, sans-serif">Inter</option>
                         <option value="Roboto, sans-serif">Roboto</option>
                         <option value="Outfit, sans-serif">Outfit</option>
@@ -524,12 +415,16 @@ export function SettingsModal({
                       <span className="font-semibold text-xs">Secondary / Headers Font</span>
                       <select
                         value={settings.fontSecondary || ''}
-                        onChange={(e) => setSettings({ ...settings, fontSecondary: e.target.value })}
+                        onChange={(e) => updateSetting('fontSecondary', e.target.value)}
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
                       >
                         <option value="">Default Heading Font</option>
-                        <option value="San Francisco, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Apple Inspired</option>
-                        <option value="'FiraCode Nerd Font', 'Fira Code', monospace">Terminal Nerd Font</option>
+                        <option value="San Francisco, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+                          Apple Inspired
+                        </option>
+                        <option value="'FiraCode Nerd Font', 'Fira Code', monospace">
+                          Terminal Nerd Font
+                        </option>
                         <option value="Inter, sans-serif">Inter</option>
                         <option value="Roboto, sans-serif">Roboto</option>
                         <option value="Outfit, sans-serif">Outfit</option>
@@ -544,12 +439,16 @@ export function SettingsModal({
                       <span className="font-semibold text-xs">UI & Monospace Elements</span>
                       <select
                         value={settings.fontUI || ''}
-                        onChange={(e) => setSettings({ ...settings, fontUI: e.target.value })}
+                        onChange={(e) => updateSetting('fontUI', e.target.value)}
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
                       >
                         <option value="">Default UI Font</option>
-                        <option value="'FiraCode Nerd Font', 'Fira Code', ui-monospace, monospace">Terminal Nerd Font</option>
-                        <option value="San Francisco, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">Apple Inspired</option>
+                        <option value="'FiraCode Nerd Font', 'Fira Code', ui-monospace, monospace">
+                          Terminal Nerd Font
+                        </option>
+                        <option value="San Francisco, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+                          Apple Inspired
+                        </option>
                         <option value="Inter, sans-serif">Inter</option>
                         <option value="Roboto, sans-serif">Roboto</option>
                         <option value="Outfit, sans-serif">Outfit</option>
@@ -562,7 +461,9 @@ export function SettingsModal({
 
                   <div className="mt-8 mb-4 border-t border-slate-200 dark:border-slate-700"></div>
 
-                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Colors</h4>
+                  <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                    Colors
+                  </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
                       <span>Main color</span>
@@ -699,7 +600,7 @@ export function SettingsModal({
                     <input
                       type="checkbox"
                       checked={Boolean(settings.monkMode)}
-                      onChange={(e) => setSettings({ ...settings, monkMode: e.target.checked })}
+                      onChange={(e) => updateSetting('monkMode', e.target.checked)}
                       className="h-4 w-4 accent-emerald-600"
                     />
                   </label>
@@ -708,7 +609,7 @@ export function SettingsModal({
                     <input
                       type="checkbox"
                       checked={settings.animationsEnabled !== false}
-                      onChange={(e) => setSettings({ ...settings, animationsEnabled: e.target.checked })}
+                      onChange={(e) => updateSetting('animationsEnabled', e.target.checked)}
                       className="h-4 w-4 accent-indigo-600"
                     />
                   </label>
@@ -726,7 +627,7 @@ export function SettingsModal({
                 >
                   <select
                     value={settings.clockFormat}
-                    onChange={(e) => setSettings({ ...settings, clockFormat: e.target.value })}
+                    onChange={(e) => updateClockSetting('clockFormat', e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
                   >
                     <option value="12h">12 hour</option>
@@ -738,7 +639,7 @@ export function SettingsModal({
                       aria-label="Show seconds"
                       type="checkbox"
                       checked={settings.showSeconds !== false}
-                      onChange={(e) => setSettings({ ...settings, showSeconds: e.target.checked })}
+                      onChange={(e) => updateClockSetting('showSeconds', e.target.checked)}
                       className="h-4 w-4 accent-indigo-600"
                     />
                   </label>
@@ -748,7 +649,7 @@ export function SettingsModal({
                       aria-label="Clock background"
                       type="checkbox"
                       checked={settings.clockBackgroundVisible !== false}
-                      onChange={(e) => setSettings({ ...settings, clockBackgroundVisible: e.target.checked })}
+                      onChange={(e) => updateClockSetting('clockBackgroundVisible', e.target.checked)}
                       className="h-4 w-4 accent-indigo-600"
                     />
                   </label>
@@ -759,12 +660,12 @@ export function SettingsModal({
                         aria-label="Clock text color"
                         type="color"
                         value={effectiveClockTextColor}
-                        onChange={(e) => setSettings({ ...settings, clockTextColor: e.target.value })}
+                        onChange={(e) => updateClockSetting('clockTextColor', e.target.value)}
                         className="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1"
                       />
                       <button
                         type="button"
-                        onClick={() => setSettings({ ...settings, clockTextColor: '' })}
+                        onClick={() => updateClockSetting('clockTextColor', '')}
                         className="rounded-md text-xs text-slate-500 hover:text-indigo-600 text-left"
                       >
                         Use theme text
@@ -776,12 +677,12 @@ export function SettingsModal({
                         aria-label="Clock background color"
                         type="color"
                         value={effectiveClockBackgroundColor}
-                        onChange={(e) => setSettings({ ...settings, clockBackgroundColor: e.target.value })}
+                        onChange={(e) => updateClockSetting('clockBackgroundColor', e.target.value)}
                         className="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1"
                       />
                       <button
                         type="button"
-                        onClick={() => setSettings({ ...settings, clockBackgroundColor: '' })}
+                        onClick={() => updateClockSetting('clockBackgroundColor', '')}
                         className="rounded-md text-xs text-slate-500 hover:text-indigo-600 text-left"
                       >
                         Use theme fill
@@ -794,7 +695,7 @@ export function SettingsModal({
                       aria-label="Digital clock"
                       aria-pressed={settings.clockDisplayMode !== 'analog'}
                       type="button"
-                      onClick={() => setSettings({ ...settings, clockDisplayMode: 'digital' })}
+                      onClick={() => updateClockSetting('clockDisplayMode', 'digital')}
                       className="h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 grid place-items-center aria-pressed:text-indigo-600 aria-pressed:border-indigo-300"
                     >
                       <Hash size={16} />
@@ -803,7 +704,7 @@ export function SettingsModal({
                       aria-label="Analog clock"
                       aria-pressed={settings.clockDisplayMode === 'analog'}
                       type="button"
-                      onClick={() => setSettings({ ...settings, clockDisplayMode: 'analog' })}
+                      onClick={() => updateClockSetting('clockDisplayMode', 'analog')}
                       className="h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 grid place-items-center aria-pressed:text-indigo-600 aria-pressed:border-indigo-300"
                     >
                       <Clock size={16} />
@@ -815,9 +716,7 @@ export function SettingsModal({
                       aria-label="Hourly timeline guide lines"
                       type="checkbox"
                       checked={settings.timelineHourLinesVisible !== false}
-                      onChange={(e) =>
-                        setSettings({ ...settings, timelineHourLinesVisible: e.target.checked })
-                      }
+                      onChange={(e) => updateClockSetting('timelineHourLinesVisible', e.target.checked)}
                       className="h-4 w-4 accent-indigo-600"
                     />
                   </label>
@@ -827,7 +726,7 @@ export function SettingsModal({
                       aria-label="Current time red line"
                       type="checkbox"
                       checked={settings.timelineNowLineVisible !== false}
-                      onChange={(e) => setSettings({ ...settings, timelineNowLineVisible: e.target.checked })}
+                      onChange={(e) => updateClockSetting('timelineNowLineVisible', e.target.checked)}
                       className="h-4 w-4 accent-indigo-600"
                     />
                   </label>
@@ -874,7 +773,7 @@ export function SettingsModal({
                 >
                   <select
                     value={settings.layoutPreset}
-                    onChange={(e) => setSettings({ ...settings, layoutPreset: e.target.value })}
+                    onChange={(e) => updateSetting('layoutPreset', e.target.value)}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
                   >
                     <option value="standard">Three columns</option>
@@ -885,7 +784,7 @@ export function SettingsModal({
                     <input
                       type="checkbox"
                       checked={settings.resizeHandleVisible !== false}
-                      onChange={(e) => setSettings({ ...settings, resizeHandleVisible: e.target.checked })}
+                      onChange={(e) => updateSetting('resizeHandleVisible', e.target.checked)}
                       className="h-4 w-4 accent-indigo-600"
                     />
                   </label>
@@ -930,7 +829,7 @@ export function SettingsModal({
                         aria-label="Resize bar color"
                         type="color"
                         value={settings.resizeHandleColor || '#94a3b8'}
-                        onChange={(e) => setSettings({ ...settings, resizeHandleColor: e.target.value })}
+                        onChange={(e) => updateSetting('resizeHandleColor', e.target.value)}
                         className="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1"
                       />
                     </label>
@@ -940,7 +839,7 @@ export function SettingsModal({
                     <input
                       type="checkbox"
                       checked={Boolean(settings.collapseTasks)}
-                      onChange={(e) => setSettings({ ...settings, collapseTasks: e.target.checked })}
+                      onChange={(e) => updateSetting('collapseTasks', e.target.checked)}
                       className="h-4 w-4 accent-indigo-600"
                     />
                   </label>
@@ -1191,7 +1090,7 @@ export function SettingsModal({
                     <input
                       type="checkbox"
                       checked={settings.sidebarVisible !== false}
-                      onChange={(e) => setSettings({ ...settings, sidebarVisible: e.target.checked })}
+                      onChange={(e) => updateSetting('sidebarVisible', e.target.checked)}
                       className="h-4 w-4 accent-indigo-600"
                     />
                   </label>

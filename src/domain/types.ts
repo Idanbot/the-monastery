@@ -1,6 +1,20 @@
 export type TaskStatus = 'new' | 'done' | 'rejected';
 export type TaskRecurrence = 'none' | 'daily' | 'weekly' | 'monthly';
-export type VisualTheme = 'default' | 'zen' | 'tokyo-night' | 'liquid-glass' | 'obsidian-glass' | 'terminal' | 'terminal-white' | 'catppuccin' | 'gruvbox' | 'dracula' | 'github-light' | 'github-dark' | 'nord' | 'solarized' | 'monokai' | 'ayu' | 'night-owl' | 'synthwave';
+export type VisualTheme =
+  | 'default'
+  | 'zen'
+  | 'tokyo-night'
+  | 'liquid-glass'
+  | 'obsidian-glass'
+  | 'terminal'
+  | 'terminal-white'
+  | 'catppuccin'
+  | 'gruvbox'
+  | 'dracula'
+  | 'github-light'
+  | 'github-dark'
+  | 'nord'
+  | 'night-owl';
 export type ThemeColorScheme = {
   main: string;
   secondary: string;

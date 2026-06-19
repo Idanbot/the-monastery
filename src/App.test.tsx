@@ -389,27 +389,32 @@ it('opens full settings collapsed and supports icon-only expand/collapse control
   });
 });
 
-it('offers one default mode choice and one entry per custom theme', async () => {
+it('offers readable theme gallery choices for default modes and custom themes', async () => {
   const user = userEvent.setup();
   render(<App />);
 
   await user.click(screen.getByRole('button', { name: /open settings/i }));
   await user.click(screen.getByRole('button', { name: /^appearance$/i }));
 
-  const [themeSelect] = screen.getAllByRole('combobox');
-  const optionLabels = within(themeSelect)
-    .getAllByRole('option')
-    .map((option) => option.textContent);
+  const optionLabels = screen.getAllByTestId('theme-gallery-label').map((option) => option.textContent);
 
   expect(optionLabels).toEqual([
     'System Default',
     'Light',
-    'Dark',
     'Zen',
-    'Tokyo Night',
     'Liquid Glass',
+    'GitHub Light',
+    'Nord',
     'Terminal',
-    'Terminal White'
+    'Terminal White',
+    'Dark',
+    'Tokyo Night',
+    'Obsidian Glass',
+    'Catppuccin Mocha',
+    'Gruvbox',
+    'Dracula',
+    'GitHub Dark',
+    'Night Owl'
   ]);
 });
 

@@ -206,8 +206,18 @@ export const mergeSettings = (saved) => ({
     secondary: normalizeThemeColor(saved?.colorScheme?.secondary),
     text: normalizeThemeColor(saved?.colorScheme?.text)
   },
-  fontMain: typeof saved?.fontMain === 'string' ? saved.fontMain : (typeof saved?.fontFamily === 'string' ? saved.fontFamily : defaultSettings.fontMain),
-  fontSecondary: typeof saved?.fontSecondary === 'string' ? saved.fontSecondary : (typeof saved?.fontFamily === 'string' ? saved.fontFamily : defaultSettings.fontSecondary),
+  fontMain:
+    typeof saved?.fontMain === 'string'
+      ? saved.fontMain
+      : typeof saved?.fontFamily === 'string'
+        ? saved.fontFamily
+        : defaultSettings.fontMain,
+  fontSecondary:
+    typeof saved?.fontSecondary === 'string'
+      ? saved.fontSecondary
+      : typeof saved?.fontFamily === 'string'
+        ? saved.fontFamily
+        : defaultSettings.fontSecondary,
   customThemeName:
     typeof saved?.customThemeName === 'string' ? saved.customThemeName : defaultSettings.customThemeName,
   monkMode: Boolean(saved?.monkMode),

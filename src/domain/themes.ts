@@ -375,53 +375,24 @@ linear-gradient(135deg, #050508 0%, #000000 42%, #080812 100%)`,
       }
     }
   },
-  solarized: {
-    id: 'solarized',
-    label: 'Solarized Dark',
-    preferredMode: 'dark',
-    tokens: {
-      light: {
-        bgColor: '#002b36', bg: '#002b36', surface: '#073642', mutedSurface: '#586e75', text: '#839496', mutedText: '#657b83', border: '#586e75', accent: '#2aa198', accentContrast: '#002b36', modalSurfaceRgb: '7 54 66', modalBorderRgb: '88 110 117', motionDuration: '80ms'
-      }
-    }
-  },
-  monokai: {
-    id: 'monokai',
-    label: 'Monokai',
-    preferredMode: 'dark',
-    tokens: {
-      light: {
-        bgColor: '#272822', bg: '#272822', surface: '#3e3d32', mutedSurface: '#49483e', text: '#f8f8f2', mutedText: '#75715e', border: '#49483e', accent: '#a6e22e', accentContrast: '#272822', modalSurfaceRgb: '62 61 50', modalBorderRgb: '73 72 62', motionDuration: '80ms'
-      }
-    }
-  },
-  ayu: {
-    id: 'ayu',
-    label: 'Ayu Mirage',
-    preferredMode: 'dark',
-    tokens: {
-      light: {
-        bgColor: '#1f2430', bg: '#1f2430', surface: '#232834', mutedSurface: '#282e3a', text: '#cbccc6', mutedText: '#5c6773', border: '#5c6773', accent: '#ffcc66', accentContrast: '#1f2430', modalSurfaceRgb: '35 40 52', modalBorderRgb: '92 103 115', motionDuration: '80ms'
-      }
-    }
-  },
   'night-owl': {
     id: 'night-owl',
     label: 'Night Owl',
     preferredMode: 'dark',
     tokens: {
       light: {
-        bgColor: '#011627', bg: '#011627', surface: '#0b2942', mutedSurface: '#113554', text: '#d6deeb', mutedText: '#5f7e97', border: '#5f7e97', accent: '#82aaff', accentContrast: '#011627', modalSurfaceRgb: '11 41 66', modalBorderRgb: '95 126 151', motionDuration: '80ms'
-      }
-    }
-  },
-  synthwave: {
-    id: 'synthwave',
-    label: 'Synthwave 84',
-    preferredMode: 'dark',
-    tokens: {
-      light: {
-        bgColor: '#2b213a', bg: '#2b213a', surface: '#241b2f', mutedSurface: '#262335', text: '#f92aad', mutedText: '#36f9f6', border: '#36f9f6', accent: '#fce566', accentContrast: '#2b213a', modalSurfaceRgb: '36 27 47', modalBorderRgb: '54 249 246', motionDuration: '80ms'
+        bgColor: '#011627',
+        bg: '#011627',
+        surface: '#0b2942',
+        mutedSurface: '#113554',
+        text: '#d6deeb',
+        mutedText: '#5f7e97',
+        border: '#5f7e97',
+        accent: '#82aaff',
+        accentContrast: '#011627',
+        modalSurfaceRgb: '11 41 66',
+        modalBorderRgb: '95 126 151',
+        motionDuration: '80ms'
       }
     }
   }

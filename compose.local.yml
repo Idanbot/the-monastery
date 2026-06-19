@@ -1,5 +1,6 @@
 services:
   the-monastery:
+    image: the-monastery:local
     build:
       context: .
       dockerfile: Dockerfile
