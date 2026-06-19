@@ -1,6 +1,7 @@
 export const tasksStorageKey = 'the-monastery_tasks_v1';
 export const settingsStorageKey = 'the-monastery_settings_v1';
 export const activeProfileStorageKey = 'the-monastery_active_profile_id_v1';
+export const backupHistoryStorageKey = 'the-monastery_backup_history_v1';
 
 const theMonasteryDbName = 'the-monastery_app';
 const theMonasteryStoreName = 'kv';

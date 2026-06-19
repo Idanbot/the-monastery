@@ -1,3 +1,7 @@
+import { useMemo, useRef } from 'react';
+import { DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDownUp, CheckSquare, Clock, Flame, GripHorizontal, Play, Repeat } from 'lucide-react';
 import { UrgencyBadge } from '../UrgencyBadge';
 import {
@@ -25,6 +29,7 @@ function TaskColumn({
   handleDrop,
   handleDragStart,
   setSelectedTaskId,
+  keyboardFocusedTaskId,
   now
 }) {
   const filtered = filteredTasks.filter((task) => task.status === status);
@@ -73,6 +78,7 @@ function TaskColumn({
           const isDragOverTop = dragOverInfo?.id === task.id && dragOverInfo?.position === 'top';
           const isDragOverBottom = dragOverInfo?.id === task.id && dragOverInfo?.position === 'bottom';
           const isDragging = draggedTaskId === task.id;
+          const isKeyboardFocused = keyboardFocusedTaskId === task.id;
           const taskTags = getEffectiveTags(task);
 
           return (
@@ -89,7 +95,7 @@ function TaskColumn({
                   setDragOverInfo(null);
                 }}
                 onClick={() => setSelectedTaskId(task.id)}
-                className={`bg-white dark:bg-slate-900 ${settings.collapseTasks ? 'p-2' : 'p-3'} rounded-lg shadow-sm border cursor-pointer transition-all group overflow-hidden ${isDragging ? 'opacity-50 grayscale' : ''}
+                className={`bg-white dark:bg-slate-900 ${settings.collapseTasks ? 'p-2' : 'p-3'} rounded-lg shadow-sm border cursor-pointer transition-all group overflow-hidden ${isDragging ? 'opacity-50 grayscale' : ''} ${isKeyboardFocused ? 'ring-2 ring-amber-400 border-amber-300' : ''}
                   ${isActive ? 'border-indigo-400 ring-1 ring-indigo-400/30' : 'border-slate-200 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-600'}
                 `}
               >
@@ -177,9 +183,28 @@ function TaskColumn({
 
 export function TaskListView({ filteredTasks, setSelectedTaskId, now }) {
   const orderedStatuses = ['new', 'done', 'rejected'];
+  const parentRef = useRef(null);
+  const rowCount = useMemo(
+    () => orderedStatuses.length + filteredTasks.length,
+    [filteredTasks, orderedStatuses.length]
+  );
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual manages its own measurement callbacks.
+  const virtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 92,
+    overscan: 8
+  });
 
   return (
-    <div role="list" aria-label="Task list" className="h-full overflow-y-auto custom-scrollbar space-y-4">
+    <div
+      ref={parentRef}
+      role="list"
+      aria-label="Task list"
+      data-testid="virtualized-task-list"
+      data-virtual-items={virtualizer.getVirtualItems().length}
+      className="h-full overflow-y-auto custom-scrollbar space-y-4"
+    >
       {orderedStatuses.map((status) => {
         const statusTasks = filteredTasks.filter((task) => task.status === status);
         return (
@@ -269,174 +294,191 @@ export function KanbanBoard({
   handleDrop,
   handleDragStart,
   setSelectedTaskId,
+  keyboardFocusedTaskId,
   now,
   startResize
 }) {
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
+  const sortableTaskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
+
   return (
-    <div
-      id="kanban-board"
-      className="flex-1 min-h-0 flex flex-col sm:flex-row gap-2 md:gap-4 overflow-hidden relative"
-    >
-      {settings.layoutPreset === 'standard' ? (
-        <>
-          <div
-            style={{ flex: `${settings.columnWidths.new} 1 0%` }}
-            className="h-full min-h-0 min-w-0 flex-1"
-          >
-            <TaskColumn
-              status="new"
-              filteredTasks={filteredTasks}
-              settings={settings}
-              columnSorts={columnSorts}
-              cycleSort={cycleSort}
-              draggedTaskId={draggedTaskId}
-              dragOverInfo={dragOverInfo}
-              setDraggedTaskId={setDraggedTaskId}
-              setDragOverInfo={setDragOverInfo}
-              handleDragOver={handleDragOver}
-              handleDrop={handleDrop}
-              handleDragStart={handleDragStart}
-              setSelectedTaskId={setSelectedTaskId}
-              now={now}
-            />
-          </div>
-          <div
-            className="resize-handle resize-handle-vertical w-1 cursor-col-resize shrink-0 flex items-center justify-center hover:bg-indigo-500/10 group rounded hidden sm:flex"
-            onMouseDown={() => startResize('new-done')}
-          >
-            <div className="resize-grip resize-grip-vertical w-px h-10 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
-          </div>
-          <div
-            style={{ flex: `${settings.columnWidths.done} 1 0%` }}
-            className="h-full min-h-0 min-w-0 flex-1"
-          >
-            <TaskColumn
-              status="done"
-              filteredTasks={filteredTasks}
-              settings={settings}
-              columnSorts={columnSorts}
-              cycleSort={cycleSort}
-              draggedTaskId={draggedTaskId}
-              dragOverInfo={dragOverInfo}
-              setDraggedTaskId={setDraggedTaskId}
-              setDragOverInfo={setDragOverInfo}
-              handleDragOver={handleDragOver}
-              handleDrop={handleDrop}
-              handleDragStart={handleDragStart}
-              setSelectedTaskId={setSelectedTaskId}
-              now={now}
-            />
-          </div>
-          <div
-            className="resize-handle resize-handle-vertical w-1 cursor-col-resize shrink-0 flex items-center justify-center hover:bg-indigo-500/10 group rounded hidden sm:flex"
-            onMouseDown={() => startResize('done-rejected')}
-          >
-            <div className="resize-grip resize-grip-vertical w-px h-10 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
-          </div>
-          <div
-            style={{ flex: `${settings.columnWidths.rejected} 1 0%` }}
-            className="h-full min-h-0 min-w-0 flex-1"
-          >
-            <TaskColumn
-              status="rejected"
-              filteredTasks={filteredTasks}
-              settings={settings}
-              columnSorts={columnSorts}
-              cycleSort={cycleSort}
-              draggedTaskId={draggedTaskId}
-              dragOverInfo={dragOverInfo}
-              setDraggedTaskId={setDraggedTaskId}
-              setDragOverInfo={setDragOverInfo}
-              handleDragOver={handleDragOver}
-              handleDrop={handleDrop}
-              handleDragStart={handleDragStart}
-              setSelectedTaskId={setSelectedTaskId}
-              now={now}
-            />
-          </div>
-        </>
-      ) : (
-        <>
-          <div
-            style={{ flex: `${settings.compactColumnWidths.left} 1 0%` }}
-            className="h-full min-h-0 min-w-0 flex-1"
-          >
-            <TaskColumn
-              status="new"
-              filteredTasks={filteredTasks}
-              settings={settings}
-              columnSorts={columnSorts}
-              cycleSort={cycleSort}
-              draggedTaskId={draggedTaskId}
-              dragOverInfo={dragOverInfo}
-              setDraggedTaskId={setDraggedTaskId}
-              setDragOverInfo={setDragOverInfo}
-              handleDragOver={handleDragOver}
-              handleDrop={handleDrop}
-              handleDragStart={handleDragStart}
-              setSelectedTaskId={setSelectedTaskId}
-              now={now}
-            />
-          </div>
-          <div
-            className="resize-handle resize-handle-vertical w-1 cursor-col-resize shrink-0 flex items-center justify-center hover:bg-indigo-500/10 group rounded hidden sm:flex"
-            onMouseDown={() => startResize('compact-horizontal')}
-          >
-            <div className="resize-grip resize-grip-vertical w-px h-10 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
-          </div>
-          <div
-            id="compact-right-col"
-            style={{ flex: `${settings.compactColumnWidths.right} 1 0%` }}
-            className="h-full min-h-0 flex flex-col min-w-0 flex-1"
-          >
-            <div style={{ flex: `${settings.compactHeights.done} 1 0%` }} className="w-full min-h-0 flex-1">
-              <TaskColumn
-                status="done"
-                filteredTasks={filteredTasks}
-                settings={settings}
-                columnSorts={columnSorts}
-                cycleSort={cycleSort}
-                draggedTaskId={draggedTaskId}
-                dragOverInfo={dragOverInfo}
-                setDraggedTaskId={setDraggedTaskId}
-                setDragOverInfo={setDragOverInfo}
-                handleDragOver={handleDragOver}
-                handleDrop={handleDrop}
-                handleDragStart={handleDragStart}
-                setSelectedTaskId={setSelectedTaskId}
-                now={now}
-              />
-            </div>
-            <div
-              className="resize-handle resize-handle-horizontal h-1 w-full cursor-row-resize shrink-0 flex items-center justify-center hover:bg-indigo-500/10 group rounded"
-              onMouseDown={() => startResize('compact-vertical')}
-            >
-              <div className="resize-grip resize-grip-horizontal h-px w-10 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
-            </div>
-            <div
-              style={{ flex: `${settings.compactHeights.rejected} 1 0%` }}
-              className="w-full min-h-0 flex-1"
-            >
-              <TaskColumn
-                status="rejected"
-                filteredTasks={filteredTasks}
-                settings={settings}
-                columnSorts={columnSorts}
-                cycleSort={cycleSort}
-                draggedTaskId={draggedTaskId}
-                dragOverInfo={dragOverInfo}
-                setDraggedTaskId={setDraggedTaskId}
-                setDragOverInfo={setDragOverInfo}
-                handleDragOver={handleDragOver}
-                handleDrop={handleDrop}
-                handleDragStart={handleDragStart}
-                setSelectedTaskId={setSelectedTaskId}
-                now={now}
-              />
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+    <DndContext sensors={sensors}>
+      <SortableContext items={sortableTaskIds} strategy={verticalListSortingStrategy}>
+        <div
+          id="kanban-board"
+          className="flex-1 min-h-0 flex flex-col sm:flex-row gap-2 md:gap-4 overflow-hidden relative"
+        >
+          {settings.layoutPreset === 'standard' ? (
+            <>
+              <div
+                style={{ flex: `${settings.columnWidths.new} 1 0%` }}
+                className="h-full min-h-0 min-w-0 flex-1"
+              >
+                <TaskColumn
+                  status="new"
+                  filteredTasks={filteredTasks}
+                  settings={settings}
+                  columnSorts={columnSorts}
+                  cycleSort={cycleSort}
+                  draggedTaskId={draggedTaskId}
+                  dragOverInfo={dragOverInfo}
+                  setDraggedTaskId={setDraggedTaskId}
+                  setDragOverInfo={setDragOverInfo}
+                  handleDragOver={handleDragOver}
+                  handleDrop={handleDrop}
+                  handleDragStart={handleDragStart}
+                  setSelectedTaskId={setSelectedTaskId}
+                  keyboardFocusedTaskId={keyboardFocusedTaskId}
+                  now={now}
+                />
+              </div>
+              <div
+                className="resize-handle resize-handle-vertical w-1 cursor-col-resize shrink-0 flex items-center justify-center hover:bg-indigo-500/10 group rounded hidden sm:flex"
+                onMouseDown={() => startResize('new-done')}
+              >
+                <div className="resize-grip resize-grip-vertical w-px h-10 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
+              </div>
+              <div
+                style={{ flex: `${settings.columnWidths.done} 1 0%` }}
+                className="h-full min-h-0 min-w-0 flex-1"
+              >
+                <TaskColumn
+                  status="done"
+                  filteredTasks={filteredTasks}
+                  settings={settings}
+                  columnSorts={columnSorts}
+                  cycleSort={cycleSort}
+                  draggedTaskId={draggedTaskId}
+                  dragOverInfo={dragOverInfo}
+                  setDraggedTaskId={setDraggedTaskId}
+                  setDragOverInfo={setDragOverInfo}
+                  handleDragOver={handleDragOver}
+                  handleDrop={handleDrop}
+                  handleDragStart={handleDragStart}
+                  setSelectedTaskId={setSelectedTaskId}
+                  keyboardFocusedTaskId={keyboardFocusedTaskId}
+                  now={now}
+                />
+              </div>
+              <div
+                className="resize-handle resize-handle-vertical w-1 cursor-col-resize shrink-0 flex items-center justify-center hover:bg-indigo-500/10 group rounded hidden sm:flex"
+                onMouseDown={() => startResize('done-rejected')}
+              >
+                <div className="resize-grip resize-grip-vertical w-px h-10 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
+              </div>
+              <div
+                style={{ flex: `${settings.columnWidths.rejected} 1 0%` }}
+                className="h-full min-h-0 min-w-0 flex-1"
+              >
+                <TaskColumn
+                  status="rejected"
+                  filteredTasks={filteredTasks}
+                  settings={settings}
+                  columnSorts={columnSorts}
+                  cycleSort={cycleSort}
+                  draggedTaskId={draggedTaskId}
+                  dragOverInfo={dragOverInfo}
+                  setDraggedTaskId={setDraggedTaskId}
+                  setDragOverInfo={setDragOverInfo}
+                  handleDragOver={handleDragOver}
+                  handleDrop={handleDrop}
+                  handleDragStart={handleDragStart}
+                  setSelectedTaskId={setSelectedTaskId}
+                  keyboardFocusedTaskId={keyboardFocusedTaskId}
+                  now={now}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                style={{ flex: `${settings.compactColumnWidths.left} 1 0%` }}
+                className="h-full min-h-0 min-w-0 flex-1"
+              >
+                <TaskColumn
+                  status="new"
+                  filteredTasks={filteredTasks}
+                  settings={settings}
+                  columnSorts={columnSorts}
+                  cycleSort={cycleSort}
+                  draggedTaskId={draggedTaskId}
+                  dragOverInfo={dragOverInfo}
+                  setDraggedTaskId={setDraggedTaskId}
+                  setDragOverInfo={setDragOverInfo}
+                  handleDragOver={handleDragOver}
+                  handleDrop={handleDrop}
+                  handleDragStart={handleDragStart}
+                  setSelectedTaskId={setSelectedTaskId}
+                  keyboardFocusedTaskId={keyboardFocusedTaskId}
+                  now={now}
+                />
+              </div>
+              <div
+                className="resize-handle resize-handle-vertical w-1 cursor-col-resize shrink-0 flex items-center justify-center hover:bg-indigo-500/10 group rounded hidden sm:flex"
+                onMouseDown={() => startResize('compact-horizontal')}
+              >
+                <div className="resize-grip resize-grip-vertical w-px h-10 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
+              </div>
+              <div
+                id="compact-right-col"
+                style={{ flex: `${settings.compactColumnWidths.right} 1 0%` }}
+                className="h-full min-h-0 flex flex-col min-w-0 flex-1"
+              >
+                <div
+                  style={{ flex: `${settings.compactHeights.done} 1 0%` }}
+                  className="w-full min-h-0 flex-1"
+                >
+                  <TaskColumn
+                    status="done"
+                    filteredTasks={filteredTasks}
+                    settings={settings}
+                    columnSorts={columnSorts}
+                    cycleSort={cycleSort}
+                    draggedTaskId={draggedTaskId}
+                    dragOverInfo={dragOverInfo}
+                    setDraggedTaskId={setDraggedTaskId}
+                    setDragOverInfo={setDragOverInfo}
+                    handleDragOver={handleDragOver}
+                    handleDrop={handleDrop}
+                    handleDragStart={handleDragStart}
+                    setSelectedTaskId={setSelectedTaskId}
+                    keyboardFocusedTaskId={keyboardFocusedTaskId}
+                    now={now}
+                  />
+                </div>
+                <div
+                  className="resize-handle resize-handle-horizontal h-1 w-full cursor-row-resize shrink-0 flex items-center justify-center hover:bg-indigo-500/10 group rounded"
+                  onMouseDown={() => startResize('compact-vertical')}
+                >
+                  <div className="resize-grip resize-grip-horizontal h-px w-10 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-400 rounded-full transition-colors"></div>
+                </div>
+                <div
+                  style={{ flex: `${settings.compactHeights.rejected} 1 0%` }}
+                  className="w-full min-h-0 flex-1"
+                >
+                  <TaskColumn
+                    status="rejected"
+                    filteredTasks={filteredTasks}
+                    settings={settings}
+                    columnSorts={columnSorts}
+                    cycleSort={cycleSort}
+                    draggedTaskId={draggedTaskId}
+                    dragOverInfo={dragOverInfo}
+                    setDraggedTaskId={setDraggedTaskId}
+                    setDragOverInfo={setDragOverInfo}
+                    handleDragOver={handleDragOver}
+                    handleDrop={handleDrop}
+                    handleDragStart={handleDragStart}
+                    setSelectedTaskId={setSelectedTaskId}
+                    keyboardFocusedTaskId={keyboardFocusedTaskId}
+                    now={now}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }

@@ -2,6 +2,26 @@ import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
 if (typeof window !== 'undefined') {
+  class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+
+  Object.defineProperty(window, 'ResizeObserver', { writable: true, value: ResizeObserverMock });
+  Object.defineProperty(globalThis, 'ResizeObserver', { writable: true, value: ResizeObserverMock });
+
+  if (!URL.createObjectURL) {
+    URL.createObjectURL = vi.fn(() => 'blob:test');
+  }
+  if (!URL.revokeObjectURL) {
+    URL.revokeObjectURL = vi.fn();
+  }
+
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = vi.fn();
+  }
+
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query) => ({

@@ -95,6 +95,34 @@ test('adds a task tag from the fuzzy tag pool', async ({ page }) => {
   await expectTaskVisible(page, 'Pool tag smoke');
 });
 
+test('plans day, suggests title tags, opens shortcuts, and records local backup history', async ({
+  page
+}) => {
+  await page.goto('/');
+
+  await page.getByLabel('New task').click();
+  await page.getByLabel('Title').fill('Python plan smoke');
+  await page.getByRole('button', { name: /add suggested tag python/i }).click();
+  await expect(page.getByPlaceholder(/backend, high priority/i)).toHaveValue('python');
+  await page.getByRole('button', { name: /save task/i }).click();
+
+  await createTask(page, 'Unscheduled day plan smoke');
+  await page.getByRole('button', { name: /plan day/i }).click();
+  await expectTaskVisible(page, 'Unscheduled day plan smoke');
+
+  await page.keyboard.press('?');
+  await expect(page.getByRole('dialog', { name: /keyboard shortcuts/i })).toBeVisible();
+  await page.getByRole('button', { name: /close keyboard shortcuts/i }).click();
+
+  await page.getByRole('button', { name: /open settings/i }).click();
+  await page.getByRole('button', { name: /^tasks data$/i }).click();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /backup/i }).click();
+  await downloadPromise;
+  await expect(page.getByText(/local backup history/i)).toBeVisible();
+  await expect(page.getByText(/2 tasks/i)).toBeVisible();
+});
+
 test('opens settings and exposes backup/import controls', async ({ page }) => {
   await page.goto('/');
 
@@ -103,7 +131,8 @@ test('opens settings and exposes backup/import controls', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /preferences/i })).toBeVisible();
   await page.getByRole('button', { name: /^tasks data$/i }).click();
   await expect(page.getByRole('button', { name: /backup/i })).toBeVisible();
-  await expect(page.getByRole('button', { name: /import/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Import', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /import ics/i })).toBeVisible();
 });
 
 test('customizes clock, resize handles, and timeline guides from settings', async ({ page }) => {
@@ -125,24 +154,34 @@ test('customizes clock, resize handles, and timeline guides from settings', asyn
 
   await page.getByRole('button', { name: /open settings/i }).click();
   await page.getByRole('button', { name: 'Appearance' }).click();
-  await page.getByLabel('Clock background').uncheck();
+  await expect(page.getByLabel('Hourly timeline guide lines')).toHaveCount(0);
+  await expect(page.getByLabel('Resize bars')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Board' }).click();
   await page.getByLabel('Resize bars').uncheck();
-  await page.getByLabel('Hourly timeline guide lines').uncheck();
-  await page.getByLabel('Current time red line').uncheck();
   await page.getByLabel('Resize bar thickness').fill('12');
   await page.getByLabel('Resize bar length').fill('88');
   await page.getByLabel('Resize bar color').fill('#ff2d55');
+  await page.getByRole('button', { name: 'Time' }).click();
+  await page.getByRole('checkbox', { name: 'Clock background' }).uncheck();
+  await page.getByLabel('Hourly timeline guide lines').uncheck();
+  await page.getByLabel('Current time red line').uncheck();
+  await page.getByLabel('Clock text color').fill('#1d1d1f');
+  await page.getByLabel('Clock background color').fill('#f5f5f7');
+  await page.getByRole('button', { name: /analog clock/i }).click();
+  await expect(page.getByRole('button', { name: /increase clock size/i })).toHaveText('+');
   await page.getByRole('button', { name: /close settings/i }).click();
 
   await expect(clock).toHaveAttribute('data-clock-background', 'false');
+  await expect(clock).toHaveAttribute('data-clock-mode', 'analog');
+  await expect(page.getByTestId('clock-analog')).toBeVisible();
   await expect(page.getByTestId('main-sidebar-resizer')).toHaveCount(0);
   await expect(page.locator('[data-testid=timeline-hour-line]')).toHaveCount(0);
   await expect(page.locator('[data-testid=timeline-now-line]')).toHaveCount(0);
 
   await page.getByRole('button', { name: /open clock settings/i }).click();
   await expect(page.getByRole('heading', { name: /preferences/i })).toBeVisible();
-  await page.getByRole('button', { name: /increase clock text size/i }).click();
-  await expect(page.getByTestId('clock-time')).toBeVisible();
+  await page.getByRole('button', { name: /increase clock size/i }).click();
+  await expect(page.getByTestId('clock-analog')).toBeVisible();
 });
 
 test('customizes Liquid Glass colors and exposes material surfaces', async ({ page }) => {
@@ -153,6 +192,8 @@ test('customizes Liquid Glass colors and exposes material surfaces', async ({ pa
   await page.getByRole('combobox').first().selectOption('theme:liquid-glass');
   await page.getByLabel('Main color').fill('#ff2d55');
   await page.getByLabel('Secondary color').fill('#34c759');
+  await page.getByLabel('Text color').fill('#2c2c2e');
+  await expect(page.getByRole('combobox').first()).not.toContainText('Terminal Clean');
   await page.getByRole('button', { name: /close settings/i }).click();
 
   const shell = page.locator('.app-shell');
@@ -160,11 +201,23 @@ test('customizes Liquid Glass colors and exposes material surfaces', async ({ pa
   await expect(page.getByTestId('app-sidebar')).toHaveAttribute('data-material', 'sidebar');
   await expect(page.locator('.app-header')).toHaveAttribute('data-material', 'control');
 
+  const resizeGrip = page.locator('.resize-grip-vertical').first();
+  await expect(resizeGrip).toBeVisible();
+  await expect
+    .poll(async () => resizeGrip.evaluate((element) => element.getBoundingClientRect().height))
+    .toBeLessThan(80);
+  await expect
+    .poll(async () =>
+      resizeGrip.evaluate((element) => getComputedStyle(element.parentElement!).backgroundColor)
+    )
+    .toBe('rgba(0, 0, 0, 0)');
+
   const tokens = await shell.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       main: style.getPropertyValue('--theme-main').trim(),
       secondary: style.getPropertyValue('--theme-secondary').trim(),
+      text: style.getPropertyValue('--theme-text').trim(),
       glassBlur: style.getPropertyValue('--theme-glass-blur').trim(),
       radiusPanel: style.getPropertyValue('--theme-radius-panel').trim()
     };
@@ -173,9 +226,65 @@ test('customizes Liquid Glass colors and exposes material surfaces', async ({ pa
   expect(tokens).toEqual({
     main: '#ff2d55',
     secondary: '#34c759',
+    text: '#2c2c2e',
     glassBlur: '34px',
     radiusPanel: '28px'
   });
+});
+
+test('uses command palette, shortcuts, and task templates', async ({ page }) => {
+  await page.goto('/');
+
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K');
+  await expect(page.getByRole('dialog', { name: /command palette/i })).toBeVisible();
+  await page.getByRole('option', { name: /new focus task/i }).click();
+  await page.getByLabel('Title').fill('Palette focus task');
+  await page.getByRole('button', { name: /save task/i }).click();
+  await expectTaskVisible(page, 'Palette focus task');
+
+  await page.keyboard.press('n');
+  await page.getByRole('button', { name: /deep work template/i }).click();
+  await expect(page.getByLabel('Title')).toHaveValue('Deep Work Block');
+  await page.getByLabel('Title').fill('Template task');
+  await page.getByRole('button', { name: /save task/i }).click();
+  await expectTaskVisible(page, 'Template task');
+
+  await page.keyboard.press('m');
+  await expect(page.getByRole('heading', { name: /monk mode/i })).toBeVisible();
+  await expect(page.getByTestId('monk-minimap')).toBeVisible();
+});
+
+test('exports and imports the active profile from settings', async ({ page }) => {
+  await page.goto('/');
+  await createTask(page, 'Profile portable task');
+
+  await page.getByRole('button', { name: /open settings/i }).click();
+  await page.getByRole('button', { name: /^profiles$/i }).click();
+  await expect(page.getByRole('button', { name: /export profile/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /import profile/i })).toBeVisible();
+});
+
+test('drags scheduled tasks on the timeline to update start time', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByLabel('New task').click();
+  await page.getByLabel('Title').fill('Timeline drag task');
+  await page.getByLabel('Date').fill(new Date().toISOString().slice(0, 10));
+  await page.getByLabel('Start').fill('09:00');
+  await page.getByLabel('End').fill('10:00');
+  await page.getByRole('button', { name: /save task/i }).click();
+
+  const taskBlock = page.getByTestId('timeline-task-Timeline drag task');
+  await expect(taskBlock).toBeVisible();
+  const box = await taskBlock.boundingBox();
+  if (!box) throw new Error('Missing timeline task box');
+  const startY = box.y + box.height / 2;
+  await taskBlock.dispatchEvent('mousedown', { clientY: startY, bubbles: true });
+  await page.locator('body').dispatchEvent('mouseup', { clientY: startY + 60, bubbles: true });
+
+  await expect(taskBlock).toHaveAttribute('data-scheduled-start', '10:00');
+  await taskBlock.click();
+  await expect(page.getByLabel('Start')).toHaveValue('10:00');
 });
 
 test('creates, resets, and removes a synced profile', async ({ page }) => {
@@ -200,6 +309,74 @@ test('creates, resets, and removes a synced profile', async ({ page }) => {
   await page.getByRole('button', { name: /list/i }).click();
   await searchTasks(page, 'Profile reset smoke');
   await expect(page.getByText('Profile reset smoke')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /open settings/i }).click();
+  await page.getByRole('button', { name: /^profiles$/i }).click();
+  await profilesSection.getByRole('button', { name: /^remove$/i }).click();
+  await page.getByRole('button', { name: /remove profile/i }).click();
+  await page.getByRole('button', { name: /open settings/i }).click();
+  await page.getByRole('button', { name: /^profiles$/i }).click();
+  await expect(profilesSection.getByRole('combobox')).not.toContainText(profileName);
+});
+
+test('completes a full profile roles tasks analytics lifecycle', async ({ page }) => {
+  const profileName = 'Analytics Flow ' + Date.now();
+
+  await page.goto('/');
+  await page.getByRole('button', { name: /open settings/i }).click();
+  await page.getByRole('button', { name: /^profiles$/i }).click();
+  const profilesSection = page.locator('section').filter({ hasText: 'Profiles' });
+  await profilesSection.getByPlaceholder('New profile name').fill(profileName);
+  await profilesSection.getByRole('button', { name: /create/i }).click();
+  await expect(profilesSection.getByRole('combobox')).toContainText(profileName);
+
+  await page.getByRole('button', { name: /^roles$/i }).click();
+  const rolesSection = page.locator('section').filter({ hasText: 'Roles' });
+  await rolesSection.getByRole('button', { name: /^preset$/i }).click();
+  await expect(page.locator("input[value='Backend']")).toBeVisible();
+
+  const addRole = async (name: string, tags: string) => {
+    await rolesSection.getByRole('button', { name: /^add$/i }).click();
+    await page.locator("input[value='New Role']").last().fill(name);
+    const tagInput = page.getByPlaceholder('python, docker, backend').last();
+    await tagInput.fill(tags);
+    await tagInput.press('Enter');
+  };
+
+  await addRole('Frontend', 'frontend, react');
+  await addRole('DevOps', 'devops, ci');
+  await page.getByRole('button', { name: /close settings/i }).click();
+
+  await page.getByLabel('New task').click();
+  await page.getByLabel('Title').fill('Backend shipped task');
+  await page.getByLabel('Status').selectOption('done');
+  await page.getByLabel('Tags').fill('backend');
+  await page.getByRole('button', { name: 'Timer', exact: true }).click();
+  await page.getByRole('button', { name: /add log/i }).click();
+  await page.getByRole('button', { name: /save task/i }).click();
+
+  await page.getByLabel('New task').click();
+  await page.getByLabel('Title').fill('Frontend rejected task');
+  await page.getByLabel('Status').selectOption('rejected');
+  await page.getByLabel('Tags').fill('frontend');
+  await page.getByRole('button', { name: /add log/i }).click();
+  await page.getByRole('button', { name: /save task/i }).click();
+
+  await page.getByLabel('New task').click();
+  await page.getByLabel('Title').fill('Open backend task');
+  await page.getByLabel('Tags').fill('backend');
+  await page.getByRole('button', { name: /save task/i }).click();
+
+  await page.getByRole('button', { name: 'Analytics', exact: true }).click();
+  await expect(page.getByTestId('metric-new')).toContainText('1');
+  await expect(page.getByTestId('metric-done')).toContainText('1');
+  await expect(page.getByTestId('metric-rejected')).toContainText('1');
+  await expect(page.getByTestId('role-radar-chart')).toBeVisible();
+  await expect(page.getByTestId('role-radar-polygon')).toBeVisible();
+  await expect(page.locator('section').filter({ hasText: 'Role Hours' })).toContainText('Backend');
+  await expect(page.locator('section').filter({ hasText: 'Role Hours' })).toContainText('Frontend');
+  await expect(page.locator('section').filter({ hasText: 'Tag Hours' })).toContainText('backend');
+  await expect(page.locator('section').filter({ hasText: 'Focus Snapshot' })).toContainText('Top tag');
 
   await page.getByRole('button', { name: /open settings/i }).click();
   await page.getByRole('button', { name: /^profiles$/i }).click();
@@ -281,7 +458,7 @@ test('merges imported tasks into the active profile', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /open settings/i }).click();
   await page.getByRole('button', { name: /^tasks data$/i }).click();
-  await page.locator('input[type="file"]').setInputFiles({
+  await page.locator('input[accept="application/json,.json"]').setInputFiles({
     name: 'tasks.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify({ schemaVersion: 1, tasks: [task] }))
@@ -357,12 +534,12 @@ test('adjusts clock text size with sidebar controls', async ({ page }) => {
   );
 
   await page.getByRole('button', { name: /open clock settings/i }).click();
-  await page.getByRole('button', { name: /increase clock text size/i }).click();
+  await page.getByRole('button', { name: /increase clock size/i }).click();
   await expect
     .poll(async () => clock.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize)))
     .toBeGreaterThan(initialSize);
 
-  await page.getByRole('button', { name: /decrease clock text size/i }).click();
+  await page.getByRole('button', { name: /decrease clock size/i }).click();
   await expect
     .poll(async () => clock.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize)))
     .toBeLessThan(initialSize + 1);
@@ -394,8 +571,8 @@ test('enables monk mode and switches visual theme', async ({ page }) => {
   await page.getByRole('button', { name: /open settings/i }).click();
   await page.getByRole('button', { name: 'Appearance' }).click();
   const appearanceSection = page.locator('section').filter({ hasText: 'Appearance' });
-  await appearanceSection.getByRole('combobox').first().selectOption('theme:terminal-clean');
-  await expect(page.locator('[data-monk-mode][data-visual-theme="terminal-clean"]')).toBeVisible();
+  await appearanceSection.getByRole('combobox').first().selectOption('theme:terminal-white');
+  await expect(page.locator('[data-monk-mode][data-visual-theme="terminal-white"]')).toBeVisible();
 });
 
 test('uses the shared themed dropdown surface for filters and profiles', async ({ page }) => {
@@ -423,7 +600,7 @@ test('keeps themed modals readable in terminal themes', async ({ page }) => {
 
   await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveCSS('color', 'rgb(124, 255, 138)');
 
-  await appearanceSection.getByRole('combobox').first().selectOption('theme:terminal-clean-white');
+  await appearanceSection.getByRole('combobox').first().selectOption('theme:terminal-white');
   await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveCSS('color', 'rgb(255, 255, 255)');
 });
 

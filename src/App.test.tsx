@@ -46,6 +46,138 @@ it('renders TheMonastery board', () => {
   expect(screen.getByText('rejected')).toBeInTheDocument();
 });
 
+it('filters commands in the command palette', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await user.keyboard('{Control>}k{/Control}');
+  await user.type(screen.getByPlaceholderText(/search commands/i), 'analytics');
+
+  const palette = screen.getByRole('dialog', { name: /command palette/i });
+  expect(within(palette).getByText(/go to analytics/i)).toBeInTheDocument();
+  expect(within(palette).queryByRole('option', { name: /new focus task/i })).not.toBeInTheDocument();
+});
+
+it('renders analytics with a chart component', async () => {
+  const user = userEvent.setup();
+  seedTasks([makeTask({ id: 'done-task', title: 'Done task', status: 'done' })]);
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: /analytics/i }));
+
+  expect(screen.getByTestId('analytics-status-chart')).toBeInTheDocument();
+});
+
+it('shows virtualized mobile task list', async () => {
+  const user = userEvent.setup();
+  seedTasks([makeTask({ id: 'one', title: 'One' }), makeTask({ id: 'two', title: 'Two', status: 'done' })]);
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: /list/i }));
+
+  const taskList = screen.getByTestId('virtualized-task-list');
+  expect(taskList).toBeInTheDocument();
+  expect(within(taskList).getByText(/^One$/)).toBeInTheDocument();
+});
+
+it('shows the spring-backed ambient focus scene in monk mode', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: /enter monk mode/i }));
+
+  expect(screen.getByTestId('spring-focus-scene')).toBeInTheDocument();
+});
+
+it('suggests tags from the task title', async () => {
+  const user = userEvent.setup();
+  seedSettings({
+    roles: [
+      {
+        id: 'role-python',
+        name: 'Python',
+        tags: ['python'],
+        dailyTargetHours: 0,
+        weeklyTargetHours: 3,
+        monthlyTargetHours: 0
+      }
+    ]
+  });
+  render(<App />);
+
+  await clickNewTask(user);
+  await user.type(screen.getByLabelText(/title/i), 'Python practice');
+  await user.click(screen.getByRole('button', { name: /add suggested tag python/i }));
+
+  expect(screen.getByPlaceholderText(/backend, high priority/i)).toHaveValue('python');
+});
+
+it('plans unscheduled tasks into today', async () => {
+  const user = userEvent.setup();
+  seedTasks([makeTask({ id: 'unscheduled', title: 'Unscheduled', scheduledDate: '', scheduledStart: '' })]);
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: /plan day/i }));
+
+  await waitFor(() => {
+    expect(screen.getByTestId('timeline-task-Unscheduled')).toBeInTheDocument();
+  });
+});
+
+it('opens keyboard shortcut help with question mark', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await user.keyboard('?');
+
+  const dialog = screen.getByRole('dialog', { name: /keyboard shortcuts/i });
+  expect(dialog).toBeInTheDocument();
+  expect(within(dialog).getByText(/plan day/i)).toBeInTheDocument();
+});
+
+it('shows weekly role balance insight', async () => {
+  const user = userEvent.setup();
+  seedSettings({
+    roles: [
+      {
+        id: 'role-python',
+        name: 'Python',
+        tags: ['python'],
+        dailyTargetHours: 0,
+        weeklyTargetHours: 5,
+        monthlyTargetHours: 0
+      }
+    ]
+  });
+  seedTasks([
+    makeTask({
+      id: 'tracked',
+      title: 'Tracked',
+      tags: ['python'],
+      logs: [{ start: new Date(Date.now() - 3600000).toISOString(), end: new Date().toISOString() }]
+    })
+  ]);
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: /analytics/i }));
+
+  expect(screen.getByText(/weekly role balance/i)).toBeInTheDocument();
+  expect(screen.getByText(/4.0h left/i)).toBeInTheDocument();
+});
+
+it('stores local backup history from settings backup', async () => {
+  const user = userEvent.setup();
+  seedTasks([makeTask({ title: 'Backup me' })]);
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: /open settings/i }));
+  await user.click(screen.getByRole('button', { name: /^tasks data$/i }));
+  await user.click(screen.getByRole('button', { name: /^backup$/i }));
+
+  expect(screen.getByText(/local backup history/i)).toBeInTheDocument();
+  expect(screen.getByText(/1 tasks/i)).toBeInTheDocument();
+});
+
 it('adds a new task to the board', async () => {
   const user = userEvent.setup();
   render(<App />);
@@ -134,6 +266,20 @@ it('adds task tags from the fuzzy tag pool', async () => {
   expect(screen.getAllByText(/python study/i).length).toBeGreaterThan(0);
 });
 
+it('opens the keyboard-focused board task with j and Enter', async () => {
+  const user = userEvent.setup();
+  seedTasks([
+    makeTask({ id: 'first-task', title: 'First task' }),
+    makeTask({ id: 'second-task', title: 'Second task' })
+  ]);
+  render(<App />);
+
+  await user.keyboard('j');
+  await user.keyboard('{Enter}');
+
+  expect(screen.getByDisplayValue(/second task/i)).toBeInTheDocument();
+});
+
 it('shows role and tag analytics from tracked tag time', async () => {
   const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
   seedTasks([
@@ -148,8 +294,22 @@ it('shows role and tag analytics from tracked tag time', async () => {
   ]);
   seedSettings({
     roles: [
-      { id: 'role-devops', name: 'DevOps', tags: ['python'], weeklyTargetHours: 5 },
-      { id: 'role-backend', name: 'Backend', tags: ['python'], weeklyTargetHours: 5 }
+      {
+        id: 'role-devops',
+        name: 'DevOps',
+        tags: ['python'],
+        dailyTargetHours: 0,
+        weeklyTargetHours: 5,
+        monthlyTargetHours: 0
+      },
+      {
+        id: 'role-backend',
+        name: 'Backend',
+        tags: ['python'],
+        dailyTargetHours: 0,
+        weeklyTargetHours: 5,
+        monthlyTargetHours: 0
+      }
     ]
   });
 
@@ -161,9 +321,39 @@ it('shows role and tag analytics from tracked tag time', async () => {
   expect(screen.getByText(/role radar/i)).toBeInTheDocument();
   expect(screen.getByText(/tag hours/i)).toBeInTheDocument();
   expect(screen.getAllByText(/^python$/i).length).toBeGreaterThan(0);
-  expect(screen.getByText(/^devops$/i)).toBeInTheDocument();
-  expect(screen.getByText(/^backend$/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/^devops$/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/^backend$/i).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/1\.00h/i).length).toBeGreaterThanOrEqual(3);
+});
+
+it('toggles seconds for the analog clock second hand', async () => {
+  const user = userEvent.setup();
+  seedSettings({ clockDisplayMode: 'analog', showSeconds: true });
+  render(<App />);
+
+  expect(screen.getByTestId('clock-second-hand')).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: /open clock settings/i }));
+  await user.click(screen.getByLabelText(/show seconds/i));
+
+  expect(screen.queryByTestId('clock-second-hand')).not.toBeInTheDocument();
+});
+
+it('keeps clock color controls aligned with inherited theme text color', async () => {
+  const user = userEvent.setup();
+  seedSettings({
+    visualTheme: 'liquid-glass',
+    theme: 'light',
+    colorScheme: { main: '#ff2d55', secondary: '#34c759', text: '#2c2c2e' },
+    clockTextColor: ''
+  });
+  render(<App />);
+
+  const clockWidget = screen.getByTestId('clock-time').closest('.clock-widget') as HTMLElement;
+  expect(clockWidget.style.getPropertyValue('--clock-text-color')).toBe('#2c2c2e');
+
+  await user.click(screen.getByRole('button', { name: /open clock settings/i }));
+  expect(screen.getByLabelText(/clock text color/i)).toHaveValue('#2c2c2e');
 });
 
 it('adds a role definition in settings', async () => {
@@ -219,9 +409,7 @@ it('offers one default mode choice and one entry per custom theme', async () => 
     'Tokyo Night',
     'Liquid Glass',
     'Terminal',
-    'Terminal Clean',
-    'Terminal White',
-    'Terminal Clean White'
+    'Terminal White'
   ]);
 });
 

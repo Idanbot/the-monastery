@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { autoUpdate, flip, offset, shift, useFloating } from '@floating-ui/react';
+import { Command } from 'cmdk';
+import { Bar, BarChart, CartesianGrid, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import {
   Activity,
   BarChart2,
@@ -8,6 +10,7 @@ import {
   ChevronDown,
   Clock,
   Filter,
+  Keyboard,
   LayoutDashboard,
   ListTodo,
   Menu,
@@ -26,10 +29,13 @@ import { UrgencyBadge } from './components/UrgencyBadge';
 import { KanbanBoard, TaskListView } from './components/board/TaskBoard';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { TaskModal } from './components/task-modal/TaskModal';
+import { AmbientFocusScene } from './components/focus/AmbientFocusScene';
 import { ThemedSurface } from './components/ui/ThemedSurface';
 import { calculateAnalytics } from './domain/analytics';
+import { parseIcsTasks } from './domain/calendar';
 import { rolePresets } from './domain/rolePresets';
 import { getModalEffectStyle, getThemeStyle } from './domain/themes';
+import { createThemeCss, createThemeRecipe } from './domain/themeStudio';
 import {
   formatDateInputValue,
   formatDurationString,
@@ -38,10 +44,12 @@ import {
   generateId,
   calculateTotalDuration,
   normalizeTasksPayload,
-  normalizeTask
+  normalizeTask,
+  mergeSettings
 } from './domain/tasks';
 import { apiRequest } from './lib/api';
 import { downloadJson } from './lib/download';
+import { backupHistoryStorageKey, parseStoredJson } from './lib/storage';
 import {
   loadInitialLocalSettings,
   loadInitialLocalTasks,
@@ -71,17 +79,29 @@ export default function App() {
   const [settingsInitialSection, setSettingsInitialSection] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isCommandOpen, setIsCommandOpen] = useState(false);
+  const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
+  const [keyboardFocusedTaskId, setKeyboardFocusedTaskId] = useState(null);
   const [importPreview, setImportPreview] = useState(null);
+  const [profileImportPreview, setProfileImportPreview] = useState(null);
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === 'undefined' ? true : navigator.onLine
+  );
+  const [localBackups, setLocalBackups] = useState(() => parseStoredJson(backupHistoryStorageKey, []));
 
   const [columnSorts, setColumnSorts] = useState({ new: 'none', done: 'none', rejected: 'none' });
 
   const { startResize } = useResizableLayout(setSettings);
 
   /* Modal Collapsible State */
-  const [modalSections, setModalSections] = useState({ timer: false, notes: false, activity: true });
+  const [modalSections, setModalSections] = useState({ timer: false, notes: false, activity: false });
   const importInputRef = useRef(null);
+  const importProfileInputRef = useRef(null);
+  const importCalendarInputRef = useRef(null);
   const agendaContainerRef = useRef(null);
   const agendaScrollTopRef = useRef(0);
+  const timelineDragRef = useRef(null);
+  const suppressTimelineClickRef = useRef(new Set());
   const {
     isBackendAvailable,
     isProfileReady,
@@ -193,6 +213,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const updateOnlineState = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', updateOnlineState);
+    window.addEventListener('offline', updateOnlineState);
+    return () => {
+      window.removeEventListener('online', updateOnlineState);
+      window.removeEventListener('offline', updateOnlineState);
+    };
+  }, []);
+
+  useEffect(() => {
     if (settings.theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const updateSystemTheme = () => setIsDarkMode(mediaQuery.matches);
@@ -223,6 +253,39 @@ export default function App() {
     return () => document.removeEventListener('pointerdown', closeOnOutsidePointer);
   }, [isProfileOpen, profileFloatingNode, profileReferenceNode]);
 
+  const persistLocalBackups = (nextBackups) => {
+    const limited = nextBackups.slice(0, 8);
+    setLocalBackups(limited);
+    localStorage.setItem(backupHistoryStorageKey, JSON.stringify(limited));
+  };
+
+  const saveLocalBackupSnapshot = (label = 'Manual backup') => {
+    const snapshot = {
+      id: generateId(),
+      label,
+      createdAt: new Date().toISOString(),
+      taskCount: tasks.length,
+      profileName: activeProfile?.name || 'Local',
+      settings,
+      tasks
+    };
+    persistLocalBackups([snapshot, ...localBackups]);
+    return snapshot;
+  };
+
+  const restoreLocalBackup = (backupId) => {
+    const backup = localBackups.find((item) => item.id === backupId);
+    if (!backup) return;
+    setSettings(mergeSettings(backup.settings));
+    setTasks(normalizeTasksPayload({ tasks: backup.tasks || [] }));
+    setSelectedTaskId(null);
+    setIsSettingsOpen(false);
+  };
+
+  const removeLocalBackup = (backupId) => {
+    persistLocalBackups(localBackups.filter((item) => item.id !== backupId));
+  };
+
   const exportTasks = () => {
     downloadJson('the-monastery-tasks.json', {
       $schema: taskSchemaId,
@@ -234,6 +297,7 @@ export default function App() {
 
   const backupData = async () => {
     try {
+      saveLocalBackupSnapshot();
       if (isBackendAvailable) {
         const backup = await apiRequest('/api/backup');
         downloadJson(`the-monastery-backup-${new Date().toISOString().slice(0, 10)}.json`, backup);
@@ -259,6 +323,71 @@ export default function App() {
 
   const exportTaskSchema = () => {
     downloadJson('the-monastery-task.schema.json', taskSchema);
+  };
+
+  const exportActiveProfile = () => {
+    downloadJson('the-monastery-profile-' + (activeProfile?.name || 'profile') + '.json', {
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      profile: {
+        id: activeProfileId || 'local',
+        name: activeProfile?.name || 'Local',
+        settings,
+        tasks
+      }
+    });
+  };
+
+  const exportThemeRecipe = () => {
+    const recipe = createThemeRecipe(settings);
+    downloadJson('the-monastery-theme-' + recipe.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.json', {
+      ...recipe,
+      css: createThemeCss(recipe)
+    });
+  };
+
+  const importActiveProfile = async (file) => {
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      const source = parsed.profile || parsed.profiles?.[0] || parsed;
+      const importedTasks = source.tasks ? normalizeTasksPayload({ tasks: source.tasks }) : [];
+      setProfileImportPreview({
+        name: source.name || 'Imported profile',
+        settings: source.settings || null,
+        tasks: importedTasks,
+        currentTaskCount: tasks.length
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not import profile.');
+    } finally {
+      if (importProfileInputRef.current) importProfileInputRef.current.value = '';
+    }
+  };
+
+  const confirmProfileImport = () => {
+    if (!profileImportPreview) return;
+    if (profileImportPreview.settings) setSettings(profileImportPreview.settings);
+    setTasks(profileImportPreview.tasks || []);
+    setSelectedTaskId(null);
+    setProfileImportPreview(null);
+  };
+
+  const importCalendarTasks = async (file) => {
+    if (!file) return;
+    try {
+      const imported = parseIcsTasks(await file.text());
+      setImportPreview({
+        imported,
+        newTasks: imported,
+        updatedTasks: [],
+        unchangedTasks: []
+      });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not import calendar file.');
+    } finally {
+      if (importCalendarInputRef.current) importCalendarInputRef.current.value = '';
+    }
   };
 
   const importTasks = async (file) => {
@@ -299,7 +428,17 @@ export default function App() {
   const addRole = () => {
     setSettings((prev) => ({
       ...prev,
-      roles: [...(prev.roles || []), { id: generateId(), name: 'New Role', tags: [], weeklyTargetHours: 0 }]
+      roles: [
+        ...(prev.roles || []),
+        {
+          id: generateId(),
+          name: 'New Role',
+          tags: [],
+          dailyTargetHours: 0,
+          weeklyTargetHours: 0,
+          monthlyTargetHours: 0
+        }
+      ]
     }));
   };
 
@@ -316,6 +455,72 @@ export default function App() {
       roles: (prev.roles || []).filter((role) => role.id !== roleId)
     }));
   };
+  const createRoleRoutineTasks = () => {
+    const today = formatDateInputValue(new Date());
+    const routineTasks = (settings.roles || []).map((role) =>
+      normalizeTask({
+        id: generateId(),
+        title: role.name + ' routine block',
+        status: 'new',
+        urgency: 6,
+        tags: Array.from(new Set(['routine', ...(role.tags || [])])),
+        scheduledDate: today,
+        scheduledStart: '',
+        scheduledEnd: '',
+        recurrence: 'weekly',
+        recurrenceRootId: null,
+        subtasks: [],
+        logs: [],
+        activeLogStart: null,
+        activity: [
+          {
+            id: generateId(),
+            type: 'system',
+            text: 'Created from role routine template',
+            timestamp: new Date().toISOString()
+          }
+        ]
+      })
+    );
+    if (routineTasks.length) setTasks((previous) => [...routineTasks, ...previous]);
+  };
+
+  useEffect(() => {
+    const minutesToClockTime = (minutes) => {
+      const clamped = Math.max(0, Math.min(1439, minutes));
+      const hours = Math.floor(clamped / 60)
+        .toString()
+        .padStart(2, '0');
+      const mins = Math.floor(clamped % 60)
+        .toString()
+        .padStart(2, '0');
+      return hours + ':' + mins;
+    };
+    const handleTimelineMouseUp = (event) => {
+      const drag = timelineDragRef.current;
+      if (!drag) return;
+      timelineDragRef.current = null;
+      const delta = event.clientY - drag.startY;
+      const snappedDelta = Math.round(delta / 15) * 15;
+      if (Math.abs(snappedDelta) < 15) return;
+      suppressTimelineClickRef.current.add(drag.taskId);
+      window.setTimeout(() => suppressTimelineClickRef.current.delete(drag.taskId), 0);
+      const nextStart = Math.max(0, Math.min(1439 - drag.duration, drag.startTop + snappedDelta));
+      setTasks((previous) =>
+        previous.map((item) =>
+          item.id === drag.taskId
+            ? {
+                ...item,
+                scheduledStart: minutesToClockTime(nextStart),
+                scheduledEnd: minutesToClockTime(nextStart + drag.duration)
+              }
+            : item
+        )
+      );
+    };
+    window.addEventListener('mouseup', handleTimelineMouseUp);
+    return () => window.removeEventListener('mouseup', handleTimelineMouseUp);
+  }, [setTasks]);
 
   const setMonkMode = (enabled) => {
     setSettings((prev) => ({ ...prev, monkMode: enabled }));
@@ -339,9 +544,14 @@ export default function App() {
     [isDarkMode, settings.animationsEnabled, settings.visualTheme, settings.colorScheme]
   );
   const modalEffectStyle = useMemo(
-    () => getModalEffectStyle(settings.modalTransparency),
-    [settings.modalTransparency]
+    () => getModalEffectStyle(settings.modalTransparency, settings.modalBlur),
+    [settings.modalTransparency, settings.modalBlur]
   );
+
+  const clockDate = new Date(now);
+  const clockMinuteAngle = clockDate.getMinutes() * 6 + clockDate.getSeconds() * 0.1;
+  const clockSecondAngle = clockDate.getSeconds() * 6;
+  const clockHourAngle = ((clockDate.getHours() % 12) + clockDate.getMinutes() / 60) * 30;
 
   const toggleSidebarVisible = () => {
     setSettings((prev) => ({ ...prev, sidebarVisible: prev.sidebarVisible === false }));
@@ -427,7 +637,7 @@ export default function App() {
     );
   };
 
-  const addTask = (status = 'new') => {
+  const addTask = (status = 'new', overrides = {}) => {
     const newTask = normalizeTask({
       id: generateId(),
       title: '',
@@ -444,11 +654,129 @@ export default function App() {
       activeLogStart: null,
       activity: [
         { id: generateId(), type: 'system', text: 'Task created', timestamp: new Date().toISOString() }
-      ]
+      ],
+      ...overrides
     });
-    setTasks([newTask, ...tasks]);
+    setTasks((previous) => [newTask, ...previous]);
     setSelectedTaskId(newTask.id);
   };
+
+  const startFocusTask = () => {
+    addTask('new', {
+      title: '',
+      urgency: 7,
+      tags: ['focus'],
+      scheduledDate: formatDateInputValue(new Date())
+    });
+  };
+
+  const planMyDay = () => {
+    const today = formatDateInputValue(new Date());
+    const startHour = Math.max(9, new Date().getHours() + 1);
+    const minutesToClockTime = (minutes) => {
+      const clamped = Math.max(0, Math.min(1439, minutes));
+      const hours = Math.floor(clamped / 60)
+        .toString()
+        .padStart(2, '0');
+      const mins = Math.floor(clamped % 60)
+        .toString()
+        .padStart(2, '0');
+      return hours + ':' + mins;
+    };
+    let slot = startHour * 60;
+
+    setTasks((previous) =>
+      previous.map((task) => {
+        const needsPlan = task.status === 'new' && (!task.scheduledDate || !task.scheduledStart);
+        if (!needsPlan) return task;
+        const start = Math.min(slot, 22 * 60);
+        slot = start + 60;
+        return {
+          ...task,
+          scheduledDate: today,
+          scheduledStart: minutesToClockTime(start),
+          scheduledEnd: minutesToClockTime(start + 45),
+          activity: [
+            ...task.activity,
+            {
+              id: generateId(),
+              type: 'system',
+              text: 'Planned into today',
+              timestamp: new Date().toISOString()
+            }
+          ]
+        };
+      })
+    );
+    setView('board');
+  };
+
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      const target = event.target;
+      const isTyping =
+        target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setIsCommandOpen((open) => !open);
+        return;
+      }
+      if (isTyping || isCommandOpen || selectedTaskId) return;
+      const navigationKeys = ['j', 'k', 'Enter'];
+      if (navigationKeys.includes(event.key)) {
+        if (filteredTasks.length === 0) return;
+        event.preventDefault();
+        const currentIndex = Math.max(
+          0,
+          filteredTasks.findIndex((task) => task.id === keyboardFocusedTaskId)
+        );
+        if (event.key === 'Enter') {
+          setSelectedTaskId(filteredTasks[currentIndex]?.id || filteredTasks[0].id);
+          return;
+        }
+        const direction = event.key === 'j' ? 1 : -1;
+        const nextIndex = (currentIndex + direction + filteredTasks.length) % filteredTasks.length;
+        setKeyboardFocusedTaskId(filteredTasks[nextIndex].id);
+        return;
+      }
+      if (event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        addTask('new');
+      }
+      if (event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        startFocusTask();
+      }
+      if (event.key.toLowerCase() === 'p') {
+        event.preventDefault();
+        planMyDay();
+      }
+      if (event.key.toLowerCase() === 'd') {
+        event.preventDefault();
+        setView('dashboard');
+      }
+      if (event.key.toLowerCase() === 'b') {
+        event.preventDefault();
+        setView('board');
+      }
+      if (event.key === '?') {
+        event.preventDefault();
+        setIsShortcutHelpOpen(true);
+      }
+      if (event.key.toLowerCase() === 'm') {
+        event.preventDefault();
+        setSettings((previous) => ({ ...previous, monkMode: !previous.monkMode }));
+      }
+      if (event.key === '/') {
+        event.preventDefault();
+        setView('mobile');
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+    // The shortcut handler intentionally rebinds only when visible keyboard scope changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredTasks, isCommandOpen, keyboardFocusedTaskId, selectedTaskId]);
 
   const handleDragStart = (e, id) => {
     setDraggedTaskId(id);
@@ -532,8 +860,16 @@ export default function App() {
   };
 
   const analytics = useMemo(
-    () => calculateAnalytics({ tasks, roles: settings.roles, now }),
-    [tasks, settings.roles, now]
+    () => calculateAnalytics({ tasks, roles: settings.roles, tagGoals: settings.tagGoals, now }),
+    [tasks, settings.roles, settings.tagGoals, now]
+  );
+  const statusChartData = useMemo(
+    () => [
+      { name: 'New', tasks: analytics.statusCounts.new },
+      { name: 'Done', tasks: analytics.statusCounts.done },
+      { name: 'Rejected', tasks: analytics.statusCounts.rejected }
+    ],
+    [analytics.statusCounts.done, analytics.statusCounts.new, analytics.statusCounts.rejected]
   );
 
   const cycleSort = (status) => {
@@ -573,7 +909,11 @@ export default function App() {
     }
 
     return (
-      <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[360px] mx-auto overflow-visible">
+      <svg
+        data-testid="role-radar-chart"
+        viewBox={`0 0 ${size} ${size}`}
+        className="w-full max-w-[360px] mx-auto overflow-visible"
+      >
         {[0.25, 0.5, 0.75, 1].map((scale) => (
           <polygon
             key={scale}
@@ -613,7 +953,13 @@ export default function App() {
             </g>
           );
         })}
-        <polygon points={valuePoints} fill="rgb(79 70 229 / 0.22)" stroke="rgb(79 70 229)" strokeWidth="2" />
+        <polygon
+          data-testid="role-radar-polygon"
+          points={valuePoints}
+          fill="rgb(79 70 229 / 0.22)"
+          stroke="rgb(79 70 229)"
+          strokeWidth="2"
+        />
         {roles.map((role, index) => {
           const angle = -Math.PI / 2 + (index * 2 * Math.PI) / roles.length;
           const scale = role.hours / maxHours;
@@ -641,6 +987,16 @@ export default function App() {
     );
     const nowObj = new Date(now);
     const currentMinutes = nowObj.getHours() * 60 + nowObj.getMinutes();
+    const minutesToClockTime = (minutes) => {
+      const clamped = Math.max(0, Math.min(1439, minutes));
+      const hours = Math.floor(clamped / 60)
+        .toString()
+        .padStart(2, '0');
+      const mins = Math.floor(clamped % 60)
+        .toString()
+        .padStart(2, '0');
+      return hours + ':' + mins;
+    };
 
     const scrollToCurrent = () => {
       if (agendaContainerRef.current) {
@@ -715,7 +1071,118 @@ export default function App() {
                 return (
                   <div
                     key={task.id}
-                    onClick={() => setSelectedTaskId(task.id)}
+                    data-testid={'timeline-task-' + (task.title || 'Untitled')}
+                    data-scheduled-start={task.scheduledStart}
+                    draggable
+                    onDragStart={(event) => {
+                      event.currentTarget.dataset.dragStartY = String(event.clientY);
+                      event.currentTarget.dataset.dragStartTop = String(top);
+                      event.currentTarget.dataset.dragDuration = String(duration);
+                    }}
+                    onDragEnd={(event) => {
+                      const startY = Number(event.currentTarget.dataset.dragStartY || event.clientY);
+                      const startTop = Number(event.currentTarget.dataset.dragStartTop || top);
+                      const savedDuration = Number(event.currentTarget.dataset.dragDuration || duration);
+                      const delta = event.clientY - startY;
+                      const snappedDelta = Math.round(delta / 15) * 15;
+                      if (Math.abs(snappedDelta) >= 15) {
+                        event.currentTarget.dataset.dragMoved = 'true';
+                        const nextStart = Math.max(
+                          0,
+                          Math.min(1439 - savedDuration, startTop + snappedDelta)
+                        );
+                        setTasks((previous) =>
+                          previous.map((item) =>
+                            item.id === task.id
+                              ? {
+                                  ...item,
+                                  scheduledStart: minutesToClockTime(nextStart),
+                                  scheduledEnd: minutesToClockTime(nextStart + savedDuration)
+                                }
+                              : item
+                          )
+                        );
+                      }
+                    }}
+                    onMouseDown={(event) => {
+                      event.currentTarget.dataset.dragStartY = String(event.clientY);
+                      event.currentTarget.dataset.dragStartTop = String(top);
+                      event.currentTarget.dataset.dragDuration = String(duration);
+                      event.currentTarget.dataset.dragMoved = 'false';
+                      timelineDragRef.current = {
+                        taskId: task.id,
+                        startY: event.clientY,
+                        startTop: top,
+                        duration
+                      };
+                    }}
+                    onMouseUp={(event) => {
+                      const startY = Number(event.currentTarget.dataset.dragStartY || event.clientY);
+                      const startTop = Number(event.currentTarget.dataset.dragStartTop || top);
+                      const savedDuration = Number(event.currentTarget.dataset.dragDuration || duration);
+                      const delta = event.clientY - startY;
+                      const snappedDelta = Math.round(delta / 15) * 15;
+                      if (Math.abs(snappedDelta) >= 15) {
+                        event.currentTarget.dataset.dragMoved = 'true';
+                        const nextStart = Math.max(
+                          0,
+                          Math.min(1439 - savedDuration, startTop + snappedDelta)
+                        );
+                        setTasks((previous) =>
+                          previous.map((item) =>
+                            item.id === task.id
+                              ? {
+                                  ...item,
+                                  scheduledStart: minutesToClockTime(nextStart),
+                                  scheduledEnd: minutesToClockTime(nextStart + savedDuration)
+                                }
+                              : item
+                          )
+                        );
+                      }
+                    }}
+                    onPointerDown={(event) => {
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      event.currentTarget.dataset.dragStartY = String(event.clientY);
+                      event.currentTarget.dataset.dragStartTop = String(top);
+                      event.currentTarget.dataset.dragDuration = String(duration);
+                      event.currentTarget.dataset.dragMoved = 'false';
+                    }}
+                    onPointerUp={(event) => {
+                      const startY = Number(event.currentTarget.dataset.dragStartY || event.clientY);
+                      const startTop = Number(event.currentTarget.dataset.dragStartTop || top);
+                      const savedDuration = Number(event.currentTarget.dataset.dragDuration || duration);
+                      const delta = event.clientY - startY;
+                      const snappedDelta = Math.round(delta / 15) * 15;
+                      if (Math.abs(snappedDelta) >= 15) {
+                        const nextStart = Math.max(
+                          0,
+                          Math.min(1439 - savedDuration, startTop + snappedDelta)
+                        );
+                        setTasks((previous) =>
+                          previous.map((item) =>
+                            item.id === task.id
+                              ? {
+                                  ...item,
+                                  scheduledStart: minutesToClockTime(nextStart),
+                                  scheduledEnd: minutesToClockTime(nextStart + savedDuration)
+                                }
+                              : item
+                          )
+                        );
+                      }
+                    }}
+                    onClick={(event) => {
+                      if (suppressTimelineClickRef.current.has(task.id)) {
+                        suppressTimelineClickRef.current.delete(task.id);
+                        return;
+                      }
+                      if (event.currentTarget.dataset.dragMoved === 'true') {
+                        event.currentTarget.dataset.dragMoved = 'false';
+                        return;
+                      }
+                      setSelectedTaskId(task.id);
+                    }}
                     className="absolute left-1 right-1 rounded-md p-2 text-xs cursor-pointer overflow-hidden border transition-all shadow-sm group hover:z-30 hover:shadow-md bg-white/95 dark:bg-slate-800/95 border-indigo-200 dark:border-indigo-500/30 hover:border-indigo-400"
                     style={{ top: `${top}px`, height: `${duration}px` }}
                   >
@@ -826,7 +1293,8 @@ export default function App() {
   const renderMonkMode = () => {
     const nextTasks = tasks
       .filter((task) => task.status === 'new' && task.id !== currentTask?.id)
-      .slice(0, 6);
+      .slice(0, 3);
+    const shutdownDone = Object.values(settings.shutdownChecklist || {}).filter(Boolean).length;
 
     return (
       <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 md:p-8">
@@ -835,7 +1303,7 @@ export default function App() {
             <div>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Monk Mode</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                One task, quiet controls, no dashboard noise.
+                One task, one next step, quiet controls.
               </p>
             </div>
             <button
@@ -846,10 +1314,77 @@ export default function App() {
             </button>
           </div>
 
+          <AmbientFocusScene enabled={settings.animationsEnabled !== false} />
+
+          <nav
+            data-testid="monk-minimap"
+            className="grid grid-cols-4 gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 p-2 text-center text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+            aria-label="Monk mode minimap"
+          >
+            {[
+              ['Goal', settings.dailyGoal ? 'done' : 'idle'],
+              ['Now', currentTask ? 'done' : 'idle'],
+              ['Next', nextTasks.length ? 'done' : 'idle'],
+              ['Close', shutdownDone === 3 ? 'done' : 'idle']
+            ].map(([label, state]) => (
+              <div
+                key={label}
+                className={
+                  'rounded-lg px-2 py-2 ' +
+                  (state === 'done'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                    : 'bg-white dark:bg-slate-900')
+                }
+              >
+                {label}
+              </div>
+            ))}
+          </nav>
+
+          <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 p-4 space-y-3">
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Daily plan</div>
+            <input
+              value={settings.dailyGoal || ''}
+              onChange={(event) =>
+                setSettings((previous) => ({ ...previous, dailyGoal: event.target.value }))
+              }
+              placeholder="One outcome for today"
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-emerald-400"
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+              {[
+                ['review', 'Review day'],
+                ['plan', 'Plan next'],
+                ['clear', 'Clear lane']
+              ].map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-2"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(settings.shutdownChecklist?.[key])}
+                    onChange={(event) =>
+                      setSettings((previous) => ({
+                        ...previous,
+                        shutdownChecklist: {
+                          ...(previous.shutdownChecklist || {}),
+                          [key]: event.target.checked
+                        }
+                      }))
+                    }
+                    className="h-4 w-4 accent-emerald-600"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </section>
+
           {renderCurrentTaskPin('wide')}
 
           <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 p-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Next</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Next up</div>
             <div className="space-y-2">
               {nextTasks.length === 0 && (
                 <div className="text-sm text-slate-400">No queued tasks. Keep the lane clear.</div>
@@ -1071,6 +1606,13 @@ export default function App() {
               </div>
             )}
 
+            <div
+              data-testid="offline-status"
+              className={`hidden lg:block rounded-full px-2 py-1 text-[10px] font-semibold ${isOnline ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'}`}
+            >
+              {isOnline ? 'Online' : 'Offline ready'}
+            </div>
+
             <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
 
             <button
@@ -1191,6 +1733,7 @@ export default function App() {
                     {(['new', 'done', 'rejected'] as const).map((status) => (
                       <div
                         key={status}
+                        data-testid={`metric-${status}`}
                         className="bg-slate-50 dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"
                       >
                         <div className="text-slate-500 text-sm mb-1 capitalize">{status}</div>
@@ -1200,6 +1743,49 @@ export default function App() {
                       </div>
                     ))}
                   </div>
+
+                  <section
+                    data-testid="analytics-status-chart"
+                    className="bg-slate-50 dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"
+                  >
+                    <h3 className="text-base font-bold mb-4">Status Chart</h3>
+                    <div className="h-44 overflow-x-auto">
+                      <BarChart width={520} height={176} data={statusChartData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                        <RechartsTooltip cursor={{ fill: 'rgba(99,102,241,0.08)' }} />
+                        <Bar dataKey="tasks" fill="var(--theme-main)" radius={[8, 8, 2, 2]} />
+                      </BarChart>
+                    </div>
+                  </section>
+
+                  <section className="bg-slate-50 dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <h3 className="text-base font-bold mb-4">Drilldowns</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+                      <div className="rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3">
+                        <div className="text-xs text-slate-400">Top role</div>
+                        <div className="font-semibold truncate">{analytics.roleRows[0]?.name || 'None'}</div>
+                      </div>
+                      <div className="rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3">
+                        <div className="text-xs text-slate-400">Top tag</div>
+                        <div className="font-semibold truncate">{analytics.tagRows[0]?.tag || 'None'}</div>
+                      </div>
+                      <div className="rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3">
+                        <div className="text-xs text-slate-400">Tracked</div>
+                        <div className="font-mono font-semibold">
+                          {formatDurationString(analytics.totalTrackedMs)}
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3">
+                        <div className="text-xs text-slate-400">Role coverage</div>
+                        <div className="font-mono font-semibold">
+                          {analytics.roleRows.filter((role) => role.durationMs > 0).length}/
+                          {Math.max(1, analytics.roleRows.length)}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
 
                   <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-4">
                     <section className="bg-slate-50 dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -1248,6 +1834,40 @@ export default function App() {
                     </section>
                   </div>
 
+                  <section className="bg-slate-50 dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <h3 className="text-base font-bold mb-4">Weekly Role Balance</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                      {analytics.roleRows.length === 0 && (
+                        <div className="text-sm text-slate-400">No role goals yet.</div>
+                      )}
+                      {analytics.roleRows.map((role) => (
+                        <div
+                          key={role.id}
+                          className="rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3"
+                        >
+                          <div className="flex justify-between gap-2">
+                            <span className="font-medium truncate">{role.name}</span>
+                            <span className="font-mono text-xs text-slate-500">
+                              {role.weeklyTargetHours
+                                ? Math.max(0, role.weeklyBalanceHours).toFixed(1) + 'h left'
+                                : 'no goal'}
+                            </span>
+                          </div>
+                          <div className="mt-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500"
+                              style={{
+                                width: role.weeklyTargetHours
+                                  ? Math.min(100, role.weeklyProgress * 100) + '%'
+                                  : '0%'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <section className="bg-slate-50 dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                       <h3 className="text-base font-bold mb-4">Tag Hours</h3>
@@ -1273,6 +1893,7 @@ export default function App() {
                               </div>
                               <span className="font-mono text-xs text-slate-500 text-right">
                                 {row.hours.toFixed(2)}h
+                                {row.weeklyTargetHours ? ' / ' + row.weeklyTargetHours + 'h' : ''}
                               </span>
                             </div>
                           );
@@ -1281,38 +1902,27 @@ export default function App() {
                     </section>
 
                     <section className="bg-slate-50 dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                      <h3 className="text-base font-bold mb-4">Tasks by Status</h3>
-                      <div className="space-y-3">
-                        {(['new', 'done', 'rejected'] as const).map((status) => {
-                          const maxStatus = Math.max(
-                            1,
-                            analytics.statusCounts.new,
-                            analytics.statusCounts.done,
-                            analytics.statusCounts.rejected
-                          );
-                          const color =
-                            status === 'new'
-                              ? 'bg-indigo-500'
-                              : status === 'done'
-                                ? 'bg-emerald-500'
-                                : 'bg-rose-500';
-                          return (
-                            <div key={status}>
-                              <div className="flex justify-between text-sm mb-1">
-                                <span className="capitalize font-medium">{status}</span>
-                                <span className="font-mono text-slate-500">
-                                  {analytics.statusCounts[status]}
-                                </span>
-                              </div>
-                              <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-                                <div
-                                  className={`h-full ${color}`}
-                                  style={{ width: `${(analytics.statusCounts[status] / maxStatus) * 100}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <h3 className="text-base font-bold mb-4">Focus Snapshot</h3>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-center justify-between gap-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2">
+                          <span className="text-slate-500">Now</span>
+                          <span className="font-medium truncate">
+                            {currentTask?.title || 'No active task'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2">
+                          <span className="text-slate-500">Next scheduled</span>
+                          <span className="font-medium truncate">
+                            {tasks
+                              .filter((task) => task.scheduledStart && task.status === 'new')
+                              .sort((a, b) => a.scheduledStart.localeCompare(b.scheduledStart))[0]?.title ||
+                              'None'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-3 py-2">
+                          <span className="text-slate-500">Top tag</span>
+                          <span className="font-medium truncate">{analytics.tagRows[0]?.tag || 'None'}</span>
+                        </div>
                       </div>
                     </section>
                   </div>
@@ -1328,7 +1938,13 @@ export default function App() {
 
             {!settings.monkMode && view === 'board' && (
               <>
-                <div className="mb-3 flex justify-end">
+                <div className="mb-3 flex justify-end gap-2">
+                  <button
+                    onClick={planMyDay}
+                    className="px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-900 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:border-emerald-400"
+                  >
+                    Plan day
+                  </button>
                   <button
                     onClick={() => openSettings('board')}
                     className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm font-medium text-slate-600 dark:text-slate-300 hover:border-indigo-300"
@@ -1349,6 +1965,7 @@ export default function App() {
                   handleDrop={handleDrop}
                   handleDragStart={handleDragStart}
                   setSelectedTaskId={setSelectedTaskId}
+                  keyboardFocusedTaskId={keyboardFocusedTaskId}
                   now={now}
                   startResize={startResize}
                 />
@@ -1392,16 +2009,24 @@ export default function App() {
                 <div
                   data-material="widget"
                   data-clock-background={settings.clockBackgroundVisible === false ? 'false' : 'true'}
+                  data-clock-mode={settings.clockDisplayMode === 'analog' ? 'analog' : 'digital'}
                   className="clock-widget rounded-2xl border p-4 flex flex-col items-center justify-center relative overflow-hidden shrink-0"
-                  style={{
-                    height: String(settings.clockHeight || 160) + 'px',
-                    background:
-                      settings.clockBackgroundVisible === false ? 'transparent' : 'var(--theme-surface)',
-                    borderColor:
-                      settings.clockBackgroundVisible === false ? 'transparent' : 'var(--theme-border)',
-                    color: 'var(--theme-text)',
-                    boxShadow: settings.clockBackgroundVisible === false ? 'none' : undefined
-                  }}
+                  style={
+                    {
+                      height: String(settings.clockHeight || 160) + 'px',
+                      background:
+                        settings.clockBackgroundVisible === false
+                          ? 'transparent'
+                          : 'var(--clock-background-color)',
+                      borderColor:
+                        settings.clockBackgroundVisible === false ? 'transparent' : 'var(--theme-border)',
+                      '--clock-text-color':
+                        settings.clockTextColor || settings.colorScheme?.text || 'var(--theme-text)',
+                      '--clock-background-color': settings.clockBackgroundColor || 'var(--theme-surface)',
+                      color: 'var(--clock-text-color)',
+                      boxShadow: settings.clockBackgroundVisible === false ? 'none' : undefined
+                    } as React.CSSProperties
+                  }
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/10 pointer-events-none"></div>
                   <div className="clock-widget-controls absolute top-2 right-2 z-20 flex items-center gap-1 rounded-lg border border-[color:var(--theme-border)] bg-[color:var(--theme-muted-surface)] p-1 backdrop-blur-sm">
@@ -1414,18 +2039,49 @@ export default function App() {
                       <Settings size={13} />
                     </button>
                   </div>
-                  <div
-                    data-testid="clock-time"
-                    className="font-mono font-bold mb-1 relative z-10 drop-shadow-md leading-none whitespace-nowrap max-w-full text-center"
-                    style={{
-                      fontSize: `clamp(1.75rem, ${(settings.clockTextScale || 1) * 2.25}rem, ${Math.max(
-                        2,
-                        ((settings.clockHeight || 160) - 58) / 28
-                      )}rem)`
-                    }}
-                  >
-                    {formatTime(now, settings.clockFormat, settings.showSeconds)}
-                  </div>
+                  {settings.clockDisplayMode === 'analog' ? (
+                    <div
+                      data-testid="clock-analog"
+                      className="relative z-10 mb-2 grid place-items-center rounded-full border-2"
+                      style={{
+                        width: Math.min(92, Math.max(58, (settings.clockHeight || 160) - 76)) + 'px',
+                        height: Math.min(92, Math.max(58, (settings.clockHeight || 160) - 76)) + 'px',
+                        color: 'var(--clock-text-color)',
+                        borderColor: 'currentColor'
+                      }}
+                    >
+                      <div className="absolute h-1.5 w-1.5 rounded-full bg-current" />
+                      <div
+                        className="absolute bottom-1/2 left-1/2 h-[28%] w-0.5 origin-bottom rounded-full bg-current"
+                        style={{ transform: 'translateX(-50%) rotate(' + clockHourAngle + 'deg)' }}
+                      />
+                      <div
+                        className="absolute bottom-1/2 left-1/2 h-[38%] w-px origin-bottom rounded-full bg-current"
+                        style={{ transform: 'translateX(-50%) rotate(' + clockMinuteAngle + 'deg)' }}
+                      />
+                      {settings.showSeconds && (
+                        <div
+                          data-testid="clock-second-hand"
+                          className="absolute bottom-1/2 left-1/2 h-[42%] w-px origin-bottom rounded-full bg-rose-500"
+                          style={{ transform: 'translateX(-50%) rotate(' + clockSecondAngle + 'deg)' }}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      data-testid="clock-time"
+                      className="font-mono font-bold mb-1 relative z-10 drop-shadow-md leading-none whitespace-nowrap max-w-full text-center"
+                      style={{
+                        color: 'var(--clock-text-color)',
+                        fontSize: `clamp(1.75rem, ${(settings.clockTextScale || 1) * 2.25}rem, ${Math.max(
+                          2,
+                          ((settings.clockHeight || 160) - 58) / 28
+                        )}rem)`
+                      }}
+                    >
+                      {formatTime(now, settings.clockFormat, settings.showSeconds)}
+                    </div>
+                  )}
                   <div className="text-sm font-medium text-[color:var(--theme-muted-text)] relative z-10">
                     {new Intl.DateTimeFormat('en-US', {
                       weekday: 'long',
@@ -1456,6 +2112,213 @@ export default function App() {
         </main>
 
         {}
+        {isCommandOpen && (
+          <ThemedSurface
+            variant="overlay"
+            className="fixed inset-0 z-[85] flex items-start justify-center p-4 pt-24"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setIsCommandOpen(false);
+            }}
+          >
+            <ThemedSurface
+              role="dialog"
+              aria-label="Command palette"
+              variant="modal"
+              className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden"
+            >
+              <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
+                <Keyboard size={16} className="text-indigo-500" />
+                <h3 className="font-bold text-sm">Command Palette</h3>
+              </div>
+              <Command className="p-2" shouldFilter loop>
+                <Command.Input
+                  aria-label="Search commands"
+                  placeholder="Search commands"
+                  className="mb-2 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                />
+                <Command.List className="max-h-[22rem] overflow-y-auto custom-scrollbar space-y-1">
+                  <Command.Empty className="px-3 py-4 text-sm text-slate-400">
+                    No command found.
+                  </Command.Empty>
+                  <Command.Group heading="Actions">
+                    <Command.Item
+                      value="new focus task"
+                      onSelect={() => {
+                        setIsCommandOpen(false);
+                        startFocusTask();
+                      }}
+                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                    >
+                      New focus task
+                    </Command.Item>
+                    <Command.Item
+                      value="new task"
+                      onSelect={() => {
+                        setIsCommandOpen(false);
+                        addTask('new');
+                      }}
+                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                    >
+                      New task
+                    </Command.Item>
+                    <Command.Item
+                      value="monk mode"
+                      onSelect={() => {
+                        setIsCommandOpen(false);
+                        setMonkMode(!settings.monkMode);
+                      }}
+                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                    >
+                      {settings.monkMode ? 'Exit Monk Mode' : 'Enter Monk Mode'}
+                    </Command.Item>
+                    <Command.Item
+                      value="open settings"
+                      onSelect={() => {
+                        setIsCommandOpen(false);
+                        openSettings();
+                      }}
+                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                    >
+                      Open settings
+                    </Command.Item>
+                    <Command.Item
+                      value="go to analytics dashboard"
+                      onSelect={() => {
+                        setIsCommandOpen(false);
+                        setView('dashboard');
+                      }}
+                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                    >
+                      Go to analytics
+                    </Command.Item>
+                    <Command.Item
+                      value="theme studio appearance"
+                      onSelect={() => {
+                        setIsCommandOpen(false);
+                        openSettings('appearance');
+                      }}
+                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                    >
+                      Theme Studio
+                    </Command.Item>
+                    <Command.Item
+                      value="plan my day"
+                      onSelect={() => {
+                        setIsCommandOpen(false);
+                        planMyDay();
+                      }}
+                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                    >
+                      Plan my day
+                    </Command.Item>
+                    <Command.Item
+                      value="keyboard shortcuts help"
+                      onSelect={() => {
+                        setIsCommandOpen(false);
+                        setIsShortcutHelpOpen(true);
+                      }}
+                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                    >
+                      Keyboard shortcuts
+                    </Command.Item>
+                    <Command.Item
+                      value="create role routines"
+                      onSelect={() => {
+                        setIsCommandOpen(false);
+                        createRoleRoutineTasks();
+                      }}
+                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                    >
+                      Create role routines
+                    </Command.Item>
+                  </Command.Group>
+                  <Command.Group heading="Themes">
+                    {[
+                      ['Liquid Glass', 'liquid-glass', 'light'],
+                      ['Zen', 'zen', 'light'],
+                      ['Terminal White', 'terminal-white', 'dark']
+                    ].map(([label, visualTheme, theme]) => (
+                      <Command.Item
+                        key={visualTheme}
+                        value={String(label)}
+                        onSelect={() => {
+                          setIsCommandOpen(false);
+                          setSettings((previous) => ({ ...previous, visualTheme, theme }));
+                        }}
+                        className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                      >
+                        {label}
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                  {profiles.length > 0 && (
+                    <Command.Group heading="Profiles">
+                      {profiles.slice(0, 4).map((profile) => (
+                        <Command.Item
+                          key={profile.id}
+                          value={profile.name}
+                          onSelect={() => {
+                            setIsCommandOpen(false);
+                            selectProfile(profile.id);
+                          }}
+                          className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
+                        >
+                          {profile.name}
+                        </Command.Item>
+                      ))}
+                    </Command.Group>
+                  )}
+                </Command.List>
+              </Command>
+            </ThemedSurface>
+          </ThemedSurface>
+        )}
+        {isShortcutHelpOpen && (
+          <ThemedSurface
+            variant="overlay"
+            className="fixed inset-0 z-[84] flex items-center justify-center p-4"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setIsShortcutHelpOpen(false);
+            }}
+          >
+            <ThemedSurface
+              role="dialog"
+              aria-label="Keyboard shortcuts"
+              variant="modal"
+              className="w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-2xl"
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="font-bold text-sm">Keyboard shortcuts</h3>
+                <button
+                  aria-label="Close keyboard shortcuts"
+                  onClick={() => setIsShortcutHelpOpen(false)}
+                  className="text-slate-400 hover:text-slate-700"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
+                {[
+                  ['n', 'New task'],
+                  ['f', 'Focus task'],
+                  ['p', 'Plan day'],
+                  ['j/k', 'Move task focus'],
+                  ['Enter', 'Open focused task'],
+                  ['d', 'Analytics'],
+                  ['b', 'Board'],
+                  ['?', 'Shortcuts']
+                ].map(([key, label]) => (
+                  <React.Fragment key={key}>
+                    <kbd className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 font-mono text-xs">
+                      {key}
+                    </kbd>
+                    <span>{label}</span>
+                  </React.Fragment>
+                ))}
+              </div>
+            </ThemedSurface>
+          </ThemedSurface>
+        )}
         {isSettingsOpen && (
           <SettingsModal
             initialSection={settingsInitialSection}
@@ -1478,9 +2341,19 @@ export default function App() {
             profileError={profileError}
             exportTasks={exportTasks}
             backupData={backupData}
+            exportThemeRecipe={exportThemeRecipe}
+            createRoleRoutineTasks={createRoleRoutineTasks}
+            exportActiveProfile={exportActiveProfile}
+            importProfileInputRef={importProfileInputRef}
+            importActiveProfile={importActiveProfile}
             exportTaskSchema={exportTaskSchema}
             importInputRef={importInputRef}
             importTasks={importTasks}
+            importCalendarInputRef={importCalendarInputRef}
+            importCalendarTasks={importCalendarTasks}
+            localBackups={localBackups}
+            restoreLocalBackup={restoreLocalBackup}
+            removeLocalBackup={removeLocalBackup}
             tagPool={tagPool}
             isDarkMode={isDarkMode}
             onClose={() => setIsSettingsOpen(false)}
@@ -1520,6 +2393,52 @@ export default function App() {
                   className="px-3 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white"
                 >
                   {profileAction === 'reset' ? 'Reset profile' : 'Remove profile'}
+                </button>
+              </div>
+            </ThemedSurface>
+          </ThemedSurface>
+        )}
+        {profileImportPreview && (
+          <ThemedSurface
+            variant="overlay"
+            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setProfileImportPreview(null);
+            }}
+          >
+            <ThemedSurface
+              variant="modal"
+              className="w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden"
+            >
+              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Restore profile?</h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {profileImportPreview.name} has {profileImportPreview.tasks.length} tasks. Current profile
+                  has {profileImportPreview.currentTaskCount} tasks.
+                </p>
+              </div>
+              <div className="p-4 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
+                  <div className="text-xs text-slate-400">Current</div>
+                  <div className="font-mono text-lg">{profileImportPreview.currentTaskCount}</div>
+                </div>
+                <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3">
+                  <div className="text-xs text-slate-400">Imported</div>
+                  <div className="font-mono text-lg">{profileImportPreview.tasks.length}</div>
+                </div>
+              </div>
+              <div className="p-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  onClick={() => setProfileImportPreview(null)}
+                  className="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmProfileImport}
+                  className="px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  Restore profile
                 </button>
               </div>
             </ThemedSurface>

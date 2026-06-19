@@ -15,6 +15,7 @@ import {
 import {
   calculateTotalDuration,
   formatDate,
+  formatDateInputValue,
   formatDurationString,
   formatLiveTimer,
   formatTime,
@@ -107,6 +108,17 @@ export function TaskModal({
     closeAfterSave();
   };
 
+  const suggestedTags = tagPool
+    .filter((tag) => {
+      const normalizedTag = String(tag || '').toLowerCase();
+      return (
+        normalizedTag &&
+        !(draftTask.tags || []).some((taskTag) => taskTag.toLowerCase() === normalizedTag) &&
+        draftTask.title.toLowerCase().includes(normalizedTag)
+      );
+    })
+    .slice(0, 5);
+
   const sectionButtonClass =
     'w-full flex items-center justify-between text-left text-sm font-bold text-slate-700 dark:text-slate-200';
 
@@ -145,6 +157,45 @@ export function TaskModal({
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+          <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-3">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              Templates
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  updateDraftTask({
+                    title: 'Deep Work Block',
+                    urgency: 7,
+                    tags: Array.from(new Set([...(draftTask.tags || []), 'focus'])),
+                    scheduledDate: formatDateInputValue(new Date()),
+                    scheduledStart: '09:00',
+                    scheduledEnd: '11:00'
+                  })
+                }
+                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs font-medium hover:border-indigo-300"
+              >
+                Deep work template
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateDraftTask({
+                    title: 'Review Queue',
+                    urgency: 4,
+                    tags: Array.from(new Set([...(draftTask.tags || []), 'review'])),
+                    scheduledDate: formatDateInputValue(new Date()),
+                    scheduledStart: '15:00',
+                    scheduledEnd: '16:00'
+                  })
+                }
+                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs font-medium hover:border-indigo-300"
+              >
+                Review template
+              </button>
+            </div>
+          </section>
           <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="md:col-span-2 flex flex-col gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
               Title
@@ -235,14 +286,33 @@ export function TaskModal({
               </label>
             </div>
 
-            <TagPicker
-              label="Tags"
-              value={(draftTask.tags || []).join(', ')}
-              onChange={(nextValue) => updateDraftTask({ tags: parseTagString(nextValue) })}
-              placeholder="Backend, High Priority"
-              tagPool={tagPool}
-              className="md:col-span-2"
-            />
+            <div className="md:col-span-2 space-y-2">
+              <TagPicker
+                label="Tags"
+                value={(draftTask.tags || []).join(', ')}
+                onChange={(nextValue) => updateDraftTask({ tags: parseTagString(nextValue) })}
+                placeholder="Backend, High Priority"
+                tagPool={tagPool}
+              />
+              {suggestedTags.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                  <span>Suggested</span>
+                  {suggestedTags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      aria-label={`Add suggested tag ${tag}`}
+                      onClick={() =>
+                        updateDraftTask({ tags: Array.from(new Set([...(draftTask.tags || []), tag])) })
+                      }
+                      className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
 
           <section className="rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">

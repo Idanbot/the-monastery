@@ -37,9 +37,11 @@ const requiredStyleVariables = [
 ];
 
 describe('theme contracts', () => {
-  it('keeps theme option exports backed by contracts', () => {
+  it('keeps theme option exports backed by contracts without clean terminal variants', () => {
     expect(visualThemeIds).toEqual(Object.keys(themeContracts));
     expect(visualThemeOptions.map((theme) => theme.id)).toEqual(visualThemeIds);
+    expect(visualThemeIds).not.toContain('terminal-clean');
+    expect(visualThemeIds).not.toContain('terminal-clean-white');
   });
 
   it('provides all required style variables for every theme', () => {
@@ -67,6 +69,19 @@ describe('theme contracts', () => {
     expect(style['--theme-glass-tint']).toBe('rgb(255 255 255 / 0.58)');
   });
 
+  it.each(visualThemeIds)('applies color overrides consistently for %s', (themeId) => {
+    const style = getThemeStyle(themeId, false, true, {
+      main: '#ff2d55',
+      secondary: '#34c759',
+      text: '#2c2c2e'
+    });
+
+    expect(style['--theme-main']).toBe('#ff2d55');
+    expect(style['--theme-accent']).toBe('#ff2d55');
+    expect(style['--theme-secondary']).toBe('#34c759');
+    expect(style['--theme-text']).toBe('#2c2c2e');
+  });
+
   it('marks Liquid Glass as a material-rich theme contract', () => {
     expect(themeContracts['liquid-glass'].features).toMatchObject({
       glass: true,
@@ -74,10 +89,13 @@ describe('theme contracts', () => {
     });
   });
 
-  it('maps modal transparency to reusable alpha and blur variables', () => {
-    expect(getModalEffectStyle(0)['--modal-alpha']).toBe('0');
-    expect(getModalEffectStyle(100)['--modal-alpha']).toBe('1');
-    expect(getModalEffectStyle(100)['--modal-backdrop-blur']).toBe('32px');
-    expect(getModalEffectStyle(100)['--modal-surface-blur']).toBe('32px');
+  it('maps modal transparency and blur to independent reusable variables', () => {
+    expect(getModalEffectStyle(0, 48)['--modal-alpha']).toBe('0');
+    expect(getModalEffectStyle(100, 0)['--modal-alpha']).toBe('1');
+    expect(getModalEffectStyle(100, 0)['--modal-backdrop-blur']).toBe('0px');
+    expect(getModalEffectStyle(100, 48)['--modal-backdrop-blur']).toBe('48px');
+    expect(getModalEffectStyle(100, 48)['--modal-surface-blur']).toBe('48px');
+    expect(getModalEffectStyle(35, 1)['--modal-alpha']).toBe('0.35');
+    expect(getModalEffectStyle(35, 1)['--modal-surface-alpha']).toBe('0.72');
   });
 });

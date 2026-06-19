@@ -186,55 +186,11 @@ linear-gradient(135deg, #f8fbff 0%, #edf4ff 42%, #ffffff 100%)`,
       }
     }
   },
-  'terminal-clean': {
-    id: 'terminal-clean',
-    label: 'Terminal Clean',
-    preferredMode: 'dark',
-    features: { terminal: true, minimalBorders: true },
-    tokens: {
-      light: {
-        bgColor: '#000000',
-        bg: '#000000',
-        surface: '#020402',
-        mutedSurface: '#030803',
-        text: '#7cff8a',
-        mutedText: '#45b556',
-        border: '#0b2411',
-        accent: '#7cff8a',
-        accentContrast: '#000000',
-        modalSurfaceRgb: '2 4 2',
-        modalBorderRgb: '12 70 24',
-        motionDuration: '0ms'
-      }
-    }
-  },
   'terminal-white': {
     id: 'terminal-white',
     label: 'Terminal White',
     preferredMode: 'dark',
     features: { terminal: true },
-    tokens: {
-      light: {
-        bgColor: '#000000',
-        bg: '#000000',
-        surface: '#020202',
-        mutedSurface: '#060606',
-        text: '#ffffff',
-        mutedText: '#b8b8b8',
-        border: '#202020',
-        accent: '#ffffff',
-        accentContrast: '#000000',
-        modalSurfaceRgb: '2 2 2',
-        modalBorderRgb: '70 70 70',
-        motionDuration: '0ms'
-      }
-    }
-  },
-  'terminal-clean-white': {
-    id: 'terminal-clean-white',
-    label: 'Terminal Clean White',
-    preferredMode: 'dark',
-    features: { terminal: true, minimalBorders: true },
     tokens: {
       light: {
         bgColor: '#000000',
@@ -268,6 +224,7 @@ export const getThemeContract = (visualTheme: VisualTheme, isDarkMode: boolean) 
 export type ThemeColorOverrides = {
   main?: string;
   secondary?: string;
+  text?: string;
 };
 
 const usableColor = (value?: string) => {
@@ -278,12 +235,14 @@ const usableColor = (value?: string) => {
 const resolveThemeTokens = (tokens: ThemeTokens, colorOverrides: ThemeColorOverrides = {}) => {
   const main = usableColor(colorOverrides.main) || tokens.main || tokens.accent;
   const secondary = usableColor(colorOverrides.secondary) || tokens.secondary || tokens.mutedText;
+  const text = usableColor(colorOverrides.text) || tokens.text;
 
   return {
     ...tokens,
     main,
     mainContrast: tokens.mainContrast || tokens.accentContrast,
     secondary,
+    text,
     secondaryContrast: tokens.secondaryContrast || tokens.accentContrast,
     glassTint: tokens.glassTint || 'color-mix(in srgb, var(--theme-surface) 72%, transparent)',
     glassHighlight: tokens.glassHighlight || 'rgb(255 255 255 / 0.22)',
@@ -338,13 +297,15 @@ export const getThemeStyle = (
   } as CSSProperties;
 };
 
-export const getModalEffectStyle = (modalTransparency = 88): CSSProperties => {
+export const getModalEffectStyle = (modalTransparency = 88, modalBlur = 29): CSSProperties => {
   const transparency = Math.max(0, Math.min(100, Number(modalTransparency) || 0));
+  const blur = Math.max(0, Math.min(64, Number(modalBlur) || 0));
   const alpha = transparency / 100;
 
   return {
-    '--modal-alpha': `${alpha}`,
-    '--modal-backdrop-blur': `${Math.round(8 + alpha * 24)}px`,
-    '--modal-surface-blur': `${Math.round(10 + alpha * 22)}px`
+    '--modal-alpha': String(alpha),
+    '--modal-surface-alpha': String(Math.max(alpha, 0.72)),
+    '--modal-backdrop-blur': Math.round(blur) + 'px',
+    '--modal-surface-blur': Math.round(blur) + 'px'
   } as CSSProperties;
 };

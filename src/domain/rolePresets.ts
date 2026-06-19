@@ -70,5 +70,7 @@ export const createRoleFromPreset = (preset: RolePreset): RoleDefinition => ({
   id: generateId(),
   name: preset.name,
   tags: [...preset.tags],
-  weeklyTargetHours: preset.weeklyTargetHours
+  dailyTargetHours: 0,
+  weeklyTargetHours: preset.weeklyTargetHours,
+  monthlyTargetHours: 0
 });

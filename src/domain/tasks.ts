@@ -115,9 +115,12 @@ export const defaultTasks: Task[] = [];
 
 export const defaultSettings: AppSettings = {
   theme: 'system',
-  visualTheme: 'default',
-  colorScheme: { main: '', secondary: '' },
+  visualTheme: 'liquid-glass',
+  colorScheme: { main: '', secondary: '', text: '' },
+  customThemeName: 'Custom Liquid Glass',
   monkMode: false,
+  dailyGoal: '',
+  shutdownChecklist: { review: false, plan: false, clear: false },
   sidebarVisible: true,
   animationsEnabled: true,
   clockFormat: '24h',
@@ -127,10 +130,15 @@ export const defaultSettings: AppSettings = {
   clockHeight: 160,
   clockTextScale: 1,
   clockBackgroundVisible: true,
-  modalTransparency: 88,
+  clockTextColor: '',
+  clockBackgroundColor: '',
+  clockDisplayMode: 'digital',
+  modalTransparency: 35,
+  modalBlur: 1,
   layoutPreset: 'compact',
   textSize: 'medium',
   roles: [],
+  tagGoals: [],
   collapseTasks: false,
   resizeHandleVisible: true,
   resizeHandleThickness: 4,
@@ -158,14 +166,31 @@ const clampNumber = (value, min, max, fallback) => {
   return Math.min(max, Math.max(min, Number.isFinite(number) ? number : fallback));
 };
 
+const normalizeGoalCadence = (value) => ({
+  dailyTargetHours: Math.max(0, Number(value?.dailyTargetHours) || 0),
+  weeklyTargetHours: Math.max(0, Number(value?.weeklyTargetHours) || 0),
+  monthlyTargetHours: Math.max(0, Number(value?.monthlyTargetHours) || 0)
+});
+
 const normalizeRoles = (roles) => {
   const source = Array.isArray(roles) ? roles : defaultSettings.roles;
   return source.map((role) => ({
     id: typeof role.id === 'string' ? role.id : generateId(),
     name: typeof role.name === 'string' ? role.name : 'Role',
     tags: normalizeStringArray(role.tags),
-    weeklyTargetHours: Math.max(0, Number(role.weeklyTargetHours) || 0)
+    ...normalizeGoalCadence(role)
   }));
+};
+
+const normalizeTagGoals = (tagGoals) => {
+  const source = Array.isArray(tagGoals) ? tagGoals : defaultSettings.tagGoals;
+  return source
+    .filter((goal) => typeof goal?.tag === 'string' && goal.tag.trim())
+    .map((goal) => ({
+      id: typeof goal.id === 'string' ? goal.id : generateId(),
+      tag: goal.tag.trim(),
+      ...normalizeGoalCadence(goal)
+    }));
 };
 
 export const mergeSettings = (saved) => ({
@@ -175,9 +200,19 @@ export const mergeSettings = (saved) => ({
   visualTheme: visualThemeIds.includes(saved?.visualTheme) ? saved.visualTheme : defaultSettings.visualTheme,
   colorScheme: {
     main: normalizeThemeColor(saved?.colorScheme?.main),
-    secondary: normalizeThemeColor(saved?.colorScheme?.secondary)
+    secondary: normalizeThemeColor(saved?.colorScheme?.secondary),
+    text: normalizeThemeColor(saved?.colorScheme?.text)
   },
+  customThemeName:
+    typeof saved?.customThemeName === 'string' ? saved.customThemeName : defaultSettings.customThemeName,
   monkMode: Boolean(saved?.monkMode),
+  dailyGoal: typeof saved?.dailyGoal === 'string' ? saved.dailyGoal : defaultSettings.dailyGoal,
+  shutdownChecklist: {
+    ...defaultSettings.shutdownChecklist,
+    ...(saved?.shutdownChecklist && typeof saved.shutdownChecklist === 'object'
+      ? saved.shutdownChecklist
+      : {})
+  },
   animationsEnabled:
     saved?.animationsEnabled === undefined
       ? defaultSettings.animationsEnabled
@@ -194,22 +229,27 @@ export const mergeSettings = (saved) => ({
     saved?.clockBackgroundVisible === undefined
       ? defaultSettings.clockBackgroundVisible
       : Boolean(saved.clockBackgroundVisible),
+  clockTextColor: normalizeThemeColor(saved?.clockTextColor),
+  clockBackgroundColor: normalizeThemeColor(saved?.clockBackgroundColor),
+  clockDisplayMode: saved?.clockDisplayMode === 'analog' ? 'analog' : defaultSettings.clockDisplayMode,
   modalTransparency: Math.min(
     100,
     Math.max(0, Number(saved?.modalTransparency ?? defaultSettings.modalTransparency))
   ),
+  modalBlur: Math.min(64, Math.max(0, Number(saved?.modalBlur ?? defaultSettings.modalBlur))),
   roles: normalizeRoles(saved?.roles),
+  tagGoals: normalizeTagGoals(saved?.tagGoals),
   resizeHandleVisible:
     saved?.resizeHandleVisible === undefined
       ? defaultSettings.resizeHandleVisible
       : Boolean(saved.resizeHandleVisible),
   resizeHandleThickness: clampNumber(
     saved?.resizeHandleThickness,
-    2,
+    1,
     16,
     defaultSettings.resizeHandleThickness
   ),
-  resizeHandleLength: clampNumber(saved?.resizeHandleLength, 24, 160, defaultSettings.resizeHandleLength),
+  resizeHandleLength: clampNumber(saved?.resizeHandleLength, 1, 160, defaultSettings.resizeHandleLength),
   resizeHandleColor: normalizeThemeColor(saved?.resizeHandleColor) || defaultSettings.resizeHandleColor,
   timelineHourLinesVisible:
     saved?.timelineHourLinesVisible === undefined

@@ -1,18 +1,11 @@
 export type TaskStatus = 'new' | 'done' | 'rejected';
 export type TaskRecurrence = 'none' | 'daily' | 'weekly' | 'monthly';
-export type VisualTheme =
-  | 'default'
-  | 'zen'
-  | 'tokyo-night'
-  | 'liquid-glass'
-  | 'terminal'
-  | 'terminal-clean'
-  | 'terminal-white'
-  | 'terminal-clean-white';
+export type VisualTheme = 'default' | 'zen' | 'tokyo-night' | 'liquid-glass' | 'terminal' | 'terminal-white';
 
 export type ThemeColorScheme = {
   main: string;
   secondary: string;
+  text: string;
 };
 
 export type TimeLog = {
@@ -53,18 +46,31 @@ export type Task = {
   activity: ActivityEntry[];
 };
 
-export type RoleDefinition = {
+export type GoalCadence = {
+  dailyTargetHours: number;
+  weeklyTargetHours: number;
+  monthlyTargetHours: number;
+};
+
+export type RoleDefinition = GoalCadence & {
   id: string;
   name: string;
   tags: string[];
-  weeklyTargetHours: number;
+};
+
+export type TagGoal = GoalCadence & {
+  id: string;
+  tag: string;
 };
 
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';
   visualTheme: VisualTheme;
   colorScheme: ThemeColorScheme;
+  customThemeName: string;
   monkMode: boolean;
+  dailyGoal: string;
+  shutdownChecklist: Record<string, boolean>;
   sidebarVisible: boolean;
   animationsEnabled: boolean;
   clockFormat: '12h' | '24h';
@@ -74,10 +80,15 @@ export type AppSettings = {
   clockHeight: number;
   clockTextScale: number;
   clockBackgroundVisible: boolean;
+  clockTextColor: string;
+  clockBackgroundColor: string;
+  clockDisplayMode: 'digital' | 'analog';
   modalTransparency: number;
+  modalBlur: number;
   layoutPreset: 'standard' | 'compact';
   textSize: 'small' | 'medium' | 'large';
   roles: RoleDefinition[];
+  tagGoals: TagGoal[];
   collapseTasks: boolean;
   resizeHandleVisible: boolean;
   resizeHandleThickness: number;

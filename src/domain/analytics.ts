@@ -1,6 +1,6 @@
 import { calculateTotalDuration } from './tasks';
 
-export const calculateAnalytics = ({ tasks, roles, now }) => {
+export const calculateAnalytics = ({ tasks, roles, tagGoals = [], now }) => {
   const tagDurations = new Map<string, number>();
   const statusCounts = { new: 0, done: 0, rejected: 0 };
 
@@ -27,8 +27,22 @@ export const calculateAnalytics = ({ tasks, roles, now }) => {
     });
   });
 
+  const goalsByTag = new Map((tagGoals || []).map((goal) => [String(goal.tag || '').toLowerCase(), goal]));
+
   const tagRows = Array.from(tagDurations.entries())
-    .map(([tag, durationMs]) => ({ tag, durationMs, hours: durationMs / 3600000 }))
+    .map(([tag, durationMs]) => {
+      const goal = goalsByTag.get(tag.toLowerCase()) || {};
+      const hours = durationMs / 3600000;
+      return {
+        tag,
+        durationMs,
+        hours,
+        dailyTargetHours: Number(goal.dailyTargetHours) || 0,
+        weeklyTargetHours: Number(goal.weeklyTargetHours) || 0,
+        monthlyTargetHours: Number(goal.monthlyTargetHours) || 0,
+        weeklyBalanceHours: Math.max(0, (Number(goal.weeklyTargetHours) || 0) - hours)
+      };
+    })
     .sort((a, b) => b.durationMs - a.durationMs);
 
   const roleRows = (roles || [])
@@ -38,10 +52,14 @@ export const calculateAnalytics = ({ tasks, roles, now }) => {
         (total, row) => (roleTags.includes(row.tag.toLowerCase()) ? total + row.durationMs : total),
         0
       );
+      const hours = durationMs / 3600000;
+      const weeklyTargetHours = Number(role.weeklyTargetHours) || 0;
       return {
         ...role,
         durationMs,
-        hours: durationMs / 3600000,
+        hours,
+        weeklyBalanceHours: Math.max(0, weeklyTargetHours - hours),
+        weeklyProgress: weeklyTargetHours > 0 ? Math.min(1, hours / weeklyTargetHours) : 0,
         matchingTags: tagRows.filter((row) => roleTags.includes(row.tag.toLowerCase())).map((row) => row.tag)
       };
     })
