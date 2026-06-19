@@ -132,7 +132,7 @@ jobs:
         run: npm ci
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v4.4.4
+        uses: actions/cache@v5.0.5
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
@@ -240,7 +240,7 @@ jobs:
         run: mkdir -p artifacts
 
       - name: Cache Trivy DB
-        uses: actions/cache@v4.4.4
+        uses: actions/cache@v5.0.5
         with:
           path: ~/.cache/trivy
           key: trivy-${{ runner.os }}-fs

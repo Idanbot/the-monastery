@@ -1,16 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="TheMonastery">
   <defs>
-    <radialGradient id="g" cx="28%" cy="20%" r="85%">
-      <stop offset="0" stop-color="#fff" stop-opacity=".95"/>
-      <stop offset=".42" stop-color="#8ec5ff"/>
-      <stop offset=".78" stop-color="#7c3aed"/>
+    <linearGradient id="bg" x1="10" y1="4" x2="54" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8fbff"/>
+      <stop offset="0.34" stop-color="#9fd7ff"/>
+      <stop offset="0.68" stop-color="#5b7cff"/>
       <stop offset="1" stop-color="#111827"/>
-    </radialGradient>
-    <filter id="s" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#0f172a" flood-opacity=".28"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="17" y1="14" x2="47" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.96"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0.58"/>
+      <stop offset="1" stop-color="#dbeafe" stop-opacity="0.72"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#020617" flood-opacity="0.32"/>
     </filter>
   </defs>
-  <rect width="64" height="64" rx="18" fill="url(#g)"/>
-  <path filter="url(#s)" d="M17 45 32 12l15 33H36l-4-10-4 10H17Z" fill="white" fill-opacity=".88"/>
-  <circle cx="32" cy="45" r="4" fill="#34d399"/>
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <path d="M12 49h40" stroke="#ffffff" stroke-opacity="0.38" stroke-width="2" stroke-linecap="round"/>
+  <path filter="url(#shadow)" d="M18 49V29c0-8 6-15 14-15s14 7 14 15v20h-9V30c0-3-2-6-5-6s-5 3-5 6v19h-9Z" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.72" stroke-width="1.5"/>
+  <path d="M23 49V31c0-5 4-10 9-10s9 5 9 10v18" fill="none" stroke="#172554" stroke-opacity="0.32" stroke-width="2" stroke-linecap="round"/>
+  <path d="m25 38 5 5 10-13" fill="none" stroke="#34d399" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="22" cy="18" r="2.4" fill="#ffffff" fill-opacity="0.86"/>
+  <circle cx="29" cy="12" r="1.4" fill="#ffffff" fill-opacity="0.72"/>
 </svg>
