@@ -35,7 +35,8 @@ Run the application quickly using the pre-built Docker image from the GitHub Con
 ```sh
 docker compose up -d
 ```
-*(No login required! The package is publicly available).*
+
+_(No login required! The package is publicly available)._
 
 ### Building Locally
 
@@ -46,6 +47,7 @@ docker compose -f docker-compose.local.yml up -d --build
 ```
 
 You can verify your local image using the provided smoke test:
+
 ```sh
 npm run docker:smoke -- the-monastery
 ```
