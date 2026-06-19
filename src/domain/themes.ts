@@ -27,7 +27,9 @@ type ThemeTokens = {
   radiusControl?: string;
   radiusPanel?: string;
   motionEase?: string;
-  fontUi?: string;
+  fontMain?: string;
+  fontSecondary?: string;
+  fontUI?: string;
 };
 
 export type ThemeContract = {
@@ -164,6 +166,45 @@ linear-gradient(135deg, #f8fbff 0%, #edf4ff 42%, #ffffff 100%)`,
       }
     }
   },
+  'obsidian-glass': {
+    id: 'obsidian-glass',
+    label: 'Obsidian Glass',
+    preferredMode: 'dark',
+    features: { glass: true, materialVariants: ['control', 'panel', 'sidebar', 'modal', 'widget'] },
+    tokens: {
+      light: {
+        bgColor: '#000000',
+        bg: `radial-gradient(circle at 14% 8%, rgb(30 35 60 / 0.7), transparent 30%),
+radial-gradient(circle at 78% 0%, rgb(50 30 70 / 0.6), transparent 35%),
+radial-gradient(circle at 100% 80%, rgb(20 40 60 / 0.5), transparent 40%),
+linear-gradient(135deg, #050508 0%, #000000 42%, #080812 100%)`,
+        surface: 'rgb(25 25 32 / 0.45)',
+        mutedSurface: 'rgb(20 20 25 / 0.3)',
+        text: '#f4f4f5',
+        mutedText: '#9ca3af',
+        border: 'rgb(255 255 255 / 0.14)',
+        accent: '#0a84ff',
+        accentContrast: '#ffffff',
+        main: '#0a84ff',
+        mainContrast: '#ffffff',
+        secondary: '#bf5af2',
+        secondaryContrast: '#ffffff',
+        glassTint: 'rgb(15 15 20 / 0.65)',
+        glassHighlight: 'rgb(255 255 255 / 0.12)',
+        glassEdge: 'rgb(255 255 255 / 0.16)',
+        glassShadow:
+          '0 24px 72px rgb(0 0 0 / 0.8), inset 0 1px 0 rgb(255 255 255 / 0.12), inset 0 -1px 0 rgb(0 0 0 / 0.5)',
+        glassBlur: '42px',
+        glassSaturation: '2.0',
+        radiusControl: '18px',
+        radiusPanel: '28px',
+        motionEase: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        modalSurfaceRgb: '25 25 32',
+        modalBorderRgb: '255 255 255',
+        motionDuration: '90ms'
+      }
+    }
+  },
   terminal: {
     id: 'terminal',
     label: 'Terminal',
@@ -207,6 +248,182 @@ linear-gradient(135deg, #f8fbff 0%, #edf4ff 42%, #ffffff 100%)`,
         motionDuration: '0ms'
       }
     }
+  },
+  catppuccin: {
+    id: 'catppuccin',
+    label: 'Catppuccin Mocha',
+    preferredMode: 'dark',
+    tokens: {
+      light: {
+        bgColor: '#1e1e2e',
+        bg: '#1e1e2e',
+        surface: '#313244',
+        mutedSurface: '#45475a',
+        text: '#cdd6f4',
+        mutedText: '#a6adc8',
+        border: '#585b70',
+        accent: '#cba6f7',
+        accentContrast: '#11111b',
+        modalSurfaceRgb: '49 50 68',
+        modalBorderRgb: '88 91 112',
+        motionDuration: '80ms'
+      }
+    }
+  },
+  gruvbox: {
+    id: 'gruvbox',
+    label: 'Gruvbox',
+    preferredMode: 'dark',
+    tokens: {
+      light: {
+        bgColor: '#282828',
+        bg: '#282828',
+        surface: '#3c3836',
+        mutedSurface: '#504945',
+        text: '#ebdbb2',
+        mutedText: '#a89984',
+        border: '#665c54',
+        accent: '#fabd2f',
+        accentContrast: '#282828',
+        modalSurfaceRgb: '60 56 54',
+        modalBorderRgb: '102 92 84',
+        motionDuration: '80ms'
+      }
+    }
+  },
+  dracula: {
+    id: 'dracula',
+    label: 'Dracula',
+    preferredMode: 'dark',
+    tokens: {
+      light: {
+        bgColor: '#282a36',
+        bg: '#282a36',
+        surface: '#44475a',
+        mutedSurface: '#383a59',
+        text: '#f8f8f2',
+        mutedText: '#6272a4',
+        border: '#6272a4',
+        accent: '#bd93f9',
+        accentContrast: '#282a36',
+        modalSurfaceRgb: '68 71 90',
+        modalBorderRgb: '98 114 164',
+        motionDuration: '80ms'
+      }
+    }
+  },
+  'github-light': {
+    id: 'github-light',
+    label: 'GitHub Light',
+    preferredMode: 'light',
+    tokens: {
+      light: {
+        bgColor: '#f6f8fa',
+        bg: '#f6f8fa',
+        surface: '#ffffff',
+        mutedSurface: '#f6f8fa',
+        text: '#24292f',
+        mutedText: '#57606a',
+        border: '#d0d7de',
+        accent: '#0969da',
+        accentContrast: '#ffffff',
+        modalSurfaceRgb: '255 255 255',
+        modalBorderRgb: '208 215 222',
+        motionDuration: '80ms'
+      }
+    }
+  },
+  'github-dark': {
+    id: 'github-dark',
+    label: 'GitHub Dark',
+    preferredMode: 'dark',
+    tokens: {
+      light: {
+        bgColor: '#0d1117',
+        bg: '#0d1117',
+        surface: '#161b22',
+        mutedSurface: '#21262d',
+        text: '#c9d1d9',
+        mutedText: '#8b949e',
+        border: '#30363d',
+        accent: '#58a6ff',
+        accentContrast: '#0d1117',
+        modalSurfaceRgb: '22 27 34',
+        modalBorderRgb: '48 54 61',
+        motionDuration: '80ms'
+      }
+    }
+  },
+  nord: {
+    id: 'nord',
+    label: 'Nord',
+    preferredMode: 'dark',
+    tokens: {
+      light: {
+        bgColor: '#2e3440',
+        bg: '#2e3440',
+        surface: '#3b4252',
+        mutedSurface: '#434c5e',
+        text: '#d8dee9',
+        mutedText: '#e5e9f0',
+        border: '#4c566a',
+        accent: '#88c0d0',
+        accentContrast: '#2e3440',
+        modalSurfaceRgb: '59 66 82',
+        modalBorderRgb: '76 86 106',
+        motionDuration: '80ms'
+      }
+    }
+  },
+  solarized: {
+    id: 'solarized',
+    label: 'Solarized Dark',
+    preferredMode: 'dark',
+    tokens: {
+      light: {
+        bgColor: '#002b36', bg: '#002b36', surface: '#073642', mutedSurface: '#586e75', text: '#839496', mutedText: '#657b83', border: '#586e75', accent: '#2aa198', accentContrast: '#002b36', modalSurfaceRgb: '7 54 66', modalBorderRgb: '88 110 117', motionDuration: '80ms'
+      }
+    }
+  },
+  monokai: {
+    id: 'monokai',
+    label: 'Monokai',
+    preferredMode: 'dark',
+    tokens: {
+      light: {
+        bgColor: '#272822', bg: '#272822', surface: '#3e3d32', mutedSurface: '#49483e', text: '#f8f8f2', mutedText: '#75715e', border: '#49483e', accent: '#a6e22e', accentContrast: '#272822', modalSurfaceRgb: '62 61 50', modalBorderRgb: '73 72 62', motionDuration: '80ms'
+      }
+    }
+  },
+  ayu: {
+    id: 'ayu',
+    label: 'Ayu Mirage',
+    preferredMode: 'dark',
+    tokens: {
+      light: {
+        bgColor: '#1f2430', bg: '#1f2430', surface: '#232834', mutedSurface: '#282e3a', text: '#cbccc6', mutedText: '#5c6773', border: '#5c6773', accent: '#ffcc66', accentContrast: '#1f2430', modalSurfaceRgb: '35 40 52', modalBorderRgb: '92 103 115', motionDuration: '80ms'
+      }
+    }
+  },
+  'night-owl': {
+    id: 'night-owl',
+    label: 'Night Owl',
+    preferredMode: 'dark',
+    tokens: {
+      light: {
+        bgColor: '#011627', bg: '#011627', surface: '#0b2942', mutedSurface: '#113554', text: '#d6deeb', mutedText: '#5f7e97', border: '#5f7e97', accent: '#82aaff', accentContrast: '#011627', modalSurfaceRgb: '11 41 66', modalBorderRgb: '95 126 151', motionDuration: '80ms'
+      }
+    }
+  },
+  synthwave: {
+    id: 'synthwave',
+    label: 'Synthwave 84',
+    preferredMode: 'dark',
+    tokens: {
+      light: {
+        bgColor: '#2b213a', bg: '#2b213a', surface: '#241b2f', mutedSurface: '#262335', text: '#f92aad', mutedText: '#36f9f6', border: '#36f9f6', accent: '#fce566', accentContrast: '#2b213a', modalSurfaceRgb: '36 27 47', modalBorderRgb: '54 249 246', motionDuration: '80ms'
+      }
+    }
   }
 };
 
@@ -221,10 +438,13 @@ export const getThemeContract = (visualTheme: VisualTheme, isDarkMode: boolean) 
   return isDarkMode && contract.tokens.dark ? contract.tokens.dark : contract.tokens.light;
 };
 
-export type ThemeColorOverrides = {
+export type ThemeColorOverrides = Partial<Omit<ThemeTokens, 'fontMain' | 'fontSecondary' | 'fontUI'>> & {
   main?: string;
   secondary?: string;
   text?: string;
+  fontMain?: string;
+  fontSecondary?: string;
+  fontUI?: string;
 };
 
 const usableColor = (value?: string) => {
@@ -236,6 +456,8 @@ const resolveThemeTokens = (tokens: ThemeTokens, colorOverrides: ThemeColorOverr
   const main = usableColor(colorOverrides.main) || tokens.main || tokens.accent;
   const secondary = usableColor(colorOverrides.secondary) || tokens.secondary || tokens.mutedText;
   const text = usableColor(colorOverrides.text) || tokens.text;
+  const fontMain = colorOverrides.fontMain?.trim() || undefined;
+  const fontSecondary = colorOverrides.fontSecondary?.trim() || undefined;
 
   return {
     ...tokens,
@@ -253,8 +475,15 @@ const resolveThemeTokens = (tokens: ThemeTokens, colorOverrides: ThemeColorOverr
     radiusControl: tokens.radiusControl || '12px',
     radiusPanel: tokens.radiusPanel || '16px',
     motionEase: tokens.motionEase || 'cubic-bezier(0.22, 1, 0.36, 1)',
-    fontUi:
-      tokens.fontUi ||
+    fontMain:
+      fontMain ||
+      tokens.fontMain ||
+      "Inter, ui-rounded, 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontSecondary:
+      fontSecondary ||
+      tokens.fontSecondary ||
+      fontMain ||
+      tokens.fontMain ||
       "Inter, ui-rounded, 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
   };
 };
@@ -291,7 +520,9 @@ export const getThemeStyle = (
     '--theme-radius-control': tokens.radiusControl,
     '--theme-radius-panel': tokens.radiusPanel,
     '--theme-motion-ease': tokens.motionEase,
-    '--theme-font-ui': tokens.fontUi,
+    '--theme-font-main': colorOverrides?.fontMain || tokens.fontMain,
+    '--theme-font-secondary': colorOverrides?.fontSecondary || tokens.fontSecondary,
+    '--theme-font-ui': colorOverrides?.fontUI || tokens.fontUI || tokens.fontMain,
     '--modal-surface-rgb': tokens.modalSurfaceRgb,
     '--modal-border-rgb': tokens.modalBorderRgb
   } as CSSProperties;

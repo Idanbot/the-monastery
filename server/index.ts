@@ -12,7 +12,7 @@ import type { ServerOptions } from './types.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..');
 const defaultPublicDir = join(projectRoot, 'dist');
-const defaultDataDir = process.env.THE_MONASTERY_DATA_DIR || '/data';
+const defaultDataDir = process.env.THE_MONASTERY_DATA_DIR || join(projectRoot, 'data');
 const defaultDbPath = process.env.THE_MONASTERY_DB_PATH || join(defaultDataDir, 'the-monastery.sqlite');
 
 export const createApp = (options: ServerOptions = {}): FastifyInstance => {

@@ -116,7 +116,10 @@ export const defaultTasks: Task[] = [];
 export const defaultSettings: AppSettings = {
   theme: 'system',
   visualTheme: 'liquid-glass',
-  colorScheme: { main: '', secondary: '', text: '' },
+  colorScheme: { main: '#4f46e5', secondary: '#64748b', text: '#1e293b' },
+  fontMain: "Inter, 'Space Grotesk', system-ui, sans-serif",
+  fontSecondary: "'Space Grotesk', system-ui, sans-serif",
+  fontUI: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
   customThemeName: 'Custom Liquid Glass',
   monkMode: false,
   dailyGoal: '',
@@ -203,6 +206,8 @@ export const mergeSettings = (saved) => ({
     secondary: normalizeThemeColor(saved?.colorScheme?.secondary),
     text: normalizeThemeColor(saved?.colorScheme?.text)
   },
+  fontMain: typeof saved?.fontMain === 'string' ? saved.fontMain : (typeof saved?.fontFamily === 'string' ? saved.fontFamily : defaultSettings.fontMain),
+  fontSecondary: typeof saved?.fontSecondary === 'string' ? saved.fontSecondary : (typeof saved?.fontFamily === 'string' ? saved.fontFamily : defaultSettings.fontSecondary),
   customThemeName:
     typeof saved?.customThemeName === 'string' ? saved.customThemeName : defaultSettings.customThemeName,
   monkMode: Boolean(saved?.monkMode),

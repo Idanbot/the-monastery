@@ -23,7 +23,8 @@ import {
   Square,
   Target,
   Users,
-  X
+  X,
+  HelpCircle
 } from 'lucide-react';
 import { UrgencyBadge } from './components/UrgencyBadge';
 import { KanbanBoard, TaskListView } from './components/board/TaskBoard';
@@ -34,7 +35,12 @@ import { ThemedSurface } from './components/ui/ThemedSurface';
 import { calculateAnalytics } from './domain/analytics';
 import { parseIcsTasks } from './domain/calendar';
 import { rolePresets } from './domain/rolePresets';
-import { getModalEffectStyle, getThemeStyle } from './domain/themes';
+import {
+  getModalEffectStyle,
+  getThemeStyle,
+  visualThemeOptions,
+  themeContracts
+} from './domain/themes';
 import { createThemeCss, createThemeRecipe } from './domain/themeStudio';
 import {
   formatDateInputValue,
@@ -73,10 +79,13 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [draggedTaskId, setDraggedTaskId] = useState(null);
   const [dragOverInfo, setDragOverInfo] = useState(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [systemIsDark, setSystemIsDark] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false
+  );
   const [now, setNow] = useState(Date.now());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState(null);
+  const [previewTheme, setPreviewTheme] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
@@ -223,16 +232,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (settings.theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const updateSystemTheme = () => setIsDarkMode(mediaQuery.matches);
-      updateSystemTheme();
-      mediaQuery.addEventListener('change', updateSystemTheme);
-      return () => mediaQuery.removeEventListener('change', updateSystemTheme);
-    }
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const updateSystemTheme = () => setSystemIsDark(mediaQuery.matches);
+    mediaQuery.addEventListener('change', updateSystemTheme);
+    return () => mediaQuery.removeEventListener('change', updateSystemTheme);
+  }, []);
 
-    setIsDarkMode(settings.theme === 'dark');
-  }, [settings.theme]);
+  const isDarkMode = settings.theme === 'system' ? systemIsDark : settings.theme === 'dark';
 
   useLayoutEffect(() => {
     if (agendaContainerRef.current) {
@@ -531,17 +537,16 @@ export default function App() {
     setSettingsInitialSection(section);
     setIsSettingsOpen(true);
   };
-
   const isSidebarVisible = settings.sidebarVisible !== false;
   const themeStyle = useMemo(
     () =>
-      getThemeStyle(
-        settings.visualTheme,
-        isDarkMode,
-        settings.animationsEnabled !== false,
-        settings.colorScheme
-      ),
-    [isDarkMode, settings.animationsEnabled, settings.visualTheme, settings.colorScheme]
+      getThemeStyle(previewTheme || settings.visualTheme, systemIsDark, true, {
+        ...settings.colorScheme,
+        fontMain: settings.fontMain,
+        fontSecondary: settings.fontSecondary,
+        fontUI: settings.fontUI
+      }),
+    [previewTheme, settings.visualTheme, settings.colorScheme, settings.fontMain, settings.fontSecondary, settings.fontUI, systemIsDark]
   );
   const modalEffectStyle = useMemo(
     () => getModalEffectStyle(settings.modalTransparency, settings.modalBlur),
@@ -1654,6 +1659,14 @@ export default function App() {
             </button>
 
             <button
+              aria-label="Shortcuts & Guide"
+              onClick={() => setIsShortcutHelpOpen(true)}
+              className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400"
+            >
+              <HelpCircle size={18} />
+            </button>
+
+            <button
               aria-label="Open settings"
               onClick={() => openSettings()}
               className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400"
@@ -2233,6 +2246,31 @@ export default function App() {
                     </Command.Item>
                   </Command.Group>
                   <Command.Group heading="Themes">
+                    {visualThemeOptions.map((theme) => (
+                      <Command.Item
+                        key={theme.id}
+                        value={`theme ${theme.label}`}
+                        onSelect={() => {
+                          setIsCommandOpen(false);
+                          setSettings(s => ({
+                            ...s,
+                            visualTheme: theme.id,
+                            theme: themeContracts[theme.id]?.preferredMode === 'dark' ? 'dark' : 'light',
+                            colorScheme: { main: '', secondary: '', text: '' },
+                            fontMain: '',
+                            fontSecondary: '',
+                            clockTextColor: '',
+                            clockBackgroundColor: ''
+                          }));
+                        }}
+                        className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800 flex items-center gap-2"
+                      >
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: (themeContracts[theme.id]?.tokens?.light || themeContracts[theme.id]?.tokens?.dark)?.bg }}></div>
+                        Theme: {theme.label}
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                  <Command.Group heading="Navigation">
                     {[
                       ['Liquid Glass', 'liquid-glass', 'light'],
                       ['Zen', 'zen', 'light'],
@@ -2324,6 +2362,7 @@ export default function App() {
             initialSection={settingsInitialSection}
             settings={settings}
             setSettings={setSettings}
+            setPreviewTheme={setPreviewTheme}
             addRole={addRole}
             updateRole={updateRole}
             removeRole={removeRole}
