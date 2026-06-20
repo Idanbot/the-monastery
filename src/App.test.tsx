@@ -37,6 +37,15 @@ beforeEach(() => {
   localStorage.clear();
 });
 
+it('renders tiny frontend and backend version indicators', async () => {
+  render(<App />);
+
+  expect(screen.getByTestId('app-version-chip')).toHaveTextContent(/fe 0\.1\.0/);
+  await waitFor(() => {
+    expect(screen.getByTestId('app-version-chip')).toHaveTextContent(/be (offline|unknown|0\.1\.0)/);
+  });
+});
+
 it('renders TheMonastery board', () => {
   render(<App />);
 

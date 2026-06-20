@@ -1,9 +1,13 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import packageJson from './package.json';
 
 const apiTarget = process.env.THE_MONASTERY_API_URL || 'http://127.0.0.1:3000';
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version)
+  },
   plugins: [react()],
   build: {
     chunkSizeWarningLimit: 900,

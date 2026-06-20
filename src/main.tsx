@@ -5,6 +5,10 @@ import { AppProviders } from './lib/AppProviders';
 import { registerAppServiceWorker } from './lib/runtimeIntegrations';
 import './index.css';
 
+declare global {
+  const __APP_VERSION__: string;
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AppProviders>

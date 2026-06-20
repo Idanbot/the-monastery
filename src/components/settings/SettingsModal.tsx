@@ -1184,6 +1184,7 @@ export function SettingsModal({
                       </div>
                       <input
                         ref={importProfileInputRef}
+                        data-testid="profile-import-input"
                         type="file"
                         accept="application/json,.json"
                         className="hidden"
@@ -1315,6 +1316,7 @@ export function SettingsModal({
                   />
                   <input
                     ref={importCalendarInputRef}
+                    data-testid="ics-import-input"
                     type="file"
                     accept="text/calendar,.ics"
                     className="hidden"

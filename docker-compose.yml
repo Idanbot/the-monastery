@@ -1,6 +1,7 @@
 services:
   the-monastery:
     image: ${THE_MONASTERY_IMAGE:-ghcr.io/idanbot/the-monastery:latest}
+    pull_policy: always
     container_name: the-monastery
     restart: unless-stopped
     environment:

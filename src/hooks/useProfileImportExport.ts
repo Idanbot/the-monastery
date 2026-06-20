@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { normalizeTasksPayload } from '../domain/tasks';
+import { mergeSettings, normalizeTasksPayload } from '../domain/tasks';
 import { downloadJson } from '../lib/download';
 
 export function useProfileImportExport({
@@ -48,7 +48,7 @@ export function useProfileImportExport({
 
   const confirmProfileImport = () => {
     if (!profileImportPreview) return;
-    if (profileImportPreview.settings) setSettings(profileImportPreview.settings);
+    if (profileImportPreview.settings) setSettings(mergeSettings(profileImportPreview.settings));
     setTasks(profileImportPreview.tasks || []);
     setSelectedTaskId(null);
     setProfileImportPreview(null);

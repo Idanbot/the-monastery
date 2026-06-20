@@ -94,6 +94,14 @@ test.beforeEach(async ({ page, request }) => {
   }, activeProfileId);
 });
 
+test('shows frontend and backend version indicators', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('app-version-chip')).toContainText('fe');
+  await expect(page.getByTestId('app-version-chip')).toContainText('be');
+  const health = await page.request.get('/api/health');
+  expect((await health.json()).version).toBeTruthy();
+});
+
 test('creates and finds a task in the browser app', async ({ page }) => {
   await page.goto('/');
 
@@ -159,6 +167,38 @@ test('opens settings and exposes backup/import controls', async ({ page }) => {
   await expect(page.getByRole('button', { name: /backup/i })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Import', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /import ics/i })).toBeVisible();
+});
+
+test('imports calendar ICS tasks from the settings UI', async ({ page }) => {
+  await page.goto('/');
+  await openSettingsSection(page, /^tasks data$/i);
+  await page.getByTestId('ics-import-input').setInputFiles({
+    name: 'learning-session.ics',
+    mimeType: 'text/calendar',
+    buffer: Buffer.from(
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        'UID:learning-session-1',
+        'SUMMARY:Course Deep Dive',
+        'DESCRIPTION:Watch module and capture notes',
+        'DTSTART:20260620T090000Z',
+        'DTEND:20260620T103000Z',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\n')
+    )
+  });
+
+  await expect(page.getByRole('heading', { name: /import preview/i })).toBeVisible();
+  await page.getByRole('button', { name: /merge import/i }).click();
+  await page.getByRole('button', { name: /list/i }).click();
+  await searchTasks(page, 'Course Deep Dive');
+  await expectTaskVisible(page, 'Course Deep Dive');
+  await page.getByText('Course Deep Dive').first().click();
+  await page.getByRole('button', { name: /^activity$/i }).click();
+  await expect(page.getByText(/Imported from calendar: Watch module and capture notes/)).toBeVisible();
 });
 
 test('customizes clock, resize handles, and timeline guides from settings', async ({ page }) => {
@@ -343,6 +383,31 @@ test('exports and imports the active profile from settings', async ({ page }) =>
   await page.getByRole('button', { name: /^profiles$/i }).click();
   await expect(page.getByRole('button', { name: /export profile/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /import profile/i })).toBeVisible();
+
+  await page.getByTestId('profile-import-input').setInputFiles({
+    name: 'profile.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        schemaVersion: 1,
+        profile: {
+          name: 'Imported Click Priority',
+          settings: { roles: [{ id: 'imported-role', name: 'Imported Role', tags: ['imported'] }] },
+          tasks: [{ id: 'imported-profile-task', title: 'Imported profile task' }]
+        }
+      })
+    )
+  });
+  await expect(page.getByRole('heading', { name: /restore profile/i })).toBeVisible();
+  await page.getByRole('button', { name: /restore profile/i }).click();
+  await expect(page.getByRole('heading', { name: /restore profile/i })).toHaveCount(0);
+  const closeSettings = page.getByRole('button', { name: /close settings/i });
+  if ((await closeSettings.count()) > 0 && (await closeSettings.first().isVisible())) {
+    await closeSettings.first().click();
+  }
+  await page.getByRole('button', { name: /list/i }).click();
+  await searchTasks(page, 'Imported profile task');
+  await expectTaskVisible(page, 'Imported profile task');
 });
 
 test('drags scheduled tasks on the timeline to update start time', async ({ page }) => {

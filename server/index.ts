@@ -2,6 +2,7 @@ import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import packageJson from '../package.json' with { type: 'json' };
 import { createDataStore } from './db.js';
 import { registerBackupRoutes } from './routes/backup.js';
 import { registerProfileRoutes } from './routes/profiles.js';
@@ -14,6 +15,8 @@ const projectRoot = join(__dirname, '..');
 const defaultPublicDir = join(projectRoot, 'dist');
 const defaultDataDir = process.env.THE_MONASTERY_DATA_DIR || join(projectRoot, 'data');
 const defaultDbPath = process.env.THE_MONASTERY_DB_PATH || join(defaultDataDir, 'the-monastery.sqlite');
+const appVersion = process.env.THE_MONASTERY_VERSION || packageJson.version;
+const buildRef = process.env.THE_MONASTERY_BUILD_REF || process.env.GITHUB_SHA || 'local';
 
 export const createApp = (options: ServerOptions = {}): FastifyInstance => {
   const store = createDataStore(options.dbPath || defaultDbPath);
@@ -38,6 +41,8 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
 
   app.get('/api/health', async () => ({
     ok: true,
+    version: appVersion,
+    buildRef,
     uptimeSeconds: Math.round(process.uptime()),
     storage: store.health()
   }));

@@ -60,6 +60,8 @@ import { useResizableLayout } from './hooks/useResizableLayout';
 import { useTaskDraft } from './hooks/useTaskDraft';
 import { useTaskFilters } from './hooks/useTaskFilters';
 
+const frontendVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
+
 export default function App() {
   const [tasks, setTasks] = useState(loadInitialLocalTasks);
   const [settings, setSettings] = useState(loadInitialLocalSettings);
@@ -85,6 +87,7 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine
   );
+  const [backendVersion, setBackendVersion] = useState('unknown');
 
   const [columnSorts, setColumnSorts] = useState({ new: 'none', done: 'none', rejected: 'none' });
 
@@ -252,6 +255,21 @@ export default function App() {
     return () => {
       window.removeEventListener('online', updateOnlineState);
       window.removeEventListener('offline', updateOnlineState);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/health')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((health) => {
+        if (!cancelled && health?.version) setBackendVersion(health.version);
+      })
+      .catch(() => {
+        if (!cancelled) setBackendVersion('offline');
+      });
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -1181,6 +1199,15 @@ export default function App() {
             <h1 className="text-lg md:text-xl font-bold text-slate-800 dark:text-white tracking-tight leading-none hidden sm:block">
               TheMonastery
             </h1>
+            <div
+              data-testid="app-version-chip"
+              title={`Frontend v${frontendVersion} · Backend v${backendVersion}`}
+              className="hidden lg:flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-2 py-0.5 text-[10px] font-mono text-slate-500 dark:text-slate-400"
+            >
+              <span>fe {frontendVersion}</span>
+              <span className="text-slate-300 dark:text-slate-600">/</span>
+              <span>be {backendVersion}</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
@@ -1870,7 +1897,7 @@ export default function App() {
         {isCommandOpen && (
           <ThemedSurface
             variant="overlay"
-            className="fixed inset-0 z-[85] flex items-start justify-center p-4 pt-24"
+            className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-24"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) setIsCommandOpen(false);
             }}
@@ -1879,7 +1906,7 @@ export default function App() {
               role="dialog"
               aria-label="Command palette"
               variant="modal"
-              className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden"
+              className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden pointer-events-auto"
             >
               <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
                 <Keyboard size={16} className="text-indigo-500" />
@@ -2064,7 +2091,7 @@ export default function App() {
         {isShortcutHelpOpen && (
           <ThemedSurface
             variant="overlay"
-            className="fixed inset-0 z-[84] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) setIsShortcutHelpOpen(false);
             }}
@@ -2152,14 +2179,14 @@ export default function App() {
         {profileAction && (
           <ThemedSurface
             variant="overlay"
-            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) setProfileAction(null);
             }}
           >
             <ThemedSurface
               variant="modal"
-              className="w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl"
+              className="w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl pointer-events-auto"
             >
               <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
@@ -2191,14 +2218,14 @@ export default function App() {
         {profileImportPreview && (
           <ThemedSurface
             variant="overlay"
-            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) setProfileImportPreview(null);
             }}
           >
             <ThemedSurface
               variant="modal"
-              className="w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden"
+              className="w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden pointer-events-auto"
             >
               <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Restore profile?</h3>
@@ -2237,14 +2264,14 @@ export default function App() {
         {planningImportPreview && (
           <ThemedSurface
             variant="overlay"
-            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) setPlanningImportPreview(null);
             }}
           >
             <ThemedSurface
               variant="modal"
-              className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden"
+              className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden pointer-events-auto"
             >
               <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Import planning data?</h3>
@@ -2288,14 +2315,14 @@ export default function App() {
         {importPreview && (
           <ThemedSurface
             variant="overlay"
-            className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) setImportPreview(null);
             }}
           >
             <ThemedSurface
               variant="modal"
-              className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden"
+              className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden pointer-events-auto"
             >
               <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Import preview</h3>

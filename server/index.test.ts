@@ -27,6 +27,21 @@ afterEach(() => {
   if (testDir) rmSync(testDir, { recursive: true, force: true });
 });
 
+it('reports health with version metadata', async () => {
+  const app = makeApp();
+
+  const response = await app.inject({ method: 'GET', url: '/api/health' });
+  await app.close();
+
+  expect(response.statusCode).toBe(200);
+  expect(response.json()).toMatchObject({
+    ok: true,
+    version: expect.any(String),
+    buildRef: expect.any(String),
+    storage: { ok: true }
+  });
+});
+
 it('creates a default profile', async () => {
   const app = makeApp();
 

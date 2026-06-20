@@ -52,7 +52,7 @@ npm start
 
 ## Docker
 
-Default Compose uses the CI-built image from GHCR via `docker-compose.yml`.
+Default Compose uses the CI-built image from GHCR via `docker-compose.yml`. The remote image compose file uses `pull_policy: always`, so `docker compose up -d` pulls the current tag instead of silently reusing a stale local `latest` image.
 
 ```sh
 docker compose up -d
