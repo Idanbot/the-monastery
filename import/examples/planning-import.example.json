@@ -1,0 +1,81 @@
+{
+  "$schema": "../schemas/planning-import.schema.json",
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "id": "mock-learning-react-001",
+      "title": "Learn React server state patterns",
+      "status": "new",
+      "urgency": 6,
+      "tags": ["learning", "react", "frontend"],
+      "scheduledDate": "",
+      "scheduledStart": "",
+      "scheduledEnd": "",
+      "recurrence": "none",
+      "recurrenceRootId": null,
+      "subtasks": [
+        {
+          "id": "mock-learning-react-001-notes",
+          "title": "Summarize core ideas after watching",
+          "status": "new",
+          "tags": ["notes"],
+          "logs": [],
+          "activeLogStart": null
+        }
+      ],
+      "logs": [],
+      "activeLogStart": null,
+      "notes": [
+        "YouTube intro: https://youtube.com/watch?v=mock-react-state",
+        {
+          "title": "Course module",
+          "url": "https://course.example/react/server-state"
+        },
+        {
+          "text": "Focus on query invalidation, optimistic updates, and cache boundaries.",
+          "url": "https://tanstack.com/query/latest/docs/framework/react/overview"
+        }
+      ]
+    },
+    {
+      "id": "mock-deep-work-setup-001",
+      "title": "Prepare weekly deep work plan",
+      "status": "new",
+      "urgency": 5,
+      "tags": ["planning", "deep-work"],
+      "note": "Use this as a seed task for importing and enriching a weekly plan."
+    }
+  ],
+  "roles": [
+    {
+      "id": "mock-role-learning",
+      "name": "Learning",
+      "tags": ["learning", "course", "notes"],
+      "dailyTargetHours": 1,
+      "weeklyTargetHours": 5,
+      "monthlyTargetHours": 20
+    },
+    {
+      "id": "mock-role-deep-work",
+      "name": "Deep Work",
+      "tags": ["deep-work", "planning"],
+      "dailyTargetHours": 2,
+      "weeklyTargetHours": 10,
+      "monthlyTargetHours": 40
+    }
+  ],
+  "tags": ["learning", "react", "frontend", "course", "notes", "deep-work", "planning"],
+  "goals": {
+    "learning": {
+      "dailyTargetHours": 1,
+      "weeklyTargetHours": 5,
+      "monthlyTargetHours": 20
+    },
+    "deep-work": {
+      "dailyTargetHours": 2,
+      "weeklyTargetHours": 10,
+      "monthlyTargetHours": 40
+    },
+    "react": 3
+  }
+}

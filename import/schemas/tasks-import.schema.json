@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://the-monastery.local/import/schemas/tasks-import.schema.json",
+  "title": "TheMonastery Tasks Import",
+  "description": "Manual import format for tasks. Supports full task activity plus note/notes aliases for notes with links.",
+  "oneOf": [
+    {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/taskInput"
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["tasks"],
+      "properties": {
+        "schemaVersion": {
+          "type": "integer"
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/taskInput"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "noteInput": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "anyOf": [
+            {
+              "required": ["text"]
+            },
+            {
+              "required": ["title"]
+            },
+            {
+              "required": ["url"]
+            }
+          ]
+        }
+      ]
+    },
+    "timeLog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start"],
+      "properties": {
+        "start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "end": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "activityEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["system", "note"]
+        },
+        "text": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "subtaskInput": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["new", "done", "rejected"]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/timeLog"
+          }
+        },
+        "activeLogStart": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "taskInput": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["new", "done", "rejected"]
+        },
+        "urgency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scheduledDate": {
+          "type": "string"
+        },
+        "scheduledStart": {
+          "type": "string"
+        },
+        "scheduledEnd": {
+          "type": "string"
+        },
+        "recurrence": {
+          "type": "string",
+          "enum": ["none", "daily", "weekly", "monthly"]
+        },
+        "recurrenceRootId": {
+          "type": ["string", "null"]
+        },
+        "subtasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/subtaskInput"
+          }
+        },
+        "logs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/timeLog"
+          }
+        },
+        "activeLogStart": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "activity": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/activityEntry"
+          }
+        },
+        "note": {
+          "$ref": "#/$defs/noteInput"
+        },
+        "notes": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/noteInput"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/noteInput"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "goalCadence": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "dailyTargetHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "weeklyTargetHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "monthlyTargetHours": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "roleInput": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/goalCadence"
+        }
+      ],
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["name"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dailyTargetHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "weeklyTargetHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "monthlyTargetHours": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "tagGoalInput": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["tag"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "dailyTargetHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "weeklyTargetHours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "monthlyTargetHours": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
