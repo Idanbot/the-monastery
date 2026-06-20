@@ -3,6 +3,7 @@ import {
   defaultSettings,
   getNextRecurringDate,
   mergeSettings,
+  normalizePlanningImportPayload,
   normalizeTask,
   normalizeTasksPayload,
   taskMatchesSearch
@@ -25,6 +26,63 @@ describe('task domain helpers', () => {
 
     expect(tasks).toHaveLength(1);
     expect(tasks[0]).toMatchObject({ id: 'a', title: 'A' });
+  });
+
+  it('normalizes imported task note aliases into note activity', () => {
+    const tasks = normalizeTasksPayload({
+      tasks: [
+        {
+          title: 'Learn React',
+          note: 'Watch intro video: https://youtube.com/watch?v=abc',
+          notes: [
+            { title: 'Course page', url: 'https://course.example/react' },
+            { text: 'Read docs', url: 'https://react.dev/learn' }
+          ]
+        }
+      ]
+    });
+
+    expect(tasks[0].activity).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'note', text: 'Watch intro video: https://youtube.com/watch?v=abc' }),
+        expect.objectContaining({ type: 'note', text: `Course page\nhttps://course.example/react` }),
+        expect.objectContaining({ type: 'note', text: `Read docs\nhttps://react.dev/learn` })
+      ])
+    );
+  });
+
+  it('normalizes planning imports with tasks, roles, tags, and goals', () => {
+    const planning = normalizePlanningImportPayload({
+      tasks: [{ id: 'task-a', title: 'Ship importer', tags: ['import'], notes: ['Implementation note'] }],
+      roles: [{ id: 'role-a', name: 'Builder', tags: ['build'], weeklyTargetHours: 6 }],
+      tags: ['monk', 'import'],
+      goals: { monk: { dailyTargetHours: 1 }, learning: 3 }
+    });
+
+    expect(planning.tasks[0]).toMatchObject({ id: 'task-a', title: 'Ship importer', tags: ['import'] });
+    expect(planning.tasks[0].activity[0]).toMatchObject({ type: 'note', text: 'Implementation note' });
+    expect(planning.roles[0]).toEqual({
+      id: 'role-a',
+      name: 'Builder',
+      tags: ['build'],
+      dailyTargetHours: 0,
+      weeklyTargetHours: 6,
+      monthlyTargetHours: 0
+    });
+    expect(planning.tags).toEqual(expect.arrayContaining(['monk', 'import', 'build', 'learning']));
+    expect(planning.tagGoals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ tag: 'monk', dailyTargetHours: 1 }),
+        expect.objectContaining({ tag: 'learning', weeklyTargetHours: 3 })
+      ])
+    );
+  });
+
+  it('normalizes a simple imported list as task titles', () => {
+    const planning = normalizePlanningImportPayload(['Read paper', 'Write notes']);
+
+    expect(planning.tasks.map((task) => task.title)).toEqual(['Read paper', 'Write notes']);
+    expect(planning.roles).toEqual([]);
   });
 
   it('calculates next recurring dates without UTC day drift', () => {

@@ -133,6 +133,8 @@ export function SettingsModal({
   importTasks,
   importCalendarInputRef,
   importCalendarTasks,
+  importPlanningInputRef,
+  importPlanningData,
   localBackups = [],
   restoreLocalBackup,
   removeLocalBackup,
@@ -1252,6 +1254,12 @@ export function SettingsModal({
                       <Calendar size={14} /> Import ICS
                     </button>
                     <button
+                      onClick={() => importPlanningInputRef.current?.click()}
+                      className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 text-sm font-medium flex items-center justify-center gap-2"
+                    >
+                      <Upload size={14} /> Import planning
+                    </button>
+                    <button
                       onClick={exportTaskSchema}
                       className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 text-sm font-medium flex items-center justify-center gap-2"
                     >
@@ -1295,6 +1303,7 @@ export function SettingsModal({
                   </div>
                   <input
                     ref={importInputRef}
+                    data-testid="tasks-import-input"
                     type="file"
                     accept="application/json,.json"
                     className="hidden"
@@ -1313,6 +1322,18 @@ export function SettingsModal({
                       const file = e.target.files?.[0];
                       if (file) onClose();
                       importCalendarTasks(file);
+                    }}
+                  />
+                  <input
+                    ref={importPlanningInputRef}
+                    data-testid="planning-import-input"
+                    type="file"
+                    accept="application/json,.json"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) onClose();
+                      importPlanningData(file);
                     }}
                   />
                 </SettingSection>

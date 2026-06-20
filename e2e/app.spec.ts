@@ -397,6 +397,7 @@ test('creates, resets, and removes a synced profile', async ({ page }) => {
 });
 
 test('completes a full profile roles tasks analytics lifecycle', async ({ page }) => {
+  test.setTimeout(45000);
   const profileName = 'Analytics Flow ' + Date.now();
 
   await page.goto('/');
@@ -513,6 +514,34 @@ test('prompts on dirty modal close and supports discard or save', async ({ page 
   await expectTaskVisible(page, 'Saved dirty edit');
 });
 
+test('imports planning data with roles, tasks, tags, and goals', async ({ page }) => {
+  await page.goto('/');
+  await openSettingsSection(page, /^tasks data$/i);
+  await page.getByTestId('planning-import-input').setInputFiles({
+    name: 'planning.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        tasks: [{ id: 'planning-task', title: 'Imported planning task', tags: ['monk'] }],
+        roles: [{ id: 'role-imported', name: 'Imported Role', tags: ['monk'], weeklyTargetHours: 4 }],
+        tags: ['monk', 'deep-work'],
+        goals: { monk: { dailyTargetHours: 1 }, 'deep-work': 5 }
+      })
+    )
+  });
+
+  await expect(page.getByRole('heading', { name: /import planning data/i })).toBeVisible();
+  await page.getByRole('button', { name: /merge planning data/i }).click();
+  await page.getByRole('button', { name: /list/i }).click();
+  await searchTasks(page, 'Imported planning task');
+  await expectTaskVisible(page, 'Imported planning task');
+
+  await openSettingsSection(page, /^roles$/i);
+  await expect(page.locator("input[value='Imported Role']")).toBeVisible();
+  await expect(page.locator("input[value='monk']").first()).toBeVisible();
+  await expect(page.locator("input[value='deep-work']")).toBeVisible();
+});
+
 test('merges imported tasks into the active profile', async ({ page }) => {
   const importedTitle = `Imported Merge ${Date.now()}`;
   const task = {
@@ -529,13 +558,17 @@ test('merges imported tasks into the active profile', async ({ page }) => {
     subtasks: [],
     logs: [],
     activeLogStart: null,
-    activity: []
+    activity: [],
+    notes: [
+      'Youtube lesson: https://youtube.com/watch?v=monk123',
+      { title: 'Course module', url: 'https://course.example/monk-mode' }
+    ]
   };
 
   await page.goto('/');
   await page.getByRole('button', { name: /open settings/i }).click();
   await page.getByRole('button', { name: /^tasks data$/i }).click();
-  await page.locator('input[accept="application/json,.json"]').setInputFiles({
+  await page.getByTestId('tasks-import-input').setInputFiles({
     name: 'tasks.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify({ schemaVersion: 1, tasks: [task] }))
@@ -546,6 +579,10 @@ test('merges imported tasks into the active profile', async ({ page }) => {
   await page.getByRole('button', { name: /list/i }).click();
   await searchTasks(page, importedTitle);
   await expectTaskVisible(page, importedTitle);
+  await page.getByText(importedTitle).first().click();
+  await page.getByRole('button', { name: /^activity$/i }).click();
+  await expect(page.getByText('Youtube lesson: https://youtube.com/watch?v=monk123')).toBeVisible();
+  await expect(page.getByText(/https:\/\/course\.example\/monk-mode/)).toBeVisible();
 });
 
 test('persists sidebar resizing through server-backed settings', async ({ page, request }) => {

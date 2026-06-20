@@ -298,6 +298,34 @@ export const normalizeActivity = (activity) =>
         }))
     : [];
 
+const noteTextFromImport = (note) => {
+  if (typeof note === 'string') return note.trim();
+  if (!note || typeof note !== 'object') return '';
+  const text = typeof note.text === 'string' ? note.text.trim() : '';
+  const title = typeof note.title === 'string' ? note.title.trim() : '';
+  const url = typeof note.url === 'string' ? note.url.trim() : '';
+  const base = text || title || url;
+  if (!base) return '';
+  return url && !base.includes(url) ? base + '\n' + url : base;
+};
+
+const normalizeImportedNotes = (task) => {
+  const rawNotes = [
+    ...(Array.isArray(task.notes) ? task.notes : task.notes === undefined ? [] : [task.notes]),
+    ...(task.note === undefined ? [] : [task.note])
+  ];
+
+  return rawNotes
+    .map((note) => ({ raw: note, text: noteTextFromImport(note) }))
+    .filter(({ text }) => text.length > 0)
+    .map(({ raw, text }) => ({
+      id: typeof raw?.id === 'string' ? raw.id : generateId(),
+      type: 'note' as const,
+      text,
+      timestamp: typeof raw?.timestamp === 'string' ? raw.timestamp : new Date().toISOString()
+    }));
+};
+
 export const normalizeSubtasks = (subtasks) =>
   Array.isArray(subtasks)
     ? subtasks.map((subtask) => ({
@@ -329,7 +357,7 @@ export const normalizeTask = (task): Task => {
     subtasks: normalizeSubtasks(task.subtasks),
     logs: normalizeLogs(task.logs),
     activeLogStart: typeof task.activeLogStart === 'string' ? task.activeLogStart : null,
-    activity: normalizeActivity(task.activity)
+    activity: [...normalizeActivity(task.activity), ...normalizeImportedNotes(task)]
   };
 };
 
@@ -338,6 +366,64 @@ export const normalizeTasksPayload = (payload): Task[] => {
   if (!Array.isArray(rawTasks))
     throw new Error('Import must be an array of tasks or an export object with a tasks array.');
   return rawTasks.map(normalizeTask);
+};
+
+const normalizeImportedTagList = (tags) =>
+  Array.from(
+    new Set(
+      normalizeStringArray(tags)
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    )
+  );
+
+const normalizeGoalMap = (goals) => {
+  if (!goals || typeof goals !== 'object' || Array.isArray(goals)) return [];
+  return Object.entries(goals)
+    .filter(([tag]) => tag.trim())
+    .map(([tag, value]) => ({
+      id: generateId(),
+      tag,
+      ...(typeof value === 'number'
+        ? { weeklyTargetHours: value }
+        : value && typeof value === 'object' && !Array.isArray(value)
+          ? value
+          : {})
+    }));
+};
+
+export const normalizePlanningImportPayload = (payload) => {
+  const source = payload?.profile || payload?.profiles?.[0] || payload;
+  const settingsSource = source?.settings || source || {};
+  const rawTasks = Array.isArray(source)
+    ? source.map((item) => (typeof item === 'string' ? { title: item } : item))
+    : source?.tasks || [];
+  const rawRoles = settingsSource.roles || [];
+  const rawGoals = settingsSource.tagGoals || settingsSource.goals || [];
+  const mappedGoals = normalizeGoalMap(settingsSource.goals);
+  const tasks = normalizeTasksPayload({ tasks: rawTasks });
+  const roles = normalizeRoles(rawRoles);
+  const explicitTags = normalizeImportedTagList(settingsSource.tags);
+  const roleTags = roles.flatMap((role) => role.tags || []);
+  const taskTags = tasks.flatMap((task) => getEffectiveTags(task));
+  const goals = normalizeTagGoals(Array.isArray(rawGoals) ? rawGoals : []).concat(
+    normalizeTagGoals(mappedGoals)
+  );
+  const goalTags = goals.map((goal) => goal.tag);
+  const tags = Array.from(new Set([...explicitTags, ...roleTags, ...taskTags, ...goalTags].filter(Boolean)));
+  const existingGoalTags = new Set(goals.map((goal) => goal.tag.toLowerCase()));
+  const tagGoals = [
+    ...goals,
+    ...explicitTags
+      .filter((tag) => !existingGoalTags.has(tag.toLowerCase()))
+      .map((tag) => ({ id: generateId(), tag, ...normalizeGoalCadence({}) }))
+  ];
+
+  if (!tasks.length && !roles.length && !tags.length && !tagGoals.length) {
+    throw new Error('Import must include tasks, roles, tags, tagGoals, or goals.');
+  }
+
+  return { tasks, roles, tags, tagGoals };
 };
 
 export const taskMatchesSearch = (task, query) => {
