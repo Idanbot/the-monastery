@@ -63,8 +63,7 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
         ok: true,
         version: appVersion,
         buildRef,
-        uptimeSeconds: Math.round(process.uptime()),
-        storage: store.health()
+        uptimeSeconds: Math.round(process.uptime())
       })
     );
     registerProfileRoutes(api, store);

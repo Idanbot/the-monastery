@@ -58,11 +58,12 @@ it('reports health with version metadata', async () => {
     ok: true,
     version: expect.any(String),
     buildRef: expect.any(String),
-    storage: { ok: true }
+    uptimeSeconds: expect.any(Number)
   });
+  expect(response.json()).not.toHaveProperty('storage');
 });
 
-it('rate-limits API routes before storage work can be repeated aggressively', async () => {
+it('rate-limits API routes before health checks can be repeated aggressively', async () => {
   const app = makeApp({ apiRateLimit: { max: 1, timeWindow: '1 minute' } });
 
   const first = await app.inject({ method: 'GET', url: '/api/health' });

@@ -65,7 +65,7 @@ try {
   if (!port) throw new Error(`Could not resolve mapped port from: ${portLine}`);
 
   const baseUrl = `http://127.0.0.1:${port}`;
-  await waitForJson(`${baseUrl}/api/health`, (body) => body.ok === true && body.storage?.ok === true);
+  await waitForJson(`${baseUrl}/api/health`, (body) => body.ok === true && typeof body.version === 'string');
   await waitForJson(`${baseUrl}/api/profiles`, (body) => Array.isArray(body.profiles));
   console.log(`Docker smoke passed for ${image}`);
 } catch (error) {
