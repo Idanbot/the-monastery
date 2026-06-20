@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { mergeSettings, normalizeTasksPayload } from '../domain/tasks';
 import { apiRequest, shouldUseBackend } from '../lib/api';
 import { activeProfileStorageKey } from '../lib/storage';
@@ -114,6 +115,47 @@ function useActiveProfileLoader({
   }, [activeProfileId, isBackendAvailable, setIsProfileSettingsReady, setProfileError, setSettings]);
 }
 
+const tasksEqual = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+
+const saveTasksDelta = async (activeProfileId, previousTasks, nextTasks) => {
+  const previousById = new Map(previousTasks.map((task) => [task.id, task]));
+  const nextById = new Map(nextTasks.map((task) => [task.id, task]));
+  const added = nextTasks.filter((task) => !previousById.has(task.id));
+  const deleted = previousTasks.filter((task) => !nextById.has(task.id));
+  const updated = nextTasks.filter((task) => {
+    const previous = previousById.get(task.id);
+    return previous && !tasksEqual(previous, task);
+  });
+
+  if (added.length === 1 && deleted.length === 0 && updated.length === 0) {
+    const task = added[0];
+    await apiRequest(`/api/profiles/${activeProfileId}/tasks`, {
+      method: 'POST',
+      body: JSON.stringify({ task, position: nextTasks.findIndex((item) => item.id === task.id) })
+    });
+    return;
+  }
+
+  if (added.length === 0 && deleted.length === 1 && updated.length === 0) {
+    await apiRequest(`/api/profiles/${activeProfileId}/tasks/${deleted[0].id}`, { method: 'DELETE' });
+    return;
+  }
+
+  if (added.length === 0 && deleted.length === 0 && updated.length === 1) {
+    const task = updated[0];
+    await apiRequest(`/api/profiles/${activeProfileId}/tasks/${task.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ task, position: nextTasks.findIndex((item) => item.id === task.id) })
+    });
+    return;
+  }
+
+  await apiRequest(`/api/profiles/${activeProfileId}/tasks`, {
+    method: 'PUT',
+    body: JSON.stringify({ tasks: nextTasks })
+  });
+};
+
 function useDebouncedProfileSave({
   activeProfileId,
   isBackendAvailable,
@@ -123,16 +165,47 @@ function useDebouncedProfileSave({
   settings,
   setProfileError
 }) {
+  const [persistenceStatus, setPersistenceStatus] = useState('idle');
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const tasksBaselineRef = useRef(null);
+  const settingsBaselineRef = useRef(null);
+
+  useEffect(() => {
+    tasksBaselineRef.current = null;
+    settingsBaselineRef.current = null;
+    setPersistenceStatus(isBackendAvailable ? 'loading' : 'offline');
+  }, [activeProfileId, isBackendAvailable]);
+
+  useEffect(() => {
+    if (!isBackendAvailable) setPersistenceStatus('offline');
+  }, [isBackendAvailable]);
+
   useEffect(() => {
     if (!isBackendAvailable || !activeProfileId || !isProfileReady) return;
+    if (tasksBaselineRef.current === null) {
+      tasksBaselineRef.current = [];
+    }
+    if (tasksEqual(tasksBaselineRef.current, tasks)) {
+      setPersistenceStatus('saved');
+      return;
+    }
 
+    setPersistenceStatus('saving');
     const saveTimer = window.setTimeout(() => {
-      apiRequest(`/api/profiles/${activeProfileId}/tasks`, {
-        method: 'PUT',
-        body: JSON.stringify({ tasks })
-      }).catch((error) => {
-        setProfileError(getErrorMessage(error, 'Could not save tasks.'));
-      });
+      const previousTasks = tasksBaselineRef.current || [];
+      saveTasksDelta(activeProfileId, previousTasks, tasks)
+        .then(() => {
+          tasksBaselineRef.current = tasks;
+          setLastSavedAt(new Date());
+          setPersistenceStatus('saved');
+          setProfileError('');
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error, 'Could not save tasks.');
+          setPersistenceStatus('error');
+          setProfileError(message);
+          toast.error(message);
+        });
     }, 350);
 
     return () => window.clearTimeout(saveTimer);
@@ -140,18 +213,38 @@ function useDebouncedProfileSave({
 
   useEffect(() => {
     if (!isBackendAvailable || !activeProfileId || !isProfileSettingsReady) return;
+    if (settingsBaselineRef.current === null) {
+      settingsBaselineRef.current = {};
+    }
+    if (tasksEqual(settingsBaselineRef.current, settings)) {
+      setPersistenceStatus((status) => (status === 'saving' ? status : 'saved'));
+      return;
+    }
 
+    setPersistenceStatus('saving');
     const saveTimer = window.setTimeout(() => {
       apiRequest(`/api/profiles/${activeProfileId}/settings`, {
         method: 'PUT',
         body: JSON.stringify({ settings })
-      }).catch((error) => {
-        setProfileError(getErrorMessage(error, 'Could not save settings.'));
-      });
+      })
+        .then(() => {
+          settingsBaselineRef.current = settings;
+          setLastSavedAt(new Date());
+          setPersistenceStatus('saved');
+          setProfileError('');
+        })
+        .catch((error) => {
+          const message = getErrorMessage(error, 'Could not save settings.');
+          setPersistenceStatus('error');
+          setProfileError(message);
+          toast.error(message);
+        });
     }, 450);
 
     return () => window.clearTimeout(saveTimer);
   }, [settings, activeProfileId, isBackendAvailable, isProfileSettingsReady, setProfileError]);
+
+  return { persistenceStatus, lastSavedAt };
 }
 
 export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSelectedTaskId }) {
@@ -183,7 +276,7 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     setProfileError
   });
 
-  useDebouncedProfileSave({
+  const { persistenceStatus, lastSavedAt } = useDebouncedProfileSave({
     activeProfileId,
     isBackendAvailable,
     isProfileReady,
@@ -265,6 +358,8 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
   return {
     isBackendAvailable,
     isProfileReady,
+    persistenceStatus,
+    lastSavedAt,
     profiles,
     activeProfileId,
     selectProfile,

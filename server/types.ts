@@ -1,3 +1,5 @@
+import type { RateLimitPluginOptions } from '@fastify/rate-limit';
+
 export type Task = Record<string, unknown>;
 
 export type ProfileRow = {
@@ -16,4 +18,5 @@ export type ServerOptions = {
   dbPath?: string;
   publicDir?: string;
   logger?: boolean | { level?: string; redact?: string[] };
+  apiRateLimit?: RateLimitPluginOptions | false;
 };

@@ -1,5 +1,6 @@
+import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
-import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyError, type FastifyInstance, type FastifyRequest } from 'fastify';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import packageJson from '../package.json' with { type: 'json' };
@@ -17,6 +18,14 @@ const defaultDataDir = process.env.THE_MONASTERY_DATA_DIR || join(projectRoot, '
 const defaultDbPath = process.env.THE_MONASTERY_DB_PATH || join(defaultDataDir, 'the-monastery.sqlite');
 const appVersion = process.env.THE_MONASTERY_VERSION || packageJson.version;
 const buildRef = process.env.THE_MONASTERY_BUILD_REF || process.env.GITHUB_SHA || 'local';
+const defaultApiRateLimit = {
+  max: Number(process.env.THE_MONASTERY_API_RATE_LIMIT_MAX || 300),
+  timeWindow: process.env.THE_MONASTERY_API_RATE_LIMIT_WINDOW || '1 minute',
+  errorResponseBuilder: () => Object.assign(new Error('Too many requests.'), { statusCode: 429 }),
+  onExceeded: (request: FastifyRequest, key: string) => {
+    request.log.warn({ key, method: request.method, url: request.url }, 'rate limit exceeded');
+  }
+};
 
 export const createApp = (options: ServerOptions = {}): FastifyInstance => {
   const store = createDataStore(options.dbPath || defaultDbPath);
@@ -33,23 +42,32 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
     const statusCode = error.statusCode || 500;
-    request.log.error({ err: error, statusCode }, 'request failed');
+    request.log.error({ err: error, statusCode, method: request.method, url: request.url }, 'request failed');
     reply.code(statusCode).send({
       error: statusCode >= 500 ? 'Internal server error.' : error.message
     });
   });
 
-  app.get('/api/health', async () => ({
-    ok: true,
-    version: appVersion,
-    buildRef,
-    uptimeSeconds: Math.round(process.uptime()),
-    storage: store.health()
-  }));
-  registerProfileRoutes(app, store);
-  registerTaskRoutes(app, store);
-  registerSettingsRoutes(app, store);
-  registerBackupRoutes(app, store);
+  app.register(async (api) => {
+    if (options.apiRateLimit !== false) {
+      await api.register(fastifyRateLimit, {
+        ...defaultApiRateLimit,
+        ...(options.apiRateLimit ?? {})
+      });
+    }
+
+    api.get('/api/health', async () => ({
+      ok: true,
+      version: appVersion,
+      buildRef,
+      uptimeSeconds: Math.round(process.uptime()),
+      storage: store.health()
+    }));
+    registerProfileRoutes(api, store);
+    registerTaskRoutes(api, store);
+    registerSettingsRoutes(api, store);
+    registerBackupRoutes(api, store);
+  });
 
   app.register(fastifyStatic, {
     root: options.publicDir || defaultPublicDir,

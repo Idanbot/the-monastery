@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { autoUpdate, flip, offset, shift, useFloating } from '@floating-ui/react';
 import { Command } from 'cmdk';
+import { Toaster, toast } from 'sonner';
 import { Bar, BarChart, CartesianGrid, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import {
   Activity,
@@ -33,7 +34,6 @@ import { TaskModal } from './components/task-modal/TaskModal';
 import { AmbientFocusScene } from './components/focus/AmbientFocusScene';
 import { ThemedSurface } from './components/ui/ThemedSurface';
 import { calculateAnalytics } from './domain/analytics';
-import { parseIcsTasks } from './domain/calendar';
 import { rolePresets } from './domain/rolePresets';
 import { getModalEffectStyle, getThemeStyle, visualThemeOptions, themeContracts } from './domain/themes';
 import {
@@ -43,11 +43,10 @@ import {
   formatTime,
   generateId,
   calculateTotalDuration,
-  normalizeTasksPayload,
-  normalizePlanningImportPayload,
   normalizeTask
 } from './domain/tasks';
 import { useBackupActions } from './hooks/useBackupActions';
+import { useImportFlows } from './hooks/useImportFlows';
 import {
   loadInitialLocalSettings,
   loadInitialLocalTasks,
@@ -82,8 +81,6 @@ export default function App() {
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
   const [keyboardFocusedTaskId, setKeyboardFocusedTaskId] = useState(null);
-  const [importPreview, setImportPreview] = useState(null);
-  const [planningImportPreview, setPlanningImportPreview] = useState(null);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine
   );
@@ -95,10 +92,7 @@ export default function App() {
 
   /* Modal Collapsible State */
   const [modalSections, setModalSections] = useState({ timer: false, notes: false, activity: false });
-  const importInputRef = useRef(null);
   const importProfileInputRef = useRef(null);
-  const importCalendarInputRef = useRef(null);
-  const importPlanningInputRef = useRef(null);
   const agendaContainerRef = useRef(null);
   const agendaScrollTopRef = useRef(0);
   const timelineDragRef = useRef(null);
@@ -106,6 +100,8 @@ export default function App() {
   const {
     isBackendAvailable,
     isProfileReady,
+    persistenceStatus,
+    lastSavedAt,
     profiles,
     activeProfileId,
     selectProfile,
@@ -135,6 +131,20 @@ export default function App() {
     setSelectedTaskId,
     importProfileInputRef
   });
+  const {
+    importPreview,
+    setImportPreview,
+    planningImportPreview,
+    setPlanningImportPreview,
+    importInputRef,
+    importCalendarInputRef,
+    importPlanningInputRef,
+    importTasks,
+    importCalendarTasks,
+    importPlanningData,
+    confirmImportTasks,
+    confirmPlanningImport
+  } = useImportFlows({ tasks, setTasks, setSettings, setSelectedTaskId });
   const {
     localBackups,
     restoreLocalBackup,
@@ -300,104 +310,6 @@ export default function App() {
     document.addEventListener('pointerdown', closeOnOutsidePointer);
     return () => document.removeEventListener('pointerdown', closeOnOutsidePointer);
   }, [isProfileOpen, profileFloatingNode, profileReferenceNode]);
-
-  const importCalendarTasks = async (file) => {
-    if (!file) return;
-    try {
-      const imported = parseIcsTasks(await file.text());
-      setImportPreview({
-        imported,
-        newTasks: imported,
-        updatedTasks: [],
-        unchangedTasks: []
-      });
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not import calendar file.');
-    } finally {
-      if (importCalendarInputRef.current) importCalendarInputRef.current.value = '';
-    }
-  };
-
-  const importTasks = async (file) => {
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const imported = normalizeTasksPayload(JSON.parse(text));
-      const currentById = new Map(tasks.map((task) => [task.id, task] as const));
-      const newTasks = imported.filter((task) => !currentById.has(task.id));
-      const updatedTasks = imported.filter((task) => {
-        const current = currentById.get(task.id);
-        return current && JSON.stringify(current) !== JSON.stringify(task);
-      });
-      const unchangedTasks = imported.filter((task) => {
-        const current = currentById.get(task.id);
-        return current && JSON.stringify(current) === JSON.stringify(task);
-      });
-
-      setImportPreview({ imported, newTasks, updatedTasks, unchangedTasks });
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not import tasks.');
-    } finally {
-      if (importInputRef.current) importInputRef.current.value = '';
-    }
-  };
-
-  const confirmImportTasks = () => {
-    if (!importPreview) return;
-    const imported = importPreview.imported;
-    setTasks((prev) => {
-      const importedIds = new Set(imported.map((task) => task.id));
-      return [...imported, ...prev.filter((task) => !importedIds.has(task.id))];
-    });
-    setSelectedTaskId(null);
-    setImportPreview(null);
-  };
-
-  const importPlanningData = async (file) => {
-    if (!file) return;
-    try {
-      const imported = normalizePlanningImportPayload(JSON.parse(await file.text()));
-      const currentTasksById = new Map(tasks.map((task) => [task.id, task] as const));
-      const newTasks = imported.tasks.filter((task) => !currentTasksById.has(task.id));
-      const updatedTasks = imported.tasks.filter((task) => {
-        const current = currentTasksById.get(task.id);
-        return current && JSON.stringify(current) !== JSON.stringify(task);
-      });
-      setPlanningImportPreview({ ...imported, newTasks, updatedTasks });
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not import planning data.');
-    } finally {
-      if (importPlanningInputRef.current) importPlanningInputRef.current.value = '';
-    }
-  };
-
-  const confirmPlanningImport = () => {
-    if (!planningImportPreview) return;
-    const importedTasks = planningImportPreview.tasks || [];
-    const importedTaskIds = new Set(importedTasks.map((task) => task.id));
-    setTasks((previous) => [...importedTasks, ...previous.filter((task) => !importedTaskIds.has(task.id))]);
-    setSettings((previous) => {
-      const roleKeys = new Set(
-        (planningImportPreview.roles || []).flatMap((role) => [role.id, role.name.toLowerCase()])
-      );
-      const goalTags = new Set((planningImportPreview.tagGoals || []).map((goal) => goal.tag.toLowerCase()));
-      return {
-        ...previous,
-        roles: [
-          ...(planningImportPreview.roles || []),
-          ...(previous.roles || []).filter(
-            (role) => !roleKeys.has(role.id) && !roleKeys.has(String(role.name || '').toLowerCase())
-          )
-        ],
-        tagGoals: [
-          ...(planningImportPreview.tagGoals || []),
-          ...(previous.tagGoals || []).filter((goal) => !goalTags.has(String(goal.tag || '').toLowerCase()))
-        ]
-      };
-    });
-    setSelectedTaskId(null);
-    setPlanningImportPreview(null);
-  };
 
   const addRole = () => {
     setSettings((prev) => ({
@@ -596,6 +508,21 @@ export default function App() {
         };
       })
     );
+  };
+
+  const handleSaveDraftTask = () => {
+    saveDraftTask();
+    toast.success('Task saved.');
+  };
+
+  const handleDeleteDraftTask = () => {
+    deleteDraftTask();
+    toast.success('Task deleted.');
+  };
+
+  const handleConfirmProfileImport = () => {
+    confirmProfileImport();
+    toast.success('Profile restored.');
   };
 
   const completeTask = (taskId) => {
@@ -1161,6 +1088,18 @@ export default function App() {
     );
   };
 
+  const persistenceLabel =
+    persistenceStatus === 'saving'
+      ? 'Saving'
+      : persistenceStatus === 'saved'
+        ? 'Saved'
+        : persistenceStatus === 'error'
+          ? 'Save failed'
+          : persistenceStatus === 'offline'
+            ? 'Offline local'
+            : 'Loading';
+  const persistenceTitle = lastSavedAt ? 'Last saved ' + lastSavedAt.toLocaleTimeString() : persistenceLabel;
+
   return (
     <div
       className={`${isDarkMode ? 'dark' : ''} app-shell h-screen w-full flex flex-col overflow-hidden`}
@@ -1180,6 +1119,7 @@ export default function App() {
       }
     >
       <div className="app-frame h-full w-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans overflow-hidden transition-colors duration-200">
+        <Toaster richColors position="top-right" theme={isDarkMode ? 'dark' : 'light'} />
         {/* Header - Fixed Height */}
         <header
           data-material="control"
@@ -1373,6 +1313,22 @@ export default function App() {
               className={`hidden lg:block rounded-full px-2 py-1 text-[10px] font-semibold ${isOnline ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'}`}
             >
               {isOnline ? 'Online' : 'Offline ready'}
+            </div>
+
+            <div
+              data-testid="persistence-status"
+              title={persistenceTitle}
+              className={`hidden lg:block rounded-full px-2 py-1 text-[10px] font-semibold ${
+                persistenceStatus === 'error'
+                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
+                  : persistenceStatus === 'saving' || persistenceStatus === 'loading'
+                    ? 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300'
+                    : persistenceStatus === 'offline'
+                      ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+                      : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+              }`}
+            >
+              {persistenceLabel}
             </div>
 
             <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
@@ -2252,7 +2208,7 @@ export default function App() {
                   Cancel
                 </button>
                 <button
-                  onClick={confirmProfileImport}
+                  onClick={handleConfirmProfileImport}
                   className="px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
                   Restore profile
@@ -2395,11 +2351,11 @@ export default function App() {
           clockFormat={settings.clockFormat}
           updateDraftTask={updateDraftTask}
           closeTaskModal={closeTaskModal}
-          saveDraftTask={saveDraftTask}
+          saveDraftTask={handleSaveDraftTask}
           closeAfterSave={() => setSelectedTaskId(null)}
           showDeleteTaskPrompt={showDeleteTaskPrompt}
           setShowDeleteTaskPrompt={setShowDeleteTaskPrompt}
-          deleteDraftTask={deleteDraftTask}
+          deleteDraftTask={handleDeleteDraftTask}
           showDirtyClosePrompt={showDirtyClosePrompt}
           setShowDirtyClosePrompt={setShowDirtyClosePrompt}
           discardDraftTask={discardDraftTask}

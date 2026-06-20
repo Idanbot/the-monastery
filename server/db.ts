@@ -69,6 +69,7 @@ export const createDataStore = (dbPath: string) => {
   const resetProfileTasksStmt = db.prepare('DELETE FROM tasks WHERE profile_id = ?');
   const resetProfileSettingsStmt = db.prepare('DELETE FROM profile_settings WHERE profile_id = ?');
   const listTasksStmt = db.prepare('SELECT task_json FROM tasks WHERE profile_id = ? ORDER BY position ASC');
+  const deleteTaskStmt = db.prepare('DELETE FROM tasks WHERE profile_id = ? AND task_id = ?');
   const getSettingsStmt = db.prepare('SELECT settings_json FROM profile_settings WHERE profile_id = ?');
   const upsertSettingsStmt = db.prepare(`
     INSERT INTO profile_settings (profile_id, settings_json, updated_at)
@@ -99,6 +100,29 @@ export const createDataStore = (dbPath: string) => {
       insertTaskStmt.run(profileId, taskId, JSON.stringify({ ...task, id: taskId }), index, timestamp);
     });
 
+    touchProfileStmt.run(timestamp, profileId);
+  });
+
+  const saveTask = db.transaction((profileId: string, task: Task, position?: number) => {
+    const tasks = (listTasksStmt.all(profileId) as { task_json: string }[]).map(
+      (row) => JSON.parse(row.task_json) as Task
+    );
+    const existingIndex = tasks.findIndex((item) => item.id === task.id);
+    const nextTasks = tasks.filter((item) => item.id !== task.id);
+    const insertAt = Math.max(
+      0,
+      Math.min(
+        nextTasks.length,
+        typeof position === 'number' ? position : existingIndex >= 0 ? existingIndex : nextTasks.length
+      )
+    );
+    nextTasks.splice(insertAt, 0, task);
+    replaceTasks(profileId, nextTasks);
+  });
+
+  const deleteTask = db.transaction((profileId: string, taskId: string) => {
+    const timestamp = nowIso();
+    deleteTaskStmt.run(profileId, taskId);
     touchProfileStmt.run(timestamp, profileId);
   });
 
@@ -140,6 +164,8 @@ export const createDataStore = (dbPath: string) => {
       return rows.map((row) => JSON.parse(row.task_json) as Task);
     },
     replaceTasks,
+    saveTask,
+    deleteTask,
     getSettings: (profileId: string) => {
       const row = getSettingsStmt.get(profileId) as SettingsRow | undefined;
       return row ? JSON.parse(row.settings_json) : null;

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { createThemeCss, createThemeRecipe } from '../domain/themeStudio';
 import { generateId, mergeSettings, normalizeTasksPayload } from '../domain/tasks';
 import { apiRequest } from '../lib/api';
@@ -48,10 +49,12 @@ export function useBackupActions({
     setTasks(normalizeTasksPayload({ tasks: backup.tasks || [] }));
     setSelectedTaskId(null);
     setIsSettingsOpen(false);
+    toast.success('Local backup restored.');
   };
 
   const removeLocalBackup = (backupId) => {
     persistLocalBackups(localBackups.filter((item) => item.id !== backupId));
+    toast.success('Local backup deleted.');
   };
 
   const exportTasks = () => {
@@ -61,6 +64,7 @@ export function useBackupActions({
       exportedAt: new Date().toISOString(),
       tasks
     });
+    toast.success('Tasks exported.');
   };
 
   const backupData = async () => {
@@ -69,6 +73,7 @@ export function useBackupActions({
       if (isBackendAvailable) {
         const backup = await apiRequest('/api/backup');
         downloadJson(`the-monastery-backup-${new Date().toISOString().slice(0, 10)}.json`, backup);
+        toast.success('Backup created.');
         return;
       }
 
@@ -84,13 +89,15 @@ export function useBackupActions({
           }
         ]
       });
+      toast.success('Backup created.');
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Could not create backup.');
+      toast.error(error instanceof Error ? error.message : 'Could not create backup.');
     }
   };
 
   const exportTaskSchema = () => {
     downloadJson('the-monastery-task.schema.json', taskSchema);
+    toast.success('Task schema exported.');
   };
 
   const exportThemeRecipe = () => {
@@ -99,6 +106,7 @@ export function useBackupActions({
       ...recipe,
       css: createThemeCss(recipe)
     });
+    toast.success('Theme recipe exported.');
   };
 
   return {

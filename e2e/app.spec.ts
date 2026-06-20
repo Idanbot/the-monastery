@@ -115,6 +115,78 @@ test('creates and finds a task in the browser app', async ({ page }) => {
   await expect(page.getByText('Design Database Schema')).toHaveCount(0);
 });
 
+test('persists task notes, goals, and deletions across reloads', async ({ page }) => {
+  const title = 'Persistent note task';
+
+  await page.goto('/');
+  await createTask(page, title);
+  await page.getByText(title).first().click();
+  await page.getByRole('button', { name: /^notes$/i }).click();
+  await page.getByPlaceholder('Add a note...').fill('Persistence note survives reload');
+  await page.getByRole('button', { name: /^add note$/i }).click();
+  await page.getByRole('button', { name: /^save$/i }).click();
+
+  await page.keyboard.press('m');
+  const profileId = await page.getByTestId('active-profile-control').getAttribute('data-active-profile-id');
+  if (!profileId) throw new Error('Missing active profile id');
+  await page.getByPlaceholder('One outcome for today').fill('Persist monk goal');
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/profiles/${profileId}/settings`);
+      const body = await response.json();
+      return body.settings?.dailyGoal || '';
+    })
+    .toBe('Persist monk goal');
+
+  await page.reload();
+  await expect(page.getByTestId('active-profile-control')).toHaveAttribute(
+    'data-active-profile-id',
+    profileId
+  );
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/profiles/${profileId}/settings`);
+      const body = await response.json();
+      return body.settings?.dailyGoal || '';
+    })
+    .toBe('Persist monk goal');
+  const goalInput = page.getByPlaceholder('One outcome for today');
+  if ((await goalInput.count()) === 0) {
+    await page.getByRole('button', { name: /monk mode/i }).click();
+  }
+  await expect(goalInput).toHaveValue('Persist monk goal');
+  await page.getByRole('button', { name: /exit monk mode/i }).click();
+  await page.getByRole('button', { name: /list/i }).click();
+  await searchTasks(page, title);
+  await expectTaskVisible(page, title);
+  await page.getByText(title).first().click();
+  await page.getByRole('button', { name: /^activity$/i }).click();
+  await expect(page.getByText('Persistence note survives reload')).toBeVisible();
+  await page.getByRole('button', { name: /^save$/i }).click();
+
+  await page.getByRole('button', { name: /list/i }).click();
+  await searchTasks(page, title);
+  await page.getByText(title).first().click();
+  await page.getByRole('button', { name: /^delete$/i }).click();
+  await page.getByRole('button', { name: /^delete task$/i }).click();
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/profiles/${profileId}/tasks`);
+      const body = await response.json();
+      return (body.tasks || []).some((task) => task.title === title);
+    })
+    .toBe(false);
+
+  await page.reload();
+  const exitMonk = page.getByRole('button', { name: /exit monk mode/i });
+  if ((await exitMonk.count()) > 0 && (await exitMonk.first().isVisible())) {
+    await exitMonk.first().click();
+  }
+  await page.getByRole('button', { name: /list/i }).click();
+  await searchTasks(page, title);
+  await expect(page.getByText(title)).toHaveCount(0);
+});
+
 test('adds a task tag from the fuzzy tag pool', async ({ page }) => {
   await page.goto('/');
 

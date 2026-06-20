@@ -5,19 +5,39 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { createApp } from './index.js';
+import type { ServerOptions } from './types.js';
 
 let testDir = '';
 
-const makeApp = () => {
+const makeApp = (options: Partial<ServerOptions> = {}) => {
   testDir = mkdtempSync(join(tmpdir(), 'the-monastery-api-'));
   writeFileSync(join(testDir, 'index.html'), '<!doctype html><html><body>TheMonastery</body></html>');
 
   return createApp({
     dbPath: join(testDir, 'the-monastery.sqlite'),
     publicDir: testDir,
-    logger: false
+    logger: false,
+    ...options
   });
 };
+
+const makeTask = (overrides = {}) => ({
+  id: 'task-' + Math.random().toString(36).slice(2, 8),
+  title: 'Server task',
+  status: 'new',
+  urgency: 5,
+  tags: [],
+  scheduledDate: '',
+  scheduledStart: '',
+  scheduledEnd: '',
+  recurrence: 'none',
+  recurrenceRootId: null,
+  subtasks: [],
+  logs: [],
+  activeLogStart: null,
+  activity: [],
+  ...overrides
+});
 
 beforeEach(() => {
   testDir = '';
@@ -42,6 +62,19 @@ it('reports health with version metadata', async () => {
   });
 });
 
+it('rate-limits API routes before storage work can be repeated aggressively', async () => {
+  const app = makeApp({ apiRateLimit: { max: 1, timeWindow: '1 minute' } });
+
+  const first = await app.inject({ method: 'GET', url: '/api/health' });
+  const second = await app.inject({ method: 'GET', url: '/api/health' });
+  await app.close();
+
+  expect(first.statusCode).toBe(200);
+  expect(second.statusCode).toBe(429);
+  expect(second.headers['retry-after']).toBeDefined();
+  expect(second.json()).toEqual({ error: 'Too many requests.' });
+});
+
 it('creates a default profile', async () => {
   const app = makeApp();
 
@@ -52,6 +85,53 @@ it('creates a default profile', async () => {
   expect(response.json()).toMatchObject({
     profiles: [{ id: 'default', name: 'Default', taskCount: 0 }]
   });
+});
+
+it('supports task action endpoints for create, update, and delete', async () => {
+  const app = makeApp();
+  const task = makeTask({ id: 'action-task', title: 'Action task' });
+
+  const created = await app.inject({
+    method: 'POST',
+    url: '/api/profiles/default/tasks',
+    payload: { task, position: 0 }
+  });
+  const updated = await app.inject({
+    method: 'PATCH',
+    url: '/api/profiles/default/tasks/action-task',
+    payload: { task: { ...task, title: 'Updated action task' }, position: 0 }
+  });
+  const listed = await app.inject({ method: 'GET', url: '/api/profiles/default/tasks' });
+  const deleted = await app.inject({ method: 'DELETE', url: '/api/profiles/default/tasks/action-task' });
+  const afterDelete = await app.inject({ method: 'GET', url: '/api/profiles/default/tasks' });
+  await app.close();
+
+  expect(created.statusCode).toBe(201);
+  expect(updated.statusCode).toBe(200);
+  expect(listed.json().tasks).toMatchObject([{ id: 'action-task', title: 'Updated action task' }]);
+  expect(deleted.statusCode).toBe(200);
+  expect(afterDelete.json().tasks).toHaveLength(0);
+});
+
+it('rejects malformed task and settings payloads with validation errors', async () => {
+  const app = makeApp();
+
+  const invalidTask = await app.inject({
+    method: 'POST',
+    url: '/api/profiles/default/tasks',
+    payload: { task: { id: 'bad', title: 'Missing fields' } }
+  });
+  const invalidSettings = await app.inject({
+    method: 'PUT',
+    url: '/api/profiles/default/settings',
+    payload: { settings: [] }
+  });
+  await app.close();
+
+  expect(invalidTask.statusCode).toBe(400);
+  expect(invalidTask.json()).toEqual({ error: 'valid task object is required.' });
+  expect(invalidSettings.statusCode).toBe(400);
+  expect(invalidSettings.json()).toEqual({ error: 'settings object is required.' });
 });
 
 it('stores tasks independently per profile and resets a profile', async () => {
@@ -68,22 +148,7 @@ it('stores tasks independently per profile and resets a profile', async () => {
     method: 'PUT',
     url: `/api/profiles/${profileId}/tasks`,
     payload: {
-      tasks: [
-        {
-          id: 'task1',
-          title: 'Synced task',
-          status: 'new',
-          urgency: 5,
-          tags: [],
-          scheduledDate: '',
-          scheduledStart: '',
-          scheduledEnd: '',
-          subtasks: [],
-          logs: [],
-          activeLogStart: null,
-          activity: []
-        }
-      ]
+      tasks: [makeTask({ id: 'task1', title: 'Synced task' })]
     }
   });
 
