@@ -56,13 +56,17 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
       });
     }
 
-    api.get('/api/health', async () => ({
-      ok: true,
-      version: appVersion,
-      buildRef,
-      uptimeSeconds: Math.round(process.uptime()),
-      storage: store.health()
-    }));
+    api.get(
+      '/api/health',
+      options.apiRateLimit === false ? {} : { preHandler: api.rateLimit() },
+      async () => ({
+        ok: true,
+        version: appVersion,
+        buildRef,
+        uptimeSeconds: Math.round(process.uptime()),
+        storage: store.health()
+      })
+    );
     registerProfileRoutes(api, store);
     registerTaskRoutes(api, store);
     registerSettingsRoutes(api, store);
