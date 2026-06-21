@@ -8,10 +8,12 @@ function ThemeGalleryCard({ themeOption, isSelected, setThemeChoice }) {
   const darkTokens = contract.tokens.dark || contract.tokens.light;
   const tokens = themeOption.group === 'dark' || themeOption.group === 'terminal' ? darkTokens : lightTokens;
   const isSystem = themeOption.group === 'system';
-  
+
   const bg1 = isSystem ? lightTokens.bg : tokens.bg;
   const bg2 = isSystem ? darkTokens.bg : tokens.accent;
-  
+  const labelBackground = tokens.bgColor || tokens.bg;
+  const labelText = tokens.text;
+
   return (
     <button
       key={themeOption.value}
@@ -20,13 +22,13 @@ function ThemeGalleryCard({ themeOption, isSelected, setThemeChoice }) {
       data-testid="theme-gallery-card"
       data-theme-card={themeOption.visualTheme}
       onClick={() => setThemeChoice(themeOption.value)}
-      className={`flex h-12 items-center gap-3 overflow-hidden rounded-xl border p-2 px-3 text-left transition-[border-color,box-shadow,transform,background-color] duration-150 ease-out hover:-translate-y-[1px] ${
+      className={`flex min-h-12 items-center gap-3 overflow-visible rounded-xl border p-2 px-3 text-left transition-[border-color,box-shadow,transform,background-color] duration-150 ease-out hover:-translate-y-[1px] ${
         isSelected
           ? 'border-indigo-500 shadow-sm ring-1 ring-indigo-500 bg-slate-50 dark:bg-slate-800/50'
           : 'border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600'
       }`}
     >
-      <div 
+      <div
         className={`h-5 w-5 shrink-0 border border-black/10 shadow-inner dark:border-white/10 overflow-hidden relative ${
           themeOption.group === 'terminal' ? 'rounded-sm' : 'rounded-full'
         }`}
@@ -39,9 +41,11 @@ function ThemeGalleryCard({ themeOption, isSelected, setThemeChoice }) {
       </div>
       <span
         data-testid="theme-gallery-label"
-        className={`truncate text-sm font-medium leading-tight ${
-          isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-300'
-        }`}
+        style={{
+          backgroundColor: labelBackground,
+          color: labelText
+        }}
+        className="min-w-0 flex-1 whitespace-normal break-words rounded-md px-2 py-0.5 text-sm font-medium leading-tight shadow-sm ring-1 ring-black/5 dark:ring-white/10"
       >
         {themeOption.label}
       </span>

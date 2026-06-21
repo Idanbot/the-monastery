@@ -40,11 +40,11 @@ import { OneBreath } from './components/monk-mode/OneBreath';
 import { calculateAnalytics } from './domain/analytics';
 
 const MANTRAS = [
-  "You have power over your mind - not outside events.",
-  "Focus on the step in front of you, not the whole staircase.",
-  "Do less, but do it better.",
-  "The obstacle is the way.",
-  "Wherever you are, be there totally."
+  'You have power over your mind - not outside events.',
+  'Focus on the step in front of you, not the whole staircase.',
+  'Do less, but do it better.',
+  'The obstacle is the way.',
+  'Wherever you are, be there totally.'
 ];
 
 import { rolePresets } from './domain/rolePresets';
@@ -99,7 +99,7 @@ export default function App() {
     typeof navigator === 'undefined' ? true : navigator.onLine
   );
   const [backendVersion, setBackendVersion] = useState('unknown');
-  
+
   // Random daily mantra
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)]);
 
@@ -426,8 +426,8 @@ export default function App() {
   }, [setTasks]);
 
   const setMonkMode = (enabled) => {
-    setSettings((prev) => ({ 
-      ...prev, 
+    setSettings((prev) => ({
+      ...prev,
       monkMode: enabled,
       monkModeOpenedAt: enabled ? new Date().toISOString() : undefined
     }));
@@ -701,8 +701,8 @@ export default function App() {
         setSettings((previous) => {
           const newMode = !previous.monkMode;
           if (newMode) setIsEnteringMonkMode(true);
-          return { 
-            ...previous, 
+          return {
+            ...previous,
             monkMode: newMode,
             monkModeOpenedAt: newMode ? new Date().toISOString() : undefined
           };
@@ -1008,11 +1008,8 @@ export default function App() {
     const nextTasks = tasks
       .filter((task) => task.status === 'new' && task.id !== currentTask?.id)
       .slice(0, 3);
-    const shutdownDone = Object.values(settings.shutdownChecklist || {}).filter(Boolean).length;
-
     return (
       <div className="flex-1 min-h-0 relative overflow-hidden bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center">
-        
         {isEnteringMonkMode && settings.animationsEnabled !== false && (
           <OneBreath onComplete={() => setIsEnteringMonkMode(false)} />
         )}
@@ -1023,7 +1020,8 @@ export default function App() {
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Monk Mode</h2>
             {settings.monkModeOpenedAt && (
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">
-                Active for {(() => {
+                Active for{' '}
+                {(() => {
                   const ms = now - new Date(settings.monkModeOpenedAt).getTime();
                   const mins = Math.floor(ms / 60000);
                   return mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
@@ -1041,30 +1039,36 @@ export default function App() {
 
         {/* Main Content Area */}
         <div className="w-full max-w-2xl px-6 flex flex-col items-center justify-center gap-12 z-10">
-          
           {/* Pomodoro Timer - The Main Focus */}
           <div className="w-full max-w-sm pointer-events-auto">
-            <PomodoroTimer 
+            <PomodoroTimer
               onComplete={(minutes) => {
                 // Automatically log time to current task if exists
                 if (currentTask) {
                   const timestamp = new Date().toISOString();
                   const pastTime = new Date(Date.now() - minutes * 60 * 1000).toISOString();
-                  setTasks(prev => prev.map(t => {
-                    if (t.id === currentTask.id) {
-                      return {
-                        ...t,
-                        logs: [...t.logs, { start: pastTime, end: timestamp }],
-                        activity: [
-                          ...t.activity,
-                          { id: generateId(), type: 'system', text: `Completed ${minutes}m Pomodoro`, timestamp }
-                        ]
-                      };
-                    }
-                    return t;
-                  }));
+                  setTasks((prev) =>
+                    prev.map((t) => {
+                      if (t.id === currentTask.id) {
+                        return {
+                          ...t,
+                          logs: [...t.logs, { start: pastTime, end: timestamp }],
+                          activity: [
+                            ...t.activity,
+                            {
+                              id: generateId(),
+                              type: 'system',
+                              text: `Completed ${minutes}m Pomodoro`,
+                              timestamp
+                            }
+                          ]
+                        };
+                      }
+                      return t;
+                    })
+                  );
                 }
-              }} 
+              }}
             />
           </div>
 
@@ -1079,8 +1083,12 @@ export default function App() {
                   {currentTask.title || 'Untitled task'}
                 </h3>
                 <div className="text-sm text-slate-500 dark:text-slate-400">
-                  {currentTask.activeLogStart 
-                    ? `Started at ${new Date(currentTask.activeLogStart).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}` 
+                  {currentTask.activeLogStart
+                    ? 'Started at ' +
+                      new Date(currentTask.activeLogStart).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
                     : 'Not active (timer paused)'}
                 </div>
               </div>
@@ -1089,13 +1097,44 @@ export default function App() {
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
                   No active task
                 </div>
-                <button onClick={() => addTask('new')} className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-sm transition-all hover:scale-105 active:scale-95">
+                <button
+                  onClick={() => addTask('new')}
+                  className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-sm transition-all hover:scale-105 active:scale-95"
+                >
                   Start New Task
                 </button>
               </div>
             )}
           </div>
 
+          <label className="w-full pointer-events-auto rounded-2xl border border-slate-200 bg-white/55 p-4 text-left shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/55">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Daily goal
+            </span>
+            <input
+              value={settings.dailyGoal || ''}
+              onChange={(event) => setSettings((prev) => ({ ...prev, dailyGoal: event.target.value }))}
+              placeholder="One outcome for today"
+              className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
+            />
+          </label>
+        </div>
+
+        <div
+          data-testid="monk-minimap"
+          className="absolute bottom-8 left-6 z-10 flex max-w-[180px] flex-col gap-2 rounded-2xl border border-slate-200 bg-white/55 p-3 text-xs shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/55"
+        >
+          <span className="font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-300">
+            Focus map
+          </span>
+          <span className="truncate text-slate-700 dark:text-slate-200">
+            {currentTask?.title || 'No active task'}
+          </span>
+          {nextTasks.length > 0 && (
+            <span className="truncate text-slate-500 dark:text-slate-400">
+              Next: {nextTasks.map((task) => task.title).join(' · ')}
+            </span>
+          )}
         </div>
 
         {/* Daily Mantra */}
@@ -1104,7 +1143,6 @@ export default function App() {
             "{mantra}"
           </p>
         </div>
-
       </div>
     );
   };

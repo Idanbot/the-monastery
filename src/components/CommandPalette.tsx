@@ -36,10 +36,10 @@ export function CommandPalette({ settings, setSettings, setMonkMode, setView, op
         >
           <div className="flex items-center border-b border-slate-100 dark:border-slate-800 px-4">
             <Search className="w-5 h-5 text-slate-400 shrink-0" />
-            <Command.Input 
-              autoFocus 
-              className="w-full bg-transparent p-4 text-base outline-none placeholder-slate-400 text-slate-900 dark:text-white" 
-              placeholder="Type a command or search..." 
+            <Command.Input
+              autoFocus
+              className="w-full bg-transparent p-4 text-base outline-none placeholder-slate-400 text-slate-900 dark:text-white"
+              placeholder="Type a command or search..."
             />
           </div>
           <Command.List className="max-h-[300px] overflow-y-auto p-2 custom-scrollbar">
@@ -68,7 +68,10 @@ export function CommandPalette({ settings, setSettings, setMonkMode, setView, op
               </Command.Item>
             </Command.Group>
 
-            <Command.Group heading="Navigation" className="text-xs font-semibold text-slate-500 px-2 py-1.5 mt-2">
+            <Command.Group
+              heading="Navigation"
+              className="text-xs font-semibold text-slate-500 px-2 py-1.5 mt-2"
+            >
               <Command.Item
                 onSelect={() => {
                   setView('board');
@@ -89,10 +92,13 @@ export function CommandPalette({ settings, setSettings, setMonkMode, setView, op
               </Command.Item>
             </Command.Group>
 
-            <Command.Group heading="Appearance" className="text-xs font-semibold text-slate-500 px-2 py-1.5 mt-2">
+            <Command.Group
+              heading="Appearance"
+              className="text-xs font-semibold text-slate-500 px-2 py-1.5 mt-2"
+            >
               <Command.Item
                 onSelect={() => {
-                  setSettings(prev => ({ ...prev, visualTheme: 'liquid-glass' }));
+                  setSettings((prev) => ({ ...prev, visualTheme: 'liquid-glass' }));
                   setOpen(false);
                 }}
                 className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg cursor-pointer aria-selected:bg-indigo-50 dark:aria-selected:bg-indigo-500/20 aria-selected:text-indigo-700 dark:aria-selected:text-indigo-300 transition-colors text-slate-700 dark:text-slate-300"
@@ -101,7 +107,7 @@ export function CommandPalette({ settings, setSettings, setMonkMode, setView, op
               </Command.Item>
               <Command.Item
                 onSelect={() => {
-                  setSettings(prev => ({ ...prev, visualTheme: 'obsidian-glass' }));
+                  setSettings((prev) => ({ ...prev, visualTheme: 'obsidian-glass' }));
                   setOpen(false);
                 }}
                 className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg cursor-pointer aria-selected:bg-indigo-50 dark:aria-selected:bg-indigo-500/20 aria-selected:text-indigo-700 dark:aria-selected:text-indigo-300 transition-colors text-slate-700 dark:text-slate-300"

@@ -89,13 +89,14 @@ it('shows virtualized mobile task list', async () => {
   expect(within(taskList).getByText(/^One$/)).toBeInTheDocument();
 });
 
-it('shows the spring-backed ambient focus scene in monk mode', async () => {
+it('shows the breathing intro before monk mode focus controls', async () => {
   const user = userEvent.setup();
   render(<App />);
 
   await user.click(screen.getByRole('button', { name: /enter monk mode/i }));
 
-  expect(screen.getByTestId('spring-focus-scene')).toBeInTheDocument();
+  expect(screen.getByTestId('one-breath')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /skip breathing intro/i })).toBeInTheDocument();
 });
 
 it('suggests tags from the task title', async () => {
@@ -413,7 +414,6 @@ it('offers readable theme gallery choices for default modes and custom themes', 
     'Zen',
     'Liquid Glass',
     'GitHub Light',
-    'Nord',
     'Terminal',
     'Terminal White',
     'Dark',
@@ -423,6 +423,7 @@ it('offers readable theme gallery choices for default modes and custom themes', 
     'Gruvbox',
     'Dracula',
     'GitHub Dark',
+    'Nord',
     'Night Owl'
   ]);
 });

@@ -51,7 +51,7 @@ const themeChoiceOptions = [
   ...visualThemeOptions
     .filter((theme) => theme.id !== 'default')
     .map((theme) => {
-      const group = ['zen', 'liquid-glass', 'github-light', 'nord'].includes(theme.id)
+      const group = ['zen', 'liquid-glass', 'github-light'].includes(theme.id)
         ? 'light'
         : ['terminal', 'terminal-white'].includes(theme.id)
           ? 'terminal'

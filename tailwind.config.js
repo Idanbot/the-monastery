@@ -8,7 +8,7 @@ export default {
         sans: ['var(--font-sans)', 'sans-serif'],
         serif: ['var(--font-serif)', 'serif'],
         mono: ['var(--font-mono)', 'monospace'],
-        heading: ['var(--font-serif)', 'serif'],
+        heading: ['var(--font-serif)', 'serif']
       }
     }
   },

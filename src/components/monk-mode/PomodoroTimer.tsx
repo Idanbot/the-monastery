@@ -29,7 +29,7 @@ export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) =
   }, [isActive, timeLeft, mode, onComplete]);
 
   const toggleTimer = () => setIsActive(!isActive);
-  
+
   const resetTimer = () => {
     setIsActive(false);
     setTimeLeft(mode === 'work' ? 25 * 60 : 5 * 60);
@@ -72,7 +72,10 @@ export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) =
         </button>
       </div>
 
-      <div className="text-7xl md:text-8xl font-mono font-bold text-slate-800 dark:text-slate-100 mb-8 tabular-nums tracking-tighter" style={{ fontVariantNumeric: 'tabular-nums' }}>
+      <div
+        className="text-7xl md:text-8xl font-mono font-bold text-slate-800 dark:text-slate-100 mb-8 tabular-nums tracking-tighter"
+        style={{ fontVariantNumeric: 'tabular-nums' }}
+      >
         {formatTime(timeLeft)}
       </div>
 
@@ -80,12 +83,18 @@ export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) =
         <button
           onClick={toggleTimer}
           className={`flex items-center justify-center w-14 h-14 rounded-full text-white shadow-lg transition-transform hover:scale-105 active:scale-95 ${
-            mode === 'work' ? 'bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/25' : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25'
+            mode === 'work'
+              ? 'bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/25'
+              : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25'
           }`}
         >
-          {isActive ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
+          {isActive ? (
+            <Pause size={24} fill="currentColor" />
+          ) : (
+            <Play size={24} fill="currentColor" className="ml-1" />
+          )}
         </button>
-        
+
         <button
           onClick={resetTimer}
           className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm transition-colors"

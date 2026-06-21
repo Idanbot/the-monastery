@@ -86,6 +86,13 @@ const expectTaskVisible = async (page, title: string) => {
   await expect(page.getByText(title).first()).toBeVisible();
 };
 
+const completeBreathingIntro = async (page) => {
+  const skipIntro = page.getByRole('button', { name: /skip breathing intro/i });
+  if ((await skipIntro.count()) > 0 && (await skipIntro.first().isVisible())) {
+    await skipIntro.first().click();
+  }
+};
+
 test.beforeEach(async ({ page, request }) => {
   const activeProfileId = await resetServerState(request);
   await page.addInitScript((profileId) => {
@@ -127,6 +134,7 @@ test('persists task notes, goals, and deletions across reloads', async ({ page }
   await page.getByRole('button', { name: /^save$/i }).click();
 
   await page.keyboard.press('m');
+  await completeBreathingIntro(page);
   const profileId = await page.getByTestId('active-profile-control').getAttribute('data-active-profile-id');
   if (!profileId) throw new Error('Missing active profile id');
   await page.getByPlaceholder('One outcome for today').fill('Persist monk goal');
@@ -153,6 +161,7 @@ test('persists task notes, goals, and deletions across reloads', async ({ page }
   const goalInput = page.getByPlaceholder('One outcome for today');
   if ((await goalInput.count()) === 0) {
     await page.getByRole('button', { name: /monk mode/i }).click();
+    await completeBreathingIntro(page);
   }
   await expect(goalInput).toHaveValue('Persist monk goal');
   await page.getByRole('button', { name: /exit monk mode/i }).click();
@@ -326,6 +335,8 @@ test('keeps theme gallery readable and stable while switching themes', async ({ 
   const gallery = page.getByTestId('theme-gallery');
   await expect(gallery).toBeVisible();
   await expect(page.getByTestId('theme-gallery-card')).toHaveCount(16);
+  await expect(page.getByTestId('theme-gallery-group-light')).not.toContainText('Nord');
+  await expect(page.getByTestId('theme-gallery-group-dark')).toContainText('Nord');
 
   const readability = await page.getByTestId('theme-gallery-label').evaluateAll((labels) => {
     const parseRgb = (value) => {
@@ -443,6 +454,7 @@ test('uses command palette, shortcuts, and task templates', async ({ page }) => 
   await expectTaskVisible(page, 'Template task');
 
   await page.keyboard.press('m');
+  await completeBreathingIntro(page);
   await expect(page.getByRole('heading', { name: /monk mode/i })).toBeVisible();
   await expect(page.getByTestId('monk-minimap')).toBeVisible();
 });

@@ -14,8 +14,8 @@ export function ActivityGraph({ tasks }: ActivityGraphProps) {
     const counts = new Map<string, number>();
 
     // Collect all task logs
-    tasks.forEach(task => {
-      task.logs.forEach(log => {
+    tasks.forEach((task) => {
+      task.logs.forEach((log) => {
         if (log.start && log.end) {
           const date = new Date(log.start);
           const dateString = date.toISOString().split('T')[0];
@@ -46,7 +46,7 @@ export function ActivityGraph({ tasks }: ActivityGraphProps) {
     return data;
   }, [tasks]);
 
-  const maxCount = Math.max(1, ...activityData.map(d => d.count));
+  const maxCount = Math.max(1, ...activityData.map((d) => d.count));
 
   const getColorClass = (count: number) => {
     if (count === 0) return 'bg-slate-100 dark:bg-slate-800/50';
