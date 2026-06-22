@@ -85,6 +85,7 @@ export type AppSettings = {
   fontUI: string;
   customThemeName: string;
   monkMode: boolean;
+  monkModeOpenedAt?: string;
   dailyGoal: string;
   shutdownChecklist: Record<string, boolean>;
   sidebarVisible: boolean;

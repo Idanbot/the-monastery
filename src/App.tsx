@@ -32,11 +32,13 @@ import { KanbanBoard, TaskListView } from './components/board/TaskBoard';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { TaskModal } from './components/task-modal/TaskModal';
 
-import { PomodoroTimer } from './components/monk-mode/PomodoroTimer';
 import { CommandPalette } from './components/CommandPalette';
 import { ActivityGraph } from './components/dashboard/ActivityGraph';
 import { ThemedSurface } from './components/ui/ThemedSurface';
-import { OneBreath } from './components/monk-mode/OneBreath';
+import { MonkModeView } from './components/monk-mode/MonkModeView';
+import { PersistenceStatusChip } from './components/PersistenceStatusChip';
+import type { PersistenceStatus } from './domain/persistenceStatus';
+import { usePersistenceNotifier } from './hooks/usePersistenceNotifier';
 import { calculateAnalytics } from './domain/analytics';
 
 const MANTRAS = [
@@ -1004,160 +1006,32 @@ export default function App() {
     );
   };
 
-  const renderMonkMode = () => {
-    const nextTasks = tasks
-      .filter((task) => task.status === 'new' && task.id !== currentTask?.id)
-      .slice(0, 3);
-    return (
-      <div className="flex-1 min-h-0 relative overflow-hidden bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center">
-        {isEnteringMonkMode && settings.animationsEnabled !== false && (
-          <OneBreath onComplete={() => setIsEnteringMonkMode(false)} />
-        )}
-
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 p-5 md:p-8 flex items-center justify-between z-10 pointer-events-none">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Monk Mode</h2>
-            {settings.monkModeOpenedAt && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-mono">
-                Active for{' '}
-                {(() => {
-                  const ms = now - new Date(settings.monkModeOpenedAt).getTime();
-                  const mins = Math.floor(ms / 60000);
-                  return mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
-                })()}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={() => setMonkMode(false)}
-            className="pointer-events-auto px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm"
-          >
-            Exit
-          </button>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="w-full max-w-2xl px-6 flex flex-col items-center justify-center gap-12 z-10">
-          {/* Pomodoro Timer - The Main Focus */}
-          <div className="w-full max-w-sm pointer-events-auto">
-            <PomodoroTimer
-              onComplete={(minutes) => {
-                // Automatically log time to current task if exists
-                if (currentTask) {
-                  const timestamp = new Date().toISOString();
-                  const pastTime = new Date(Date.now() - minutes * 60 * 1000).toISOString();
-                  setTasks((prev) =>
-                    prev.map((t) => {
-                      if (t.id === currentTask.id) {
-                        return {
-                          ...t,
-                          logs: [...t.logs, { start: pastTime, end: timestamp }],
-                          activity: [
-                            ...t.activity,
-                            {
-                              id: generateId(),
-                              type: 'system',
-                              text: `Completed ${minutes}m Pomodoro`,
-                              timestamp
-                            }
-                          ]
-                        };
-                      }
-                      return t;
-                    })
-                  );
+  const handlePomodoroComplete = (minutes) => {
+    if (!currentTask) return;
+    const timestamp = new Date().toISOString();
+    const pastTime = new Date(Date.now() - minutes * 60 * 1000).toISOString();
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === currentTask.id
+          ? {
+              ...task,
+              logs: [...task.logs, { start: pastTime, end: timestamp }],
+              activity: [
+                ...task.activity,
+                {
+                  id: generateId(),
+                  type: 'system',
+                  text: `Completed ${minutes}m Pomodoro`,
+                  timestamp
                 }
-              }}
-            />
-          </div>
-
-          {/* Current Task */}
-          <div className="w-full pointer-events-auto bg-white/60 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
-            {currentTask ? (
-              <div className="flex flex-col items-center text-center">
-                <div className="text-xs font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 mb-3">
-                  Current Focus
-                </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">
-                  {currentTask.title || 'Untitled task'}
-                </h3>
-                <div className="text-sm text-slate-500 dark:text-slate-400">
-                  {currentTask.activeLogStart
-                    ? 'Started at ' +
-                      new Date(currentTask.activeLogStart).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })
-                    : 'Not active (timer paused)'}
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center text-center py-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">
-                  No active task
-                </div>
-                <button
-                  onClick={() => addTask('new')}
-                  className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-sm transition-all hover:scale-105 active:scale-95"
-                >
-                  Start New Task
-                </button>
-              </div>
-            )}
-          </div>
-
-          <label className="w-full pointer-events-auto rounded-2xl border border-slate-200 bg-white/55 p-4 text-left shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/55">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Daily goal
-            </span>
-            <input
-              value={settings.dailyGoal || ''}
-              onChange={(event) => setSettings((prev) => ({ ...prev, dailyGoal: event.target.value }))}
-              placeholder="One outcome for today"
-              className="w-full bg-transparent text-sm font-medium text-slate-900 outline-none placeholder:text-slate-400 dark:text-white dark:placeholder:text-slate-500"
-            />
-          </label>
-        </div>
-
-        <div
-          data-testid="monk-minimap"
-          className="absolute bottom-8 left-6 z-10 flex max-w-[180px] flex-col gap-2 rounded-2xl border border-slate-200 bg-white/55 p-3 text-xs shadow-sm backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/55"
-        >
-          <span className="font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-300">
-            Focus map
-          </span>
-          <span className="truncate text-slate-700 dark:text-slate-200">
-            {currentTask?.title || 'No active task'}
-          </span>
-          {nextTasks.length > 0 && (
-            <span className="truncate text-slate-500 dark:text-slate-400">
-              Next: {nextTasks.map((task) => task.title).join(' · ')}
-            </span>
-          )}
-        </div>
-
-        {/* Daily Mantra */}
-        <div className="absolute bottom-8 left-0 right-0 text-center px-4 z-10 pointer-events-none">
-          <p className="text-sm font-serif italic text-slate-400 dark:text-slate-500 tracking-wide">
-            "{mantra}"
-          </p>
-        </div>
-      </div>
+              ]
+            }
+          : task
+      )
     );
   };
-
-  const persistenceLabel =
-    persistenceStatus === 'saving'
-      ? 'Saving'
-      : persistenceStatus === 'saved'
-        ? 'Saved'
-        : persistenceStatus === 'error'
-          ? 'Save failed'
-          : persistenceStatus === 'offline'
-            ? 'Offline local'
-            : 'Loading';
-  const persistenceTitle = lastSavedAt ? 'Last saved ' + lastSavedAt.toLocaleTimeString() : persistenceLabel;
+  const persistenceState = persistenceStatus as PersistenceStatus;
+  usePersistenceNotifier(persistenceState, lastSavedAt);
 
   return (
     <div
@@ -1374,21 +1248,7 @@ export default function App() {
               {isOnline ? 'Online' : 'Offline ready'}
             </div>
 
-            <div
-              data-testid="persistence-status"
-              title={persistenceTitle}
-              className={`hidden lg:block rounded-full px-2 py-1 text-[10px] font-semibold ${
-                persistenceStatus === 'error'
-                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
-                  : persistenceStatus === 'saving' || persistenceStatus === 'loading'
-                    ? 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300'
-                    : persistenceStatus === 'offline'
-                      ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
-                      : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
-              }`}
-            >
-              {persistenceLabel}
-            </div>
+            <PersistenceStatusChip status={persistenceState} lastSavedAt={lastSavedAt} />
 
             <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
 
@@ -1483,7 +1343,21 @@ export default function App() {
               </label>
             )}
 
-            {settings.monkMode && renderMonkMode()}
+            {settings.monkMode && (
+              <MonkModeView
+                settings={settings}
+                setSettings={setSettings}
+                tasks={tasks}
+                currentTask={currentTask}
+                now={now}
+                isEnteringMonkMode={isEnteringMonkMode}
+                mantra={mantra}
+                onExit={() => setMonkMode(false)}
+                onIntroComplete={() => setIsEnteringMonkMode(false)}
+                onAddTask={() => addTask('new')}
+                onPomodoroComplete={handlePomodoroComplete}
+              />
+            )}
 
             {!settings.monkMode && view === 'dashboard' && (
               <div className="flex-1 min-h-0 p-6 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">

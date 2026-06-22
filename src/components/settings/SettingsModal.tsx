@@ -30,43 +30,10 @@ import { createRoleFromPreset, rolePresets } from '../../domain/rolePresets';
 import { parseTagString } from '../../domain/tags';
 import { createThemeRecipe, themeRecipeSchema } from '../../domain/themeStudio';
 import { generateId } from '../../domain/tasks';
-import {
-  getModalEffectStyle,
-  getThemeContract,
-  getThemeStyle,
-  visualThemeOptions
-} from '../../domain/themes';
+import { getModalEffectStyle, getThemeContract, getThemeStyle } from '../../domain/themes';
+import { themeChoiceOptions } from '../../domain/themeGallery';
 
 const sectionIds = ['appearance', 'time', 'board', 'roles', 'sidebar', 'profiles', 'data'];
-const themeChoiceOptions = [
-  {
-    value: 'system:default',
-    label: 'System Default',
-    theme: 'system',
-    group: 'system',
-    visualTheme: 'default'
-  },
-  { value: 'light:default', label: 'Light', theme: 'light', group: 'light', visualTheme: 'default' },
-  { value: 'dark:default', label: 'Dark', theme: 'dark', group: 'dark', visualTheme: 'default' },
-  ...visualThemeOptions
-    .filter((theme) => theme.id !== 'default')
-    .map((theme) => {
-      const group = ['zen', 'liquid-glass', 'github-light'].includes(theme.id)
-        ? 'light'
-        : ['terminal', 'terminal-white'].includes(theme.id)
-          ? 'terminal'
-          : 'dark';
-
-      return {
-        value: `theme:${theme.id}`,
-        label: theme.label,
-        theme: ['tokyo-night', 'terminal', 'terminal-white'].includes(theme.id) ? 'dark' : 'light',
-        group,
-        visualTheme: theme.id
-      };
-    })
-];
-
 function SettingSection({ id, title, openSections, toggleSection, motionDuration, motionEase, children }) {
   const isOpen = Boolean(openSections[id]);
 

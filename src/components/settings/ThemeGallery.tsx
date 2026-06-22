@@ -1,18 +1,9 @@
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { ChevronDown } from 'lucide-react';
-import { themeContracts } from '../../domain/themes';
+import { resolveThemeGalleryTokens } from '../../domain/themeGallery';
 
 function ThemeGalleryCard({ themeOption, isSelected, setThemeChoice }) {
-  const contract = themeContracts[themeOption.visualTheme] || themeContracts.default;
-  const lightTokens = contract.tokens.light;
-  const darkTokens = contract.tokens.dark || contract.tokens.light;
-  const tokens = themeOption.group === 'dark' || themeOption.group === 'terminal' ? darkTokens : lightTokens;
-  const isSystem = themeOption.group === 'system';
-
-  const bg1 = isSystem ? lightTokens.bg : tokens.bg;
-  const bg2 = isSystem ? darkTokens.bg : tokens.accent;
-  const labelBackground = tokens.bgColor || tokens.bg;
-  const labelText = tokens.text;
+  const tokens = resolveThemeGalleryTokens(themeOption.visualTheme, themeOption.group);
 
   return (
     <button
@@ -33,17 +24,17 @@ function ThemeGalleryCard({ themeOption, isSelected, setThemeChoice }) {
           themeOption.group === 'terminal' ? 'rounded-sm' : 'rounded-full'
         }`}
       >
-        <div className="absolute inset-0" style={{ background: bg1 }}></div>
-        <div className="absolute inset-y-0 right-0 w-1/2" style={{ background: bg2 }}></div>
-        {contract.features?.glass && (
+        <div className="absolute inset-0" style={{ background: tokens.swatchStart }}></div>
+        <div className="absolute inset-y-0 right-0 w-1/2" style={{ background: tokens.swatchEnd }}></div>
+        {tokens.hasGlass && (
           <div className="absolute inset-0 bg-white/20 dark:bg-black/20 backdrop-blur-[2px]"></div>
         )}
       </div>
       <span
         data-testid="theme-gallery-label"
         style={{
-          backgroundColor: labelBackground,
-          color: labelText
+          backgroundColor: tokens.labelBackground,
+          color: tokens.labelText
         }}
         className="min-w-0 flex-1 whitespace-normal break-words rounded-md px-2 py-0.5 text-sm font-medium leading-tight shadow-sm ring-1 ring-black/5 dark:ring-white/10"
       >
