@@ -218,6 +218,7 @@ it('saves task edits from the modal', async () => {
   const titleInput = screen.getByDisplayValue(/design database schema/i);
   await user.clear(titleInput);
   await user.type(titleInput, 'Build API');
+  expect(screen.getByTestId('task-save-state')).toHaveTextContent(/unsaved changes/i);
   await user.click(screen.getByRole('button', { name: /save task/i }));
 
   expect(screen.getAllByText(/build api/i).length).toBeGreaterThan(0);
@@ -236,6 +237,7 @@ it('prompts before closing dirty modal edits and can discard them', async () => 
   await user.click(screen.getByRole('button', { name: /^discard$/i }));
 
   expect(screen.getByText(/save changes\?/i)).toBeInTheDocument();
+  expect(screen.getByTestId('task-save-state')).toHaveTextContent(/unsaved changes/i);
   await user.click(screen.getAllByRole('button', { name: /^discard$/i }).at(-1)!);
 
   expect(screen.getAllByText(/design database schema/i).length).toBeGreaterThan(0);

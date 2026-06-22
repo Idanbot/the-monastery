@@ -1,97 +1,16 @@
 import { expect, test } from '@playwright/test';
-
-const api = (path: string) => `http://127.0.0.1:3100${path}`;
-
-const expectStatus = async (response, expectedStatus: number) => {
-  if (response.status() !== expectedStatus) {
-    throw new Error(`${response.url()} ${response.status()}: ${await response.text()}`);
-  }
-};
-
-const resetServerState = async (request) => {
-  const createdResponse = await request.post(api('/api/profiles'), {
-    data: { name: `E2E ${Date.now()}` }
-  });
-  await expectStatus(createdResponse, 201);
-  const created = await createdResponse.json();
-  const activeProfile = created.profile;
-
-  if (activeProfile) {
-    await request.post(api(`/api/profiles/${activeProfile.id}/reset`));
-    const settingsResponse = await request.put(api(`/api/profiles/${activeProfile.id}/settings`), {
-      data: {
-        settings: {
-          theme: 'system',
-          visualTheme: 'zen',
-          monkMode: false,
-          animationsEnabled: true,
-          textSize: 'medium',
-          clockFormat: '24h',
-          showSeconds: false,
-          layoutPreset: 'standard',
-          collapseTasks: false,
-          sidebarWidgets: ['now', 'clock', 'agenda'],
-          sidebarVisible: true,
-          sidebarWidth: 320,
-          clockHeight: 160,
-          clockTextScale: 1,
-          modalTransparency: 88,
-          roles: []
-        }
-      }
-    });
-    await expectStatus(settingsResponse, 200);
-  }
-
-  return activeProfile.id;
-};
-
-const createTask = async (page, title: string) => {
-  await page.getByLabel('New task').click();
-  await page.getByLabel('Title').fill(title);
-  await page.getByRole('button', { name: /save task/i }).click();
-};
-
-const createScheduledTask = async (page, title: string, date: string, start: string, end = '') => {
-  await page.getByLabel('New task').click();
-  await page.getByLabel('Title').fill(title);
-  await page.getByLabel('Date').fill(date);
-  await page.getByLabel('Start').fill(start);
-  if (end) await page.getByLabel('End').fill(end);
-  await page.getByRole('button', { name: /save task/i }).click();
-};
-
-const openSettingsSection = async (page, sectionName: string | RegExp) => {
-  await page.getByRole('button', { name: /open settings/i }).click();
-  await page.getByRole('button', { name: sectionName }).click();
-};
-
-const chooseTheme = async (page, themeId: string) => {
-  await page.locator(`[data-theme-card="${themeId}"]`).click();
-};
-
-const searchTasks = async (page, query: string) => {
-  await page.locator('input[placeholder="Search tasks"]:visible').fill(query);
-};
-
-const browserToday = async (page) =>
-  page.evaluate(() => {
-    const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return today.getFullYear() + '-' + month + '-' + day;
-  });
-
-const expectTaskVisible = async (page, title: string) => {
-  await expect(page.getByText(title).first()).toBeVisible();
-};
-
-const completeBreathingIntro = async (page) => {
-  const skipIntro = page.getByRole('button', { name: /skip breathing intro/i });
-  if ((await skipIntro.count()) > 0 && (await skipIntro.first().isVisible())) {
-    await skipIntro.first().click();
-  }
-};
+import {
+  api,
+  browserToday,
+  chooseTheme,
+  completeBreathingIntro,
+  createScheduledTask,
+  createTask,
+  expectTaskVisible,
+  openSettingsSection,
+  resetServerState,
+  searchTasks
+} from './helpers';
 
 test.beforeEach(async ({ page, request }) => {
   const activeProfileId = await resetServerState(request);

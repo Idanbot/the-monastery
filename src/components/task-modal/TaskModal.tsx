@@ -31,6 +31,8 @@ export function TaskModal({
   draftTask,
   draftNote,
   setDraftNote,
+  draftIsDirty = false,
+  draftSavedAt = null,
   modalSections,
   setModalSections,
   now,
@@ -138,6 +140,20 @@ export function TaskModal({
           <div className="flex items-center gap-2 min-w-0">
             <ListTodo size={18} className="text-indigo-500 shrink-0" />
             <h2 className="font-bold text-lg truncate">{draftTask.title || 'Untitled Task'}</h2>
+            <span
+              data-testid="task-save-state"
+              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                draftIsDirty
+                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+                  : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+              }`}
+            >
+              {draftIsDirty
+                ? 'Unsaved changes'
+                : draftSavedAt
+                  ? 'Saved ' + draftSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : 'Saved'}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <button
