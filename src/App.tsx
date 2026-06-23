@@ -48,6 +48,7 @@ const MANTRAS = [
 ];
 
 import { rolePresets } from './domain/rolePresets';
+import { inferTaskTags } from './domain/taskIntelligence';
 import { getModalEffectStyle, getThemeStyle, visualThemeOptions, themeContracts } from './domain/themes';
 import {
   formatDateInputValue,
@@ -212,6 +213,7 @@ export default function App() {
         .sort((a, b) => a.localeCompare(b)),
     [allUniqueTags, settings.roles]
   );
+  const tagRoles = useMemo(() => settings.roles || [], [settings.roles]);
   const { refs: filterRefs, floatingStyles: filterFloatingStyles } = useFloating({
     open: isFilterOpen,
     onOpenChange: setIsFilterOpen,
@@ -572,14 +574,16 @@ export default function App() {
     );
   };
 
-  const addTask = (status = 'new', overrides = {}) => {
+  const addTask = (status = 'new', overrides: any = {}) => {
+    const createdAt = new Date().toISOString();
+    const title = typeof overrides.title === 'string' ? overrides.title : '';
+    const baseTags = Array.isArray(overrides.tags) ? overrides.tags : [];
+    const smartTags = inferTaskTags({ title, existingTags: baseTags, tagPool, roles: tagRoles });
     const newTask = normalizeTask({
       id: generateId(),
-      title: '',
       status,
       urgency: 5,
-      tags: [],
-      scheduledDate: formatDateInputValue(new Date()),
+      scheduledDate: formatDateInputValue(new Date(createdAt)),
       scheduledStart: '',
       scheduledEnd: '',
       recurrence: 'none',
@@ -587,10 +591,11 @@ export default function App() {
       subtasks: [],
       logs: [],
       activeLogStart: null,
-      activity: [
-        { id: generateId(), type: 'system', text: 'Task created', timestamp: new Date().toISOString() }
-      ],
-      ...overrides
+      activity: [{ id: generateId(), type: 'system', text: 'Task created', timestamp: createdAt }],
+      ...overrides,
+      title,
+      createdAt,
+      tags: smartTags
     });
     setTasks((previous) => [newTask, ...previous]);
     setSelectedTaskId(newTask.id);
@@ -1962,7 +1967,21 @@ export default function App() {
           setModalSections={setModalSections}
           now={now}
           clockFormat={settings.clockFormat}
-          updateDraftTask={updateDraftTask}
+          updateDraftTask={(updates) => {
+            if (!draftTask || typeof updates.title !== 'string') {
+              updateDraftTask(updates);
+              return;
+            }
+            updateDraftTask({
+              ...updates,
+              tags: inferTaskTags({
+                title: updates.title,
+                existingTags: draftTask.tags || [],
+                tagPool,
+                roles: tagRoles
+              })
+            });
+          }}
           closeTaskModal={closeTaskModal}
           saveDraftTask={handleSaveDraftTask}
           closeAfterSave={() => setSelectedTaskId(null)}

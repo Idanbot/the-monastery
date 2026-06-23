@@ -6,6 +6,7 @@ import type { AppSettings, Task } from './domain/types';
 const makeTask = (overrides: Partial<Task> = {}): Task => ({
   id: 'seed-task',
   title: 'Design Database Schema',
+  createdAt: '2026-06-23T09:00:00.000Z',
   status: 'new',
   urgency: 8,
   tags: ['Backend', 'High Priority'],
@@ -99,14 +100,14 @@ it('shows the breathing intro before monk mode focus controls', async () => {
   expect(screen.getByRole('button', { name: /skip breathing intro/i })).toBeInTheDocument();
 });
 
-it('suggests tags from the task title', async () => {
+it('auto-adds tags from the task title and role graph', async () => {
   const user = userEvent.setup();
   seedSettings({
     roles: [
       {
-        id: 'role-python',
-        name: 'Python',
-        tags: ['python'],
+        id: 'role-cloud',
+        name: 'Cloud Architect',
+        tags: ['gcp', 'gke', 'networking'],
         dailyTargetHours: 0,
         weeklyTargetHours: 3,
         monthlyTargetHours: 0
@@ -116,10 +117,11 @@ it('suggests tags from the task title', async () => {
   render(<App />);
 
   await clickNewTask(user);
-  await user.type(screen.getByLabelText(/title/i), 'Python practice');
-  await user.click(screen.getByRole('button', { name: /add suggested tag python/i }));
+  await user.type(screen.getByLabelText(/title/i), 'GKE migration plan');
 
-  expect(screen.getByPlaceholderText(/backend, high priority/i)).toHaveValue('python');
+  await waitFor(() => {
+    expect(screen.getByPlaceholderText(/backend, high priority/i)).toHaveValue('gke, gcp, networking');
+  });
 });
 
 it('plans unscheduled tasks into today', async () => {
@@ -269,7 +271,7 @@ it('adds task tags from the fuzzy tag pool', async () => {
   await clickNewTask(user);
   await user.type(screen.getByLabelText(/title/i), 'Python study');
   await user.type(screen.getByRole('textbox', { name: /find tag/i }), 'py');
-  await user.click(screen.getByRole('button', { name: /^python$/i }));
+  await user.click(screen.getByRole('button', { name: /^pytorch$/i }));
   await user.click(screen.getByRole('button', { name: /save task/i }));
 
   await user.click(screen.getByRole('button', { name: /filters/i }));

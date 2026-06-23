@@ -343,6 +343,7 @@ export const normalizeTask = (task): Task => {
   return {
     id: typeof task.id === 'string' ? task.id : generateId(),
     title: typeof task.title === 'string' ? task.title : '',
+    createdAt: typeof task.createdAt === 'string' ? task.createdAt : new Date().toISOString(),
     status: validStatuses.includes(task.status) ? task.status : 'new',
     urgency: Math.min(
       10,

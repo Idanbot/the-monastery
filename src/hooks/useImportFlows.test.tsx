@@ -15,9 +15,11 @@ vi.mock('sonner', () => ({
 const makeJsonFile = (payload: unknown) =>
   new File([JSON.stringify(payload)], 'import.json', { type: 'application/json' });
 
+const unchangedCreatedAt = '2026-06-23T09:00:00.000Z';
+
 function ImportHarness({ importPayload, planningPayload = null }) {
   const [tasks, setTasks] = useState([
-    normalizeTask({ id: 'same', title: 'Same task' }),
+    normalizeTask({ id: 'same', title: 'Same task', createdAt: unchangedCreatedAt }),
     normalizeTask({ id: 'changed', title: 'Old title' })
   ]);
   const [settings, setSettings] = useState({
@@ -86,7 +88,7 @@ describe('useImportFlows', () => {
 
   it('previews new, updated, and unchanged task imports before merging', async () => {
     const user = userEvent.setup();
-    const same = normalizeTask({ id: 'same', title: 'Same task' });
+    const same = normalizeTask({ id: 'same', title: 'Same task', createdAt: unchangedCreatedAt });
     const payload = {
       tasks: [same, { id: 'changed', title: 'New title' }, { id: 'new-task', title: 'Imported task' }]
     };

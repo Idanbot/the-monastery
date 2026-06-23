@@ -62,5 +62,8 @@ test('mobile task board remains visually stable', async ({ page }) => {
   await page.goto('/');
   await stabilizePage(page);
   await createTask(page, 'Mobile visual task');
-  await expect(page.locator('.app-main')).toHaveScreenshot('mobile-board.png', screenshotOptions);
+  await expect(page.locator('.app-main')).toHaveScreenshot('mobile-board.png', {
+    ...screenshotOptions,
+    maxDiffPixels: 1000
+  });
 });

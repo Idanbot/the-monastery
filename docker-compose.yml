@@ -11,7 +11,9 @@ services:
       THE_MONASTERY_DATA_DIR: /data
       LOG_LEVEL: info
     ports:
-      - '3000:3000'
+      - '127.0.0.1:8181:3000'
+    labels:
+      com.centurylinklabs.watchtower.enable: 'true'
     volumes:
       - the-monastery-data:/data
     logging:
@@ -31,6 +33,19 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: the-monastery-watchtower
+    restart: unless-stopped
+    command: --label-enable --cleanup --interval 300
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    logging:
+      driver: local
+      options:
+        max-size: '10m'
+        max-file: '3'
 
 volumes:
   the-monastery-data:
