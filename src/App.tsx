@@ -48,6 +48,7 @@ const MANTRAS = [
 ];
 
 import { rolePresets } from './domain/rolePresets';
+import { parseQuickAddTask } from './domain/quickAdd';
 import { inferTaskTags } from './domain/taskIntelligence';
 import { getModalEffectStyle, getThemeStyle, visualThemeOptions, themeContracts } from './domain/themes';
 import {
@@ -100,6 +101,7 @@ export default function App() {
     typeof navigator === 'undefined' ? true : navigator.onLine
   );
   const [backendVersion, setBackendVersion] = useState('unknown');
+  const [quickAddText, setQuickAddText] = useState('');
 
   // Random daily mantra
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)]);
@@ -262,6 +264,7 @@ export default function App() {
     setDraftNote,
     draftIsDirty,
     draftSavedAt,
+    draftSaveStatus,
     showDirtyClosePrompt,
     setShowDirtyClosePrompt,
     showDeleteTaskPrompt,
@@ -579,6 +582,10 @@ export default function App() {
     const title = typeof overrides.title === 'string' ? overrides.title : '';
     const baseTags = Array.isArray(overrides.tags) ? overrides.tags : [];
     const smartTags = inferTaskTags({ title, existingTags: baseTags, tagPool, roles: tagRoles });
+    const activity = [
+      { id: generateId(), type: 'system' as const, text: 'Task created', timestamp: createdAt },
+      ...(Array.isArray(overrides.activity) ? overrides.activity : [])
+    ];
     const newTask = normalizeTask({
       id: generateId(),
       status,
@@ -591,7 +598,7 @@ export default function App() {
       subtasks: [],
       logs: [],
       activeLogStart: null,
-      activity: [{ id: generateId(), type: 'system', text: 'Task created', timestamp: createdAt }],
+      activity,
       ...overrides,
       title,
       createdAt,
@@ -599,6 +606,14 @@ export default function App() {
     });
     setTasks((previous) => [newTask, ...previous]);
     setSelectedTaskId(newTask.id);
+  };
+
+  const submitQuickAddTask = (event) => {
+    event.preventDefault();
+    const parsed = parseQuickAddTask(quickAddText);
+    if (!parsed.title) return;
+    addTask('new', parsed.overrides);
+    setQuickAddText('');
   };
 
   const startFocusTask = () => {
@@ -1273,19 +1288,41 @@ export default function App() {
 
             {!settings.monkMode && view === 'board' && (
               <>
-                <div className="mb-3 flex justify-end gap-2">
-                  <button
-                    onClick={planMyDay}
-                    className="px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-900 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:border-emerald-400"
+                <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                  <form
+                    onSubmit={submitQuickAddTask}
+                    className="hidden min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex"
+                    aria-label="Quick add task"
                   >
-                    Plan day
-                  </button>
-                  <button
-                    onClick={() => openSettings('board')}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm font-medium text-slate-600 dark:text-slate-300 hover:border-indigo-300"
-                  >
-                    Board settings
-                  </button>
+                    <Plus size={15} className="shrink-0 text-indigo-500" />
+                    <input
+                      value={quickAddText}
+                      onChange={(event) => setQuickAddText(event.target.value)}
+                      placeholder="Quick add: GKE migration tomorrow 9-10 #cloud !7"
+                      className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-200"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!quickAddText.trim()}
+                    >
+                      Add
+                    </button>
+                  </form>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={planMyDay}
+                      className="px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-900 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:border-emerald-400"
+                    >
+                      Plan day
+                    </button>
+                    <button
+                      onClick={() => openSettings('board')}
+                      className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm font-medium text-slate-600 dark:text-slate-300 hover:border-indigo-300"
+                    >
+                      Board settings
+                    </button>
+                  </div>
                 </div>
                 <KanbanBoard
                   filteredTasks={filteredTasks}
@@ -1963,6 +2000,7 @@ export default function App() {
           setDraftNote={setDraftNote}
           draftIsDirty={draftIsDirty}
           draftSavedAt={draftSavedAt}
+          draftSaveStatus={draftSaveStatus}
           modalSections={modalSections}
           setModalSections={setModalSections}
           now={now}

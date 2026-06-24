@@ -227,6 +227,58 @@ it('saves task edits from the modal', async () => {
   expect(screen.queryByText(/design database schema/i)).not.toBeInTheDocument();
 });
 
+it('creates a task from smart quick add input', async () => {
+  const user = userEvent.setup();
+  seedSettings({
+    roles: [
+      {
+        id: 'role-cloud',
+        name: 'Cloud Architect',
+        tags: ['gcp', 'gke', 'networking'],
+        dailyTargetHours: 0,
+        weeklyTargetHours: 3,
+        monthlyTargetHours: 0
+      }
+    ]
+  });
+  render(<App />);
+
+  await user.type(
+    screen.getByPlaceholderText(/quick add/i),
+    'GKE migration tomorrow 9-10 #cloud !7 https://example.com/course'
+  );
+  await user.click(screen.getByRole('button', { name: /^add$/i }));
+
+  expect(screen.getByDisplayValue(/gke migration/i)).toBeInTheDocument();
+  expect(screen.getByPlaceholderText(/backend, high priority/i)).toHaveValue('cloud, gke, gcp, networking');
+  expect(screen.getByLabelText(/start/i)).toHaveValue('09:00');
+  expect(screen.getByLabelText(/end/i)).toHaveValue('10:00');
+  await user.click(screen.getByRole('button', { name: /activity/i }));
+  expect(screen.getByText('https://example.com/course')).toBeInTheDocument();
+});
+
+it('autosaves task title edits without pressing save', async () => {
+  const user = userEvent.setup();
+  seedTasks();
+  render(<App />);
+
+  await user.click(screen.getAllByText(/design database schema/i)[0]);
+  const titleInput = screen.getByDisplayValue(/design database schema/i);
+  await user.clear(titleInput);
+  await user.type(titleInput, 'Autosaved API Design');
+
+  await waitFor(
+    () => {
+      expect(screen.getByTestId('task-save-state')).toHaveTextContent(/^Saved/i);
+    },
+    { timeout: 2500 }
+  );
+  await user.click(screen.getByTitle(/close/i));
+
+  expect(screen.getAllByText(/autosaved api design/i).length).toBeGreaterThan(0);
+  expect(screen.queryByText(/design database schema/i)).not.toBeInTheDocument();
+});
+
 it('prompts before closing dirty modal edits and can discard them', async () => {
   const user = userEvent.setup();
   seedTasks();

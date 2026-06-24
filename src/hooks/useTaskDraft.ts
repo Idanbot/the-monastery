@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cloneTask, generateId, normalizeTask } from '../domain/tasks';
 
 export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskId }) {
   const [draftTask, setDraftTask] = useState(null);
-  const [draftNote, setDraftNote] = useState('');
+  const [draftNote, setDraftNoteState] = useState('');
   const [showDirtyClosePrompt, setShowDirtyClosePrompt] = useState(false);
   const [showDeleteTaskPrompt, setShowDeleteTaskPrompt] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
+  const [draftSaveStatus, setDraftSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [modalBaselineSnapshot, setModalBaselineSnapshot] = useState('');
   const modalBaselineRef = useRef(null);
   const tasksRef = useRef(tasks);
@@ -20,10 +21,11 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
     if (!selected) {
       setDraftTask(null);
       modalBaselineRef.current = null;
-      setDraftNote('');
+      setDraftNoteState('');
       setShowDirtyClosePrompt(false);
       setShowDeleteTaskPrompt(false);
       setDraftSavedAt(null);
+      setDraftSaveStatus('saved');
       setModalBaselineSnapshot('');
       return;
     }
@@ -33,40 +35,73 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
     setDraftTask(nextDraft);
     modalBaselineRef.current = nextBaseline;
     setModalBaselineSnapshot(JSON.stringify(nextBaseline));
-    setDraftNote('');
+    setDraftNoteState('');
     setShowDirtyClosePrompt(false);
     setShowDeleteTaskPrompt(false);
     setDraftSavedAt(null);
+    setDraftSaveStatus('saved');
   }, [selectedTaskId]);
 
-  const updateDraftTask = (updates) => setDraftTask((prev) => (prev ? { ...prev, ...updates } : prev));
+  const draftTaskIsDirty = useMemo(() => {
+    if (!draftTask || !modalBaselineSnapshot) return false;
+    return JSON.stringify(draftTask) !== modalBaselineSnapshot;
+  }, [draftTask, modalBaselineSnapshot]);
 
   const draftIsDirty = useMemo(() => {
-    if (!draftTask || !modalBaselineSnapshot) return false;
-    return JSON.stringify(draftTask) !== modalBaselineSnapshot || draftNote.trim().length > 0;
-  }, [draftNote, draftTask, modalBaselineSnapshot]);
+    return draftTaskIsDirty || draftNote.trim().length > 0;
+  }, [draftNote, draftTaskIsDirty]);
+
+  const updateDraftTask = (updates) =>
+    setDraftTask((prev) => {
+      if (!prev) return prev;
+      setDraftSaveStatus('unsaved');
+      return { ...prev, ...updates };
+    });
+
+  const setDraftNote = (value) => {
+    setDraftNoteState(value);
+    if (value.trim()) setDraftSaveStatus('unsaved');
+  };
+
+  const persistDraftTask = useCallback(
+    ({ includePendingNote = true } = {}) => {
+      if (!draftTask) return false;
+      const noteText = includePendingNote ? draftNote.trim() : '';
+      const withPendingNote = noteText
+        ? {
+            ...draftTask,
+            activity: [
+              ...draftTask.activity,
+              { id: generateId(), type: 'note' as const, text: noteText, timestamp: new Date().toISOString() }
+            ]
+          }
+        : draftTask;
+      const normalized = normalizeTask(withPendingNote);
+      setTasks((prev) => prev.map((task) => (task.id === normalized.id ? normalized : task)));
+      modalBaselineRef.current = cloneTask(normalized);
+      setModalBaselineSnapshot(JSON.stringify(modalBaselineRef.current));
+      setDraftTask(normalized);
+      if (includePendingNote) setDraftNoteState('');
+      setDraftSavedAt(new Date());
+      setDraftSaveStatus(!includePendingNote && draftNote.trim() ? 'unsaved' : 'saved');
+      return true;
+    },
+    [draftNote, draftTask, setTasks]
+  );
+
+  useEffect(() => {
+    if (!draftTask || !draftTaskIsDirty) return undefined;
+    const timeout = window.setTimeout(() => {
+      setDraftSaveStatus('saving');
+      persistDraftTask({ includePendingNote: false });
+    }, 800);
+    return () => window.clearTimeout(timeout);
+  }, [draftTask, draftTaskIsDirty, persistDraftTask]);
 
   const hasDraftChanges = () => draftIsDirty;
 
   const saveDraftTask = () => {
-    if (!draftTask) return;
-    const noteText = draftNote.trim();
-    const withPendingNote = noteText
-      ? {
-          ...draftTask,
-          activity: [
-            ...draftTask.activity,
-            { id: generateId(), type: 'note' as const, text: noteText, timestamp: new Date().toISOString() }
-          ]
-        }
-      : draftTask;
-    const normalized = normalizeTask(withPendingNote);
-    setTasks((prev) => prev.map((task) => (task.id === normalized.id ? normalized : task)));
-    modalBaselineRef.current = cloneTask(normalized);
-    setModalBaselineSnapshot(JSON.stringify(modalBaselineRef.current));
-    setDraftTask(normalized);
-    setDraftNote('');
-    setDraftSavedAt(new Date());
+    persistDraftTask({ includePendingNote: true });
   };
 
   const closeTaskModal = ({ promptToSave = false } = {}) => {
@@ -93,6 +128,7 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
     setDraftNote,
     draftIsDirty,
     draftSavedAt,
+    draftSaveStatus,
     showDirtyClosePrompt,
     setShowDirtyClosePrompt,
     showDeleteTaskPrompt,

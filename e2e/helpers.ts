@@ -91,6 +91,10 @@ export const expectTaskVisible = async (page, title: string) => {
 
 export const completeBreathingIntro = async (page) => {
   const skipIntro = page.getByRole('button', { name: /skip breathing intro/i });
+  await skipIntro
+    .first()
+    .waitFor({ state: 'visible', timeout: 2000 })
+    .catch(() => {});
   if ((await skipIntro.count()) > 0 && (await skipIntro.first().isVisible())) {
     await skipIntro.first().click();
   }
