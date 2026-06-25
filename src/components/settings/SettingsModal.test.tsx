@@ -82,6 +82,28 @@ describe('SettingsModal', () => {
     expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, clockTextScale: 1.1 });
   });
 
+  it('updates board lane order controls', () => {
+    const props = renderSettings({ initialSection: 'board' });
+
+    fireEvent.change(screen.getByLabelText(/compact active top lane/i), { target: { value: 'in-progress' } });
+    expect(props.setSettings).toHaveBeenLastCalledWith({
+      ...props.settings,
+      boardColumnOrder: {
+        ...props.settings.boardColumnOrder,
+        compactActive: ['in-progress', 'backlog']
+      }
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /move backlog right/i }));
+    expect(props.setSettings).toHaveBeenLastCalledWith({
+      ...props.settings,
+      boardColumnOrder: {
+        ...props.settings.boardColumnOrder,
+        full: ['in-progress', 'backlog', 'done', 'rejected']
+      }
+    });
+  });
+
   it('updates board resize controls with bounded values', async () => {
     const props = renderSettings({ initialSection: 'board' });
 

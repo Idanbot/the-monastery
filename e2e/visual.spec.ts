@@ -49,6 +49,9 @@ test('monk mode focus surface remains visually stable', async ({ page }) => {
   await page.goto('/');
   await stabilizePage(page);
   await createTask(page, 'Visual focus task');
+  await page.getByText('Visual focus task').first().click();
+  await page.getByLabel('Status').selectOption('in-progress');
+  await page.getByRole('button', { name: /save task/i }).click();
   await page.keyboard.press('m');
   await completeBreathingIntro(page);
   await expect(page.getByTestId('monk-mode-view')).toHaveScreenshot('monk-mode.png', {

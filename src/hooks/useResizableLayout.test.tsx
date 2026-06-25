@@ -42,6 +42,10 @@ describe('useResizableLayout', () => {
     board.id = 'kanban-board';
     Object.defineProperty(board, 'clientWidth', { configurable: true, value: 1000 });
     document.body.appendChild(board);
+    const compactLeft = document.createElement('div');
+    compactLeft.id = 'compact-left-col';
+    Object.defineProperty(compactLeft, 'clientHeight', { configurable: true, value: 600 });
+    document.body.appendChild(compactLeft);
     const compactRight = document.createElement('div');
     compactRight.id = 'compact-right-col';
     Object.defineProperty(compactRight, 'clientHeight', { configurable: true, value: 600 });
@@ -61,15 +65,24 @@ describe('useResizableLayout', () => {
     fireEvent.mouseMove(window, { movementX: 40 });
     expect(getSettings().columnWidths).toMatchObject({ done: 25, rejected: 21 });
 
+    act(() => result.current.startResize('columns-group:in-progress:done,rejected'));
+    fireEvent.mouseMove(window, { movementX: 20 });
+    expect(getSettings().columnWidths).toMatchObject({ inProgress: 26, done: 24, rejected: 20 });
+
     act(() => result.current.startResize('compact-horizontal'));
     fireEvent.mouseMove(window, { movementX: 100 });
     expect(getSettings().compactColumnWidths).toMatchObject({ left: 60, right: 40 });
+
+    act(() => result.current.startResize('stack:backlog:in-progress:compact-left-col'));
+    fireEvent.mouseMove(window, { movementY: 60 });
+    expect(getSettings().compactHeights).toMatchObject({ backlog: 60, inProgress: 40 });
 
     act(() => result.current.startResize('compact-vertical'));
     fireEvent.mouseMove(window, { movementY: 60 });
     expect(getSettings().compactHeights).toMatchObject({ done: 60, rejected: 40 });
 
     board.remove();
+    compactLeft.remove();
     compactRight.remove();
   });
 });

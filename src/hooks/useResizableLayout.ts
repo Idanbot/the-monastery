@@ -1,5 +1,34 @@
 import { useEffect, useState } from 'react';
 
+const widthKey = (status) => (status === 'in-progress' ? 'inProgress' : status);
+
+const adjustColumnPair = (columnWidths, leftStatus, rightStatus, deltaPercent) => {
+  const leftKey = widthKey(leftStatus);
+  const rightKey = widthKey(rightStatus);
+  const next = { ...columnWidths };
+  if ((next[leftKey] || 0) + deltaPercent > 15 && (next[rightKey] || 0) - deltaPercent > 15) {
+    next[leftKey] += deltaPercent;
+    next[rightKey] -= deltaPercent;
+  }
+  return next;
+};
+
+const adjustColumnGroup = (columnWidths, leftStatus, rightStatuses, deltaPercent) => {
+  const leftKey = widthKey(leftStatus);
+  const rightKeys = rightStatuses.map(widthKey);
+  const next = { ...columnWidths };
+  const rightDelta = deltaPercent / Math.max(1, rightKeys.length);
+  const canResize =
+    (next[leftKey] || 0) + deltaPercent > 15 && rightKeys.every((key) => (next[key] || 0) - rightDelta > 15);
+  if (canResize) {
+    next[leftKey] += deltaPercent;
+    rightKeys.forEach((key) => {
+      next[key] -= rightDelta;
+    });
+  }
+  return next;
+};
+
 export function useResizableLayout(setSettings) {
   const [isResizing, setIsResizing] = useState(false);
   const [activeResizer, setActiveResizer] = useState(null);
@@ -24,34 +53,47 @@ export function useResizableLayout(setSettings) {
           };
         }
 
+        if (activeResizer.startsWith('columns-group:')) {
+          const [, leftStatus, rightGroup] = activeResizer.split(':');
+          const rightStatuses = rightGroup.split(',').filter(Boolean);
+          const deltaPercent = (e.movementX / boardWidth) * 100;
+          return {
+            ...prev,
+            columnWidths: adjustColumnGroup(prev.columnWidths, leftStatus, rightStatuses, deltaPercent)
+          };
+        }
+
+        if (activeResizer.startsWith('columns:')) {
+          const [, leftStatus, rightStatus] = activeResizer.split(':');
+          const deltaPercent = (e.movementX / boardWidth) * 100;
+          return {
+            ...prev,
+            columnWidths: adjustColumnPair(prev.columnWidths, leftStatus, rightStatus, deltaPercent)
+          };
+        }
+
         if (activeResizer === 'backlog-in-progress') {
           const deltaPercent = (e.movementX / boardWidth) * 100;
-          const columnWidths = { ...prev.columnWidths };
-          if (columnWidths.backlog + deltaPercent > 15 && columnWidths.inProgress - deltaPercent > 15) {
-            columnWidths.backlog += deltaPercent;
-            columnWidths.inProgress -= deltaPercent;
-          }
-          return { ...prev, columnWidths };
+          return {
+            ...prev,
+            columnWidths: adjustColumnPair(prev.columnWidths, 'backlog', 'in-progress', deltaPercent)
+          };
         }
 
         if (activeResizer === 'in-progress-done') {
           const deltaPercent = (e.movementX / boardWidth) * 100;
-          const columnWidths = { ...prev.columnWidths };
-          if (columnWidths.inProgress + deltaPercent > 15 && columnWidths.done - deltaPercent > 15) {
-            columnWidths.inProgress += deltaPercent;
-            columnWidths.done -= deltaPercent;
-          }
-          return { ...prev, columnWidths };
+          return {
+            ...prev,
+            columnWidths: adjustColumnPair(prev.columnWidths, 'in-progress', 'done', deltaPercent)
+          };
         }
 
         if (activeResizer === 'done-rejected') {
           const deltaPercent = (e.movementX / boardWidth) * 100;
-          const columnWidths = { ...prev.columnWidths };
-          if (columnWidths.done + deltaPercent > 15 && columnWidths.rejected - deltaPercent > 15) {
-            columnWidths.done += deltaPercent;
-            columnWidths.rejected -= deltaPercent;
-          }
-          return { ...prev, columnWidths };
+          return {
+            ...prev,
+            columnWidths: adjustColumnPair(prev.columnWidths, 'done', 'rejected', deltaPercent)
+          };
         }
 
         if (activeResizer === 'compact-horizontal') {
@@ -62,6 +104,20 @@ export function useResizableLayout(setSettings) {
             compactColumnWidths.right -= deltaPercent;
           }
           return { ...prev, compactColumnWidths };
+        }
+
+        if (activeResizer.startsWith('stack:')) {
+          const [, topStatus, bottomStatus, containerId] = activeResizer.split(':');
+          const containerHeight = document.getElementById(containerId)?.clientHeight || 800;
+          const deltaPercent = (e.movementY / containerHeight) * 100;
+          const compactHeights = { ...prev.compactHeights };
+          const topKey = widthKey(topStatus);
+          const bottomKey = widthKey(bottomStatus);
+          if (compactHeights[topKey] + deltaPercent > 15 && compactHeights[bottomKey] - deltaPercent > 15) {
+            compactHeights[topKey] += deltaPercent;
+            compactHeights[bottomKey] -= deltaPercent;
+          }
+          return { ...prev, compactHeights };
         }
 
         if (activeResizer === 'compact-vertical') {
@@ -88,7 +144,11 @@ export function useResizableLayout(setSettings) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor =
-        activeResizer.includes('vertical') || activeResizer === 'sidebar-clock' ? 'row-resize' : 'col-resize';
+        activeResizer.startsWith('stack:') ||
+        activeResizer.includes('vertical') ||
+        activeResizer === 'sidebar-clock'
+          ? 'row-resize'
+          : 'col-resize';
       document.body.style.userSelect = 'none';
     } else {
       document.body.style.cursor = '';

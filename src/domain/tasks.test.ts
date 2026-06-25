@@ -166,4 +166,20 @@ describe('task domain helpers', () => {
     expect(settings.timelineHourLinesVisible).toBe(false);
     expect(settings.timelineNowLineVisible).toBe(false);
   });
+
+  it('normalizes persisted board column order', () => {
+    const settings = mergeSettings({
+      boardColumnOrder: {
+        compactActive: ['in-progress'],
+        compactDone: ['rejected'],
+        threeColumn: ['in-progress', 'backlog', 'rejected'],
+        full: ['done', 'backlog', 'done', 'unknown']
+      }
+    });
+
+    expect(settings.boardColumnOrder.compactActive).toEqual(['in-progress', 'backlog']);
+    expect(settings.boardColumnOrder.compactDone).toEqual(['rejected', 'done']);
+    expect(settings.boardColumnOrder.threeColumn).toEqual(['in-progress', 'backlog', 'rejected', 'done']);
+    expect(settings.boardColumnOrder.full).toEqual(['done', 'backlog', 'in-progress', 'rejected']);
+  });
 });

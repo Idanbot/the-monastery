@@ -3,12 +3,37 @@ import { visualThemeIds } from './themes';
 
 export const validStatuses: TaskStatus[] = ['backlog', 'in-progress', 'done', 'rejected'];
 export const taskStatuses = validStatuses;
-export const activeTaskStatuses: TaskStatus[] = ['backlog', 'in-progress'];
+export const activeTaskStatuses: TaskStatus[] = ['in-progress'];
 export const statusLabels: Record<TaskStatus, string> = {
   backlog: 'Backlog',
   'in-progress': 'In-Progress',
   done: 'Done',
   rejected: 'Rejected'
+};
+
+export const defaultBoardColumnOrder = {
+  compactActive: ['backlog', 'in-progress'] as TaskStatus[],
+  compactDone: ['done', 'rejected'] as TaskStatus[],
+  threeColumn: ['backlog', 'in-progress', 'done', 'rejected'] as TaskStatus[],
+  full: ['backlog', 'in-progress', 'done', 'rejected'] as TaskStatus[]
+};
+
+export const normalizeBoardColumnOrder = (saved) => {
+  const normalizeOrder = (value, fallback: TaskStatus[]) => {
+    const order = Array.isArray(value) ? value.filter((status) => validStatuses.includes(status)) : [];
+    return [...new Set([...order, ...fallback])] as TaskStatus[];
+  };
+
+  return {
+    compactActive: normalizeOrder(saved?.compactActive, defaultBoardColumnOrder.compactActive).filter(
+      (status) => defaultBoardColumnOrder.compactActive.includes(status)
+    ),
+    compactDone: normalizeOrder(saved?.compactDone, defaultBoardColumnOrder.compactDone).filter((status) =>
+      defaultBoardColumnOrder.compactDone.includes(status)
+    ),
+    threeColumn: normalizeOrder(saved?.threeColumn, defaultBoardColumnOrder.threeColumn).slice(0, 4),
+    full: normalizeOrder(saved?.full, defaultBoardColumnOrder.full).slice(0, 4)
+  };
 };
 
 export const normalizeTaskStatus = (status): TaskStatus => {
@@ -164,7 +189,8 @@ export const defaultSettings: AppSettings = {
   timelineNowLineVisible: true,
   columnWidths: { backlog: 25, inProgress: 25, done: 25, rejected: 25 },
   compactColumnWidths: { left: 50, right: 50 },
-  compactHeights: { backlog: 50, inProgress: 50, done: 50, rejected: 50 }
+  compactHeights: { backlog: 50, inProgress: 50, done: 50, rejected: 50 },
+  boardColumnOrder: defaultBoardColumnOrder
 };
 
 export const cloneTask = (task) => JSON.parse(JSON.stringify(task));
@@ -298,7 +324,8 @@ export const mergeSettings = (saved) => ({
     backlog: saved?.columnWidths?.backlog ?? saved?.columnWidths?.new ?? defaultSettings.columnWidths.backlog
   },
   compactColumnWidths: { ...defaultSettings.compactColumnWidths, ...(saved?.compactColumnWidths || {}) },
-  compactHeights: { ...defaultSettings.compactHeights, ...(saved?.compactHeights || {}) }
+  compactHeights: { ...defaultSettings.compactHeights, ...(saved?.compactHeights || {}) },
+  boardColumnOrder: normalizeBoardColumnOrder(saved?.boardColumnOrder)
 });
 
 export const normalizeLogs = (logs) =>

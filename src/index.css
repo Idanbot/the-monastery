@@ -154,6 +154,22 @@ h6,
   display: none !important;
 }
 
+.kanban-board-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.kanban-stack {
+  display: grid;
+  grid-template-rows: var(--kanban-stack-template, 1fr 1fr);
+}
+
+@media (min-width: 640px) {
+  .kanban-board-grid {
+    grid-template-columns: var(--kanban-grid-template, 1fr);
+  }
+}
+
 .resize-handle {
   opacity: 0.68;
   background: transparent !important;

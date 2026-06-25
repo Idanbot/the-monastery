@@ -125,7 +125,15 @@ it('auto-adds tags from the task title and role graph', async () => {
 
 it('plans unscheduled tasks into today', async () => {
   const user = userEvent.setup();
-  seedTasks([makeTask({ id: 'unscheduled', title: 'Unscheduled', scheduledDate: '', scheduledStart: '' })]);
+  seedTasks([
+    makeTask({
+      id: 'unscheduled',
+      title: 'Unscheduled',
+      status: 'in-progress',
+      scheduledDate: '',
+      scheduledStart: ''
+    })
+  ]);
   render(<App />);
 
   await user.click(screen.getByRole('button', { name: /plan day/i }));

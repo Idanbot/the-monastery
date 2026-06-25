@@ -29,7 +29,7 @@ import { themedSurfaceClassName } from '../ui/themedSurfaceStyles';
 import { createRoleFromPreset, rolePresets } from '../../domain/rolePresets';
 import { parseTagString } from '../../domain/tags';
 import { createThemeRecipe, themeRecipeSchema } from '../../domain/themeStudio';
-import { generateId } from '../../domain/tasks';
+import { defaultBoardColumnOrder, generateId, statusLabels, taskStatuses } from '../../domain/tasks';
 import { getModalEffectStyle, getThemeContract, getThemeStyle } from '../../domain/themes';
 import { themeChoiceOptions } from '../../domain/themeGallery';
 
@@ -176,6 +176,47 @@ export function SettingsModal({
 
   const updateClockSetting = (key, value) => {
     updateSetting(key, value);
+  };
+
+  const boardColumnOrder = {
+    compactActive: settings.boardColumnOrder?.compactActive || defaultBoardColumnOrder.compactActive,
+    compactDone: settings.boardColumnOrder?.compactDone || defaultBoardColumnOrder.compactDone,
+    threeColumn: settings.boardColumnOrder?.threeColumn || defaultBoardColumnOrder.threeColumn,
+    full: settings.boardColumnOrder?.full || defaultBoardColumnOrder.full
+  };
+  const updateBoardColumnOrder = (key, order) => {
+    updateSetting('boardColumnOrder', {
+      ...defaultBoardColumnOrder,
+      ...(settings.boardColumnOrder || {}),
+      [key]: order
+    });
+  };
+  const setPairFirst = (key, options, first) => {
+    const second = options.find((status) => status !== first) || options[0];
+    updateBoardColumnOrder(key, [first, second]);
+  };
+  const setThreeActiveFirst = (first) => {
+    const second = first === 'backlog' ? 'in-progress' : 'backlog';
+    const outcomes = boardColumnOrder.threeColumn.filter(
+      (status) => status === 'done' || status === 'rejected'
+    );
+    updateBoardColumnOrder('threeColumn', [first, second, ...outcomes]);
+  };
+  const setThreeOutcomeFirst = (first) => {
+    const second = first === 'done' ? 'rejected' : 'done';
+    const active = boardColumnOrder.threeColumn.filter(
+      (status) => status === 'backlog' || status === 'in-progress'
+    );
+    updateBoardColumnOrder('threeColumn', [...active, first, second]);
+  };
+  const moveFullLane = (status, direction) => {
+    const current = boardColumnOrder.full.filter((item) => taskStatuses.includes(item));
+    const index = current.indexOf(status);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return;
+    const next = [...current];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    updateBoardColumnOrder('full', next);
   };
 
   const setThemeChoice = (value) => {
@@ -715,6 +756,98 @@ export function SettingsModal({
                       <option value="full">Full: 4 columns</option>
                     </select>
                   </label>
+                  <div className="space-y-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 p-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Lane order
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                        <span>Compact active top</span>
+                        <select
+                          aria-label="Compact active top lane"
+                          value={boardColumnOrder.compactActive[0]}
+                          onChange={(e) =>
+                            setPairFirst('compactActive', ['backlog', 'in-progress'], e.target.value)
+                          }
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                        >
+                          <option value="backlog">Backlog</option>
+                          <option value="in-progress">In-Progress</option>
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                        <span>Compact outcome top</span>
+                        <select
+                          aria-label="Compact outcome top lane"
+                          value={boardColumnOrder.compactDone[0]}
+                          onChange={(e) => setPairFirst('compactDone', ['done', 'rejected'], e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                        >
+                          <option value="done">Done</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                        <span>3-column active first</span>
+                        <select
+                          aria-label="3-column active first lane"
+                          value={boardColumnOrder.threeColumn[0]}
+                          onChange={(e) => setThreeActiveFirst(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                        >
+                          <option value="backlog">Backlog</option>
+                          <option value="in-progress">In-Progress</option>
+                        </select>
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                        <span>3-column outcome top</span>
+                        <select
+                          aria-label="3-column outcome top lane"
+                          value={boardColumnOrder.threeColumn[2]}
+                          onChange={(e) => setThreeOutcomeFirst(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                        >
+                          <option value="done">Done</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div className="space-y-2">
+                      <span className="text-sm text-slate-700 dark:text-slate-300">Full layout order</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {boardColumnOrder.full.map((status, index) => (
+                          <div
+                            key={status}
+                            className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm"
+                          >
+                            <span className="font-medium text-slate-700 dark:text-slate-200">
+                              {index + 1}. {statusLabels[status]}
+                            </span>
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                aria-label={'Move ' + statusLabels[status] + ' left'}
+                                onClick={() => moveFullLane(status, -1)}
+                                disabled={index === 0}
+                                className="rounded border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs disabled:opacity-40"
+                              >
+                                Up
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={'Move ' + statusLabels[status] + ' right'}
+                                onClick={() => moveFullLane(status, 1)}
+                                disabled={index === boardColumnOrder.full.length - 1}
+                                className="rounded border border-slate-200 dark:border-slate-700 px-2 py-1 text-xs disabled:opacity-40"
+                              >
+                                Down
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                   <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
                     <span>Resize bars</span>
                     <input

@@ -190,6 +190,68 @@ function TaskColumn({
   );
 }
 
+const widthKey = (status) => (status === 'in-progress' ? 'inProgress' : status);
+
+const normalizeOrder = (value, fallback) => {
+  const source = Array.isArray(value) ? value : [];
+  return [...new Set([...source.filter((status) => taskStatuses.includes(status)), ...fallback])];
+};
+
+const boardOrder = (settings) => ({
+  compactActive: normalizeOrder(settings.boardColumnOrder?.compactActive, ['backlog', 'in-progress']).filter(
+    (status) => status === 'backlog' || status === 'in-progress'
+  ),
+  compactDone: normalizeOrder(settings.boardColumnOrder?.compactDone, ['done', 'rejected']).filter(
+    (status) => status === 'done' || status === 'rejected'
+  ),
+  threeColumn: normalizeOrder(settings.boardColumnOrder?.threeColumn, taskStatuses).slice(0, 4),
+  full: normalizeOrder(settings.boardColumnOrder?.full, taskStatuses).slice(0, 4)
+});
+
+const columnWidth = (settings, status) => Number(settings.columnWidths?.[widthKey(status)]) || 25;
+const stackHeight = (settings, status) => Number(settings.compactHeights?.[widthKey(status)]) || 50;
+const gridTemplate = (tracks, resizeVisible) =>
+  tracks
+    .flatMap((track, index) =>
+      resizeVisible && index < tracks.length - 1 ? [track, 'var(--resize-handle-thickness, 4px)'] : [track]
+    )
+    .join(' ');
+const stackTemplate = (settings, pair, resizeVisible) =>
+  resizeVisible
+    ? String(stackHeight(settings, pair[0])) +
+      'fr var(--resize-handle-thickness, 4px) ' +
+      String(stackHeight(settings, pair[1])) +
+      'fr'
+    : String(stackHeight(settings, pair[0])) + 'fr ' + String(stackHeight(settings, pair[1])) + 'fr';
+
+function ResizeHandle({ id, orientation = 'vertical', startResize, title }) {
+  return (
+    <div
+      data-testid={'board-resizer-' + id}
+      className={
+        'resize-handle resize-handle-' +
+        orientation +
+        ' ' +
+        (orientation === 'vertical' ? 'hidden cursor-col-resize sm:flex' : 'flex cursor-row-resize') +
+        ' shrink-0 items-center justify-center rounded hover:bg-indigo-500/10 group'
+      }
+      onMouseDown={(event) => {
+        event.preventDefault();
+        startResize(id);
+      }}
+      title={title || 'Resize board lanes'}
+    >
+      <div
+        className={
+          'resize-grip resize-grip-' +
+          orientation +
+          ' rounded-full bg-slate-300 transition-colors group-hover:bg-indigo-400 dark:bg-slate-700'
+        }
+      ></div>
+    </div>
+  );
+}
+
 export function TaskListView({ filteredTasks, setSelectedTaskId, now }) {
   const orderedStatuses = taskStatuses;
   const parentRef = useRef(null);
@@ -305,12 +367,14 @@ export function KanbanBoard({
   setSelectedTaskId,
   keyboardFocusedTaskId,
   now,
-  startResize: _startResize
+  startResize
 }) {
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
   const sortableTaskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
   const layoutPreset =
     settings.layoutPreset === 'standard' ? 'three-column' : settings.layoutPreset || 'compact';
+  const resizeVisible = settings.resizeHandleVisible !== false;
+  const order = boardOrder(settings);
   const columnProps = {
     filteredTasks,
     settings,
@@ -328,41 +392,157 @@ export function KanbanBoard({
     now
   };
   const column = (status) => <TaskColumn key={status} status={status} {...columnProps} />;
+  const verticalHandle = (left, right) =>
+    resizeVisible ? (
+      <ResizeHandle
+        key={'handle-' + left + '-' + right}
+        id={'columns:' + left + ':' + right}
+        startResize={startResize}
+        title={'Resize ' + statusLabels[left] + ' and ' + statusLabels[right]}
+      />
+    ) : null;
+  const stackHandle = (top, bottom, containerId) =>
+    resizeVisible ? (
+      <ResizeHandle
+        key={'handle-' + top + '-' + bottom}
+        id={'stack:' + top + ':' + bottom + ':' + containerId}
+        orientation="horizontal"
+        startResize={startResize}
+        title={'Resize ' + statusLabels[top] + ' and ' + statusLabels[bottom]}
+      />
+    ) : null;
 
   return (
     <DndContext sensors={sensors}>
       <SortableContext items={sortableTaskIds} strategy={verticalListSortingStrategy}>
         <div
           id="kanban-board"
+          data-testid="kanban-board"
           data-layout-preset={layoutPreset}
           className="min-h-0 flex-1 overflow-y-auto sm:overflow-hidden"
         >
           {layoutPreset === 'full' && (
-            <div className="grid min-h-full grid-cols-1 gap-3 pb-3 sm:h-full sm:grid-cols-2 sm:pb-0 xl:grid-cols-4">
-              {taskStatuses.map(column)}
+            <div
+              className="kanban-board-grid min-h-full gap-3 pb-3 sm:h-full sm:pb-0"
+              style={
+                {
+                  '--kanban-grid-template': gridTemplate(
+                    order.full.map((status) => String(columnWidth(settings, status)) + 'fr'),
+                    resizeVisible
+                  )
+                } as any
+              }
+            >
+              {order.full.flatMap((status, index) => [
+                column(status),
+                index < order.full.length - 1 ? verticalHandle(status, order.full[index + 1]) : null
+              ])}
             </div>
           )}
 
           {layoutPreset === 'three-column' && (
-            <div className="grid min-h-full grid-cols-1 gap-3 pb-3 sm:h-full sm:grid-cols-3 sm:pb-0">
-              {column('backlog')}
-              {column('in-progress')}
-              <div className="flex min-h-[28rem] flex-col gap-3 sm:min-h-0">
-                <div className="min-h-[14rem] flex-1 sm:min-h-0">{column('done')}</div>
-                <div className="min-h-[14rem] flex-1 sm:min-h-0">{column('rejected')}</div>
+            <div
+              className="kanban-board-grid min-h-full gap-3 pb-3 sm:h-full sm:pb-0"
+              style={
+                {
+                  '--kanban-grid-template': gridTemplate(
+                    [
+                      String(columnWidth(settings, order.threeColumn[0])) + 'fr',
+                      String(columnWidth(settings, order.threeColumn[1])) + 'fr',
+                      String(
+                        columnWidth(settings, order.threeColumn[2]) +
+                          columnWidth(settings, order.threeColumn[3])
+                      ) + 'fr'
+                    ],
+                    resizeVisible
+                  )
+                } as any
+              }
+            >
+              {column(order.threeColumn[0])}
+              {verticalHandle(order.threeColumn[0], order.threeColumn[1])}
+              {column(order.threeColumn[1])}
+              {resizeVisible && (
+                <ResizeHandle
+                  id={
+                    'columns-group:' +
+                    order.threeColumn[1] +
+                    ':' +
+                    order.threeColumn[2] +
+                    ',' +
+                    order.threeColumn[3]
+                  }
+                  startResize={startResize}
+                  title={'Resize ' + statusLabels[order.threeColumn[1]] + ' and outcomes'}
+                />
+              )}
+              <div
+                id="three-outcomes-col"
+                className="kanban-stack min-h-[28rem] gap-3 sm:min-h-0"
+                style={
+                  {
+                    '--kanban-stack-template': stackTemplate(
+                      settings,
+                      [order.threeColumn[2], order.threeColumn[3]],
+                      resizeVisible
+                    )
+                  } as any
+                }
+              >
+                {column(order.threeColumn[2])}
+                {stackHandle(order.threeColumn[2], order.threeColumn[3], 'three-outcomes-col')}
+                {column(order.threeColumn[3])}
               </div>
             </div>
           )}
 
           {layoutPreset === 'compact' && (
-            <div className="grid min-h-full grid-cols-1 gap-3 pb-3 sm:h-full sm:grid-cols-2 sm:pb-0">
-              <div className="flex min-h-[28rem] flex-col gap-3 sm:min-h-0">
-                <div className="min-h-[14rem] flex-1 sm:min-h-0">{column('backlog')}</div>
-                <div className="min-h-[14rem] flex-1 sm:min-h-0">{column('in-progress')}</div>
+            <div
+              className="kanban-board-grid min-h-full gap-3 pb-3 sm:h-full sm:pb-0"
+              style={
+                {
+                  '--kanban-grid-template': gridTemplate(
+                    [
+                      String(settings.compactColumnWidths?.left || 50) + 'fr',
+                      String(settings.compactColumnWidths?.right || 50) + 'fr'
+                    ],
+                    resizeVisible
+                  )
+                } as any
+              }
+            >
+              <div
+                id="compact-left-col"
+                className="kanban-stack min-h-[28rem] gap-3 sm:min-h-0"
+                style={
+                  {
+                    '--kanban-stack-template': stackTemplate(settings, order.compactActive, resizeVisible)
+                  } as any
+                }
+              >
+                {column(order.compactActive[0])}
+                {stackHandle(order.compactActive[0], order.compactActive[1], 'compact-left-col')}
+                {column(order.compactActive[1])}
               </div>
-              <div className="flex min-h-[28rem] flex-col gap-3 sm:min-h-0">
-                <div className="min-h-[14rem] flex-1 sm:min-h-0">{column('done')}</div>
-                <div className="min-h-[14rem] flex-1 sm:min-h-0">{column('rejected')}</div>
+              {resizeVisible && (
+                <ResizeHandle
+                  id="compact-horizontal"
+                  startResize={startResize}
+                  title="Resize active and outcome lanes"
+                />
+              )}
+              <div
+                id="compact-right-col"
+                className="kanban-stack min-h-[28rem] gap-3 sm:min-h-0"
+                style={
+                  {
+                    '--kanban-stack-template': stackTemplate(settings, order.compactDone, resizeVisible)
+                  } as any
+                }
+              >
+                {column(order.compactDone[0])}
+                {stackHandle(order.compactDone[0], order.compactDone[1], 'compact-right-col')}
+                {column(order.compactDone[1])}
               </div>
             </div>
           )}

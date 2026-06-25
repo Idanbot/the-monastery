@@ -140,8 +140,11 @@ test('plans day, suggests title tags, opens shortcuts, and records local backup 
   await page.getByRole('button', { name: /save task/i }).click();
 
   await createTask(page, 'Unscheduled day plan smoke');
+  await page.getByText('Unscheduled day plan smoke').first().click();
+  await page.getByLabel('Status').selectOption('in-progress');
+  await page.getByRole('button', { name: /save task/i }).click();
   await page.getByRole('button', { name: /plan day/i }).click();
-  await expectTaskVisible(page, 'Unscheduled day plan smoke');
+  await expect(page.getByTestId('timeline-task-Unscheduled day plan smoke')).toBeVisible();
 
   await page.keyboard.press('?');
   await expect(page.getByRole('dialog', { name: /keyboard shortcuts/i })).toBeVisible();
@@ -729,6 +732,9 @@ test('adjusts clock text size with sidebar controls', async ({ page }) => {
 test('uses current task pin to track and complete the active task', async ({ page }) => {
   await page.goto('/');
   await createTask(page, 'Pinned flow task');
+  await page.getByText('Pinned flow task').first().click();
+  await page.getByLabel('Status').selectOption('in-progress');
+  await page.getByRole('button', { name: /save task/i }).click();
 
   const pin = page.getByTestId('current-task-pin').first();
   await expect(pin).toContainText('Pinned flow task');

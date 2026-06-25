@@ -117,6 +117,12 @@ export type AppSettings = {
   columnWidths: { backlog: number; inProgress: number; done: number; rejected: number; new?: number };
   compactColumnWidths: { left: number; right: number };
   compactHeights: { backlog: number; inProgress: number; done: number; rejected: number };
+  boardColumnOrder: {
+    compactActive: TaskStatus[];
+    compactDone: TaskStatus[];
+    threeColumn: TaskStatus[];
+    full: TaskStatus[];
+  };
 };
 
 export type Profile = {
