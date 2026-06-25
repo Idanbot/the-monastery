@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import { activeTaskStatuses } from '../../domain/tasks';
 import type { AppSettings, Task } from '../../domain/types';
 import { OneBreath } from './OneBreath';
 import { PomodoroTimer } from './PomodoroTimer';
@@ -28,7 +29,9 @@ export function MonkModeView({
   onAddTask: () => void;
   onPomodoroComplete: (minutes: number) => void;
 }) {
-  const nextTasks = tasks.filter((task) => task.status === 'new' && task.id !== currentTask?.id).slice(0, 3);
+  const nextTasks = tasks
+    .filter((task) => activeTaskStatuses.includes(task.status) && task.id !== currentTask?.id)
+    .slice(0, 3);
 
   return (
     <div
@@ -94,7 +97,7 @@ export function MonkModeView({
                 onClick={onAddTask}
                 className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-sm transition-all hover:scale-105 active:scale-95"
               >
-                Start New Task
+                Start Backlog Task
               </button>
             </div>
           )}

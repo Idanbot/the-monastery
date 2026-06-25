@@ -55,7 +55,7 @@ export function CommandPalette({ settings, setSettings, setMonkMode, setView, op
                 }}
                 className="flex items-center gap-2 px-2 py-2 text-sm rounded-lg cursor-pointer aria-selected:bg-indigo-50 dark:aria-selected:bg-indigo-500/20 aria-selected:text-indigo-700 dark:aria-selected:text-indigo-300 transition-colors text-slate-700 dark:text-slate-300"
               >
-                <Plus size={16} /> Create new task
+                <Plus size={16} /> Create backlog task
               </Command.Item>
               <Command.Item
                 onSelect={() => {

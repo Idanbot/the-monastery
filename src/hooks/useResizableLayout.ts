@@ -24,11 +24,21 @@ export function useResizableLayout(setSettings) {
           };
         }
 
-        if (activeResizer === 'new-done') {
+        if (activeResizer === 'backlog-in-progress') {
           const deltaPercent = (e.movementX / boardWidth) * 100;
           const columnWidths = { ...prev.columnWidths };
-          if (columnWidths.new + deltaPercent > 15 && columnWidths.done - deltaPercent > 15) {
-            columnWidths.new += deltaPercent;
+          if (columnWidths.backlog + deltaPercent > 15 && columnWidths.inProgress - deltaPercent > 15) {
+            columnWidths.backlog += deltaPercent;
+            columnWidths.inProgress -= deltaPercent;
+          }
+          return { ...prev, columnWidths };
+        }
+
+        if (activeResizer === 'in-progress-done') {
+          const deltaPercent = (e.movementX / boardWidth) * 100;
+          const columnWidths = { ...prev.columnWidths };
+          if (columnWidths.inProgress + deltaPercent > 15 && columnWidths.done - deltaPercent > 15) {
+            columnWidths.inProgress += deltaPercent;
             columnWidths.done -= deltaPercent;
           }
           return { ...prev, columnWidths };

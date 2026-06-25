@@ -1,7 +1,20 @@
 import type { AppSettings, Task, TaskRecurrence, TaskStatus } from './types';
 import { visualThemeIds } from './themes';
 
-export const validStatuses: TaskStatus[] = ['new', 'done', 'rejected'];
+export const validStatuses: TaskStatus[] = ['backlog', 'in-progress', 'done', 'rejected'];
+export const taskStatuses = validStatuses;
+export const activeTaskStatuses: TaskStatus[] = ['backlog', 'in-progress'];
+export const statusLabels: Record<TaskStatus, string> = {
+  backlog: 'Backlog',
+  'in-progress': 'In-Progress',
+  done: 'Done',
+  rejected: 'Rejected'
+};
+
+export const normalizeTaskStatus = (status): TaskStatus => {
+  if (status === 'new') return 'backlog';
+  return validStatuses.includes(status) ? status : 'backlog';
+};
 export const validRecurrences: TaskRecurrence[] = ['none', 'daily', 'weekly', 'monthly'];
 
 export const generateId = () => Math.random().toString(36).substring(2, 9);
@@ -149,9 +162,9 @@ export const defaultSettings: AppSettings = {
   resizeHandleColor: '#94a3b8',
   timelineHourLinesVisible: true,
   timelineNowLineVisible: true,
-  columnWidths: { new: 33.33, done: 33.33, rejected: 33.33 },
+  columnWidths: { backlog: 25, inProgress: 25, done: 25, rejected: 25 },
   compactColumnWidths: { left: 50, right: 50 },
-  compactHeights: { done: 50, rejected: 50 }
+  compactHeights: { backlog: 50, inProgress: 50, done: 50, rejected: 50 }
 };
 
 export const cloneTask = (task) => JSON.parse(JSON.stringify(task));
@@ -274,7 +287,16 @@ export const mergeSettings = (saved) => ({
     saved?.timelineNowLineVisible === undefined
       ? defaultSettings.timelineNowLineVisible
       : Boolean(saved.timelineNowLineVisible),
-  columnWidths: { ...defaultSettings.columnWidths, ...(saved?.columnWidths || {}) },
+  layoutPreset: ['compact', 'three-column', 'full'].includes(saved?.layoutPreset)
+    ? saved.layoutPreset
+    : saved?.layoutPreset === 'standard'
+      ? 'three-column'
+      : defaultSettings.layoutPreset,
+  columnWidths: {
+    ...defaultSettings.columnWidths,
+    ...(saved?.columnWidths || {}),
+    backlog: saved?.columnWidths?.backlog ?? saved?.columnWidths?.new ?? defaultSettings.columnWidths.backlog
+  },
   compactColumnWidths: { ...defaultSettings.compactColumnWidths, ...(saved?.compactColumnWidths || {}) },
   compactHeights: { ...defaultSettings.compactHeights, ...(saved?.compactHeights || {}) }
 });
@@ -331,7 +353,7 @@ export const normalizeSubtasks = (subtasks) =>
     ? subtasks.map((subtask) => ({
         id: typeof subtask.id === 'string' ? subtask.id : generateId(),
         title: typeof subtask.title === 'string' ? subtask.title : '',
-        status: validStatuses.includes(subtask.status) ? subtask.status : 'new',
+        status: normalizeTaskStatus(subtask.status),
         logs: normalizeLogs(subtask.logs),
         activeLogStart: typeof subtask.activeLogStart === 'string' ? subtask.activeLogStart : null,
         tags: normalizeStringArray(subtask.tags)
@@ -344,7 +366,7 @@ export const normalizeTask = (task): Task => {
     id: typeof task.id === 'string' ? task.id : generateId(),
     title: typeof task.title === 'string' ? task.title : '',
     createdAt: typeof task.createdAt === 'string' ? task.createdAt : new Date().toISOString(),
-    status: validStatuses.includes(task.status) ? task.status : 'new',
+    status: normalizeTaskStatus(task.status),
     urgency: Math.min(
       10,
       Math.max(1, Number.isFinite(Number(task.urgency)) ? Math.round(Number(task.urgency)) : 5)

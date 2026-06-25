@@ -1,8 +1,8 @@
-import { calculateTotalDuration } from './tasks';
+import { calculateTotalDuration, taskStatuses } from './tasks';
 
 export const calculateAnalytics = ({ tasks, roles, tagGoals = [], now }) => {
   const tagDurations = new Map<string, number>();
-  const statusCounts = { new: 0, done: 0, rejected: 0 };
+  const statusCounts = Object.fromEntries(taskStatuses.map((status) => [status, 0]));
 
   const addDuration = (tags, durationMs) => {
     if (!durationMs) return;

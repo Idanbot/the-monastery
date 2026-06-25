@@ -5,7 +5,7 @@
     {
       "id": "mock-learning-react-001",
       "title": "Learn React server state patterns",
-      "status": "new",
+      "status": "backlog",
       "urgency": 6,
       "tags": ["learning", "react", "frontend"],
       "scheduledDate": "",
@@ -17,7 +17,7 @@
         {
           "id": "mock-learning-react-001-notes",
           "title": "Summarize core ideas after watching",
-          "status": "new",
+          "status": "backlog",
           "tags": ["notes"],
           "logs": [],
           "activeLogStart": null
@@ -40,7 +40,7 @@
     {
       "id": "mock-deep-work-setup-001",
       "title": "Prepare weekly deep work plan",
-      "status": "new",
+      "status": "backlog",
       "urgency": 5,
       "tags": ["planning", "deep-work"],
       "note": "Use this as a seed task for importing and enriching a weekly plan."

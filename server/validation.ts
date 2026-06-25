@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-const taskStatusSchema = z.enum(['new', 'done', 'rejected']);
+const taskStatusSchema = z.preprocess(
+  (value) => (value === 'new' ? 'backlog' : value),
+  z.enum(['backlog', 'in-progress', 'done', 'rejected'])
+);
 const recurrenceSchema = z.enum(['none', 'daily', 'weekly', 'monthly']);
 
 const timeLogSchema = z.object({

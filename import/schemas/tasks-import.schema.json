@@ -117,7 +117,7 @@
         },
         "status": {
           "type": "string",
-          "enum": ["new", "done", "rejected"]
+          "enum": ["backlog", "in-progress", "done", "rejected", "new"]
         },
         "tags": {
           "type": "array",
@@ -149,7 +149,7 @@
         },
         "status": {
           "type": "string",
-          "enum": ["new", "done", "rejected"]
+          "enum": ["backlog", "in-progress", "done", "rejected", "new"]
         },
         "urgency": {
           "type": "integer",

@@ -702,14 +702,19 @@ export function SettingsModal({
                   motionDuration={motionDuration}
                   motionEase={motionEase}
                 >
-                  <select
-                    value={settings.layoutPreset}
-                    onChange={(e) => updateSetting('layoutPreset', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                  >
-                    <option value="standard">Three columns</option>
-                    <option value="compact">Compact split</option>
-                  </select>
+                  <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                    <span>Board layout</span>
+                    <select
+                      aria-label="Board layout"
+                      value={settings.layoutPreset === 'standard' ? 'three-column' : settings.layoutPreset}
+                      onChange={(e) => updateSetting('layoutPreset', e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
+                    >
+                      <option value="compact">Compact: 2 split columns</option>
+                      <option value="three-column">3 columns: active + outcomes</option>
+                      <option value="full">Full: 4 columns</option>
+                    </select>
+                  </label>
                   <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
                     <span>Resize bars</span>
                     <input

@@ -13,7 +13,7 @@ describe('task domain helpers', () => {
   it('normalizes partial task input with safe defaults', () => {
     expect(normalizeTask({ title: 'Study', urgency: 99 })).toMatchObject({
       title: 'Study',
-      status: 'new',
+      status: 'backlog',
       urgency: 10,
       tags: [],
       recurrence: 'none',
@@ -97,7 +97,7 @@ describe('task domain helpers', () => {
       tags: ['node'],
       activity: [{ id: 'a', type: 'note', text: 'OAuth detail', timestamp: new Date().toISOString() }],
       subtasks: [
-        { id: 's', title: 'SQL migration', status: 'new', logs: [], activeLogStart: null, tags: ['db'] }
+        { id: 's', title: 'SQL migration', status: 'backlog', logs: [], activeLogStart: null, tags: ['db'] }
       ]
     });
 

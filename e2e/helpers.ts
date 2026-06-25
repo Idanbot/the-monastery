@@ -31,7 +31,7 @@ export const resetServerState = async (
           textSize: 'medium',
           clockFormat: '24h',
           showSeconds: false,
-          layoutPreset: 'standard',
+          layoutPreset: 'compact',
           collapseTasks: false,
           sidebarWidgets: ['now', 'clock', 'agenda'],
           sidebarVisible: true,
@@ -50,13 +50,13 @@ export const resetServerState = async (
 };
 
 export const createTask = async (page, title: string) => {
-  await page.getByLabel('New task').click();
+  await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill(title);
   await page.getByRole('button', { name: /save task/i }).click();
 };
 
 export const createScheduledTask = async (page, title: string, date: string, start: string, end = '') => {
-  await page.getByLabel('New task').click();
+  await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill(title);
   await page.getByLabel('Date').fill(date);
   await page.getByLabel('Start').fill(start);

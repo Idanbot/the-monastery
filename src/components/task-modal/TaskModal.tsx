@@ -51,7 +51,7 @@ export function TaskModal({
     updateDraftTask({
       subtasks: [
         ...draftTask.subtasks,
-        { id: generateId(), title: '', status: 'new', logs: [], activeLogStart: null, tags: [] }
+        { id: generateId(), title: '', status: 'backlog', logs: [], activeLogStart: null, tags: [] }
       ]
     });
   };

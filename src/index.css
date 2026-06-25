@@ -655,3 +655,15 @@ h6,
 [data-text-size='large'] [class~='text-[10px]'] {
   font-size: 11px;
 }
+
+[data-sonner-toaster] {
+  pointer-events: none !important;
+}
+
+[data-sonner-toast] {
+  pointer-events: none !important;
+  opacity: 0.82 !important;
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
+  backdrop-filter: blur(10px) saturate(1.15);
+  box-shadow: 0 10px 32px rgb(15 23 42 / 0.14) !important;
+}

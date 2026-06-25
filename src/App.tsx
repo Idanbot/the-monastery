@@ -58,7 +58,8 @@ import {
   formatTime,
   generateId,
   calculateTotalDuration,
-  normalizeTask
+  normalizeTask,
+  activeTaskStatuses
 } from './domain/tasks';
 import { useBackupActions } from './hooks/useBackupActions';
 import { useImportFlows } from './hooks/useImportFlows';
@@ -75,6 +76,10 @@ import { useTaskDraft } from './hooks/useTaskDraft';
 import { useTaskFilters } from './hooks/useTaskFilters';
 
 const frontendVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
+const formatVisibleVersion = (version: string) => {
+  const match = version.match(/^(\d+)\.(\d+)/);
+  return match ? `v${match[1]}.${match[2]}` : `v${version}`;
+};
 
 export default function App() {
   const [tasks, setTasks] = useState(loadInitialLocalTasks);
@@ -100,13 +105,17 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine
   );
-  const [backendVersion, setBackendVersion] = useState('unknown');
   const [quickAddText, setQuickAddText] = useState('');
 
   // Random daily mantra
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)]);
 
-  const [columnSorts, setColumnSorts] = useState({ new: 'none', done: 'none', rejected: 'none' });
+  const [columnSorts, setColumnSorts] = useState({
+    backlog: 'none',
+    'in-progress': 'none',
+    done: 'none',
+    rejected: 'none'
+  });
 
   const { startResize } = useResizableLayout(setSettings);
 
@@ -293,21 +302,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch('/api/health')
-      .then((response) => (response.ok ? response.json() : null))
-      .then((health) => {
-        if (!cancelled && health?.version) setBackendVersion(health.version);
-      })
-      .catch(() => {
-        if (!cancelled) setBackendVersion('offline');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const updateSystemTheme = () => setSystemIsDark(mediaQuery.matches);
     mediaQuery.addEventListener('change', updateSystemTheme);
@@ -371,7 +365,7 @@ export default function App() {
       normalizeTask({
         id: generateId(),
         title: role.name + ' routine block',
-        status: 'new',
+        status: 'backlog',
         urgency: 6,
         tags: Array.from(new Set(['routine', ...(role.tags || [])])),
         scheduledDate: today,
@@ -492,16 +486,16 @@ export default function App() {
   };
 
   const currentTask = useMemo(() => {
-    const activeTask = tasks.find((task) => task.status === 'new' && task.activeLogStart);
+    const activeTask = tasks.find((task) => activeTaskStatuses.includes(task.status) && task.activeLogStart);
     if (activeTask) return activeTask;
 
     const today = formatDateInputValue(new Date());
     const scheduledToday = tasks
-      .filter((task) => task.status === 'new' && task.scheduledDate === today)
+      .filter((task) => activeTaskStatuses.includes(task.status) && task.scheduledDate === today)
       .sort((a, b) => (a.scheduledStart || '99:99').localeCompare(b.scheduledStart || '99:99'))[0];
     if (scheduledToday) return scheduledToday;
 
-    return tasks.find((task) => task.status === 'new') || null;
+    return tasks.find((task) => activeTaskStatuses.includes(task.status)) || null;
   }, [tasks]);
 
   const updateTaskTimer = (taskId) => {
@@ -577,7 +571,7 @@ export default function App() {
     );
   };
 
-  const addTask = (status = 'new', overrides: any = {}) => {
+  const addTask = (status = 'backlog', overrides: any = {}) => {
     const createdAt = new Date().toISOString();
     const title = typeof overrides.title === 'string' ? overrides.title : '';
     const baseTags = Array.isArray(overrides.tags) ? overrides.tags : [];
@@ -612,12 +606,12 @@ export default function App() {
     event.preventDefault();
     const parsed = parseQuickAddTask(quickAddText);
     if (!parsed.title) return;
-    addTask('new', parsed.overrides);
+    addTask('backlog', parsed.overrides);
     setQuickAddText('');
   };
 
   const startFocusTask = () => {
-    addTask('new', {
+    addTask('backlog', {
       title: '',
       urgency: 7,
       tags: ['focus'],
@@ -642,7 +636,8 @@ export default function App() {
 
     setTasks((previous) =>
       previous.map((task) => {
-        const needsPlan = task.status === 'new' && (!task.scheduledDate || !task.scheduledStart);
+        const needsPlan =
+          activeTaskStatuses.includes(task.status) && (!task.scheduledDate || !task.scheduledStart);
         if (!needsPlan) return task;
         const start = Math.min(slot, 22 * 60);
         slot = start + 60;
@@ -696,7 +691,7 @@ export default function App() {
       }
       if (event.key.toLowerCase() === 'n') {
         event.preventDefault();
-        addTask('new');
+        addTask('backlog');
       }
       if (event.key.toLowerCase() === 'f') {
         event.preventDefault();
@@ -844,10 +839,10 @@ export default function App() {
           <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Now</div>
           <div className="text-sm text-slate-500 dark:text-slate-400 mb-4">No active task pinned.</div>
           <button
-            onClick={() => addTask('new')}
+            onClick={() => addTask('backlog')}
             className="w-full px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium flex items-center justify-center gap-2"
           >
-            <Plus size={15} /> New task
+            <Plus size={15} /> Backlog task
           </button>
         </section>
       );
@@ -984,12 +979,10 @@ export default function App() {
             </h1>
             <div
               data-testid="app-version-chip"
-              title={`Frontend v${frontendVersion} · Backend v${backendVersion}`}
-              className="hidden lg:flex items-center gap-1 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-2 py-0.5 text-[10px] font-mono text-slate-500 dark:text-slate-400"
+              title={`Version ${formatVisibleVersion(frontendVersion)}`}
+              className="hidden lg:flex items-center rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-2 py-0.5 text-[10px] font-mono text-slate-500 dark:text-slate-400"
             >
-              <span>fe {frontendVersion}</span>
-              <span className="text-slate-300 dark:text-slate-600">/</span>
-              <span>be {backendVersion}</span>
+              {formatVisibleVersion(frontendVersion)}
             </div>
           </div>
 
@@ -1217,11 +1210,11 @@ export default function App() {
             </button>
 
             <button
-              aria-label="New task"
-              onClick={() => addTask('new')}
+              aria-label="Backlog task"
+              onClick={() => addTask('backlog')}
               className="bg-indigo-600 hover:bg-indigo-700 transition-colors text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg flex items-center gap-2 shadow-sm text-sm font-medium shrink-0"
             >
-              <Plus size={16} /> <span className="hidden sm:inline">New Task</span>
+              <Plus size={16} /> <span className="hidden sm:inline">Backlog Task</span>
             </button>
           </div>
         </header>
@@ -1264,7 +1257,7 @@ export default function App() {
                 mantra={mantra}
                 onExit={() => setMonkMode(false)}
                 onIntroComplete={() => setIsEnteringMonkMode(false)}
-                onAddTask={() => addTask('new')}
+                onAddTask={() => addTask('backlog')}
                 onPomodoroComplete={handlePomodoroComplete}
               />
             )}
@@ -1526,24 +1519,24 @@ export default function App() {
                   </Command.Empty>
                   <Command.Group heading="Actions">
                     <Command.Item
-                      value="new focus task"
+                      value="backlog focus task"
                       onSelect={() => {
                         setIsCommandOpen(false);
                         startFocusTask();
                       }}
                       className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
                     >
-                      New focus task
+                      Backlog focus task
                     </Command.Item>
                     <Command.Item
-                      value="new task"
+                      value="backlog task"
                       onSelect={() => {
                         setIsCommandOpen(false);
-                        addTask('new');
+                        addTask('backlog');
                       }}
                       className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
                     >
-                      New task
+                      Backlog task
                     </Command.Item>
                     <Command.Item
                       value="monk mode"
@@ -1716,7 +1709,7 @@ export default function App() {
               </div>
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
                 {[
-                  ['n', 'New task'],
+                  ['n', 'Backlog task'],
                   ['f', 'Focus task'],
                   ['p', 'Plan day'],
                   ['j/k', 'Move task focus'],
@@ -1939,7 +1932,7 @@ export default function App() {
                     <div className="text-2xl font-mono font-bold text-emerald-600">
                       {importPreview.newTasks.length}
                     </div>
-                    <div className="text-xs text-slate-500">New</div>
+                    <div className="text-xs text-slate-500">Backlog</div>
                   </div>
                   <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-3 text-center border border-slate-200 dark:border-slate-700">
                     <div className="text-2xl font-mono font-bold text-indigo-600">
@@ -1992,7 +1985,7 @@ export default function App() {
           setSettings={setSettings}
           setMonkMode={setMonkMode}
           setView={setView}
-          openTaskModal={() => addTask('new')}
+          openTaskModal={() => addTask('backlog')}
         />
         <TaskModal
           draftTask={draftTask}

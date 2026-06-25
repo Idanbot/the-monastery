@@ -24,7 +24,7 @@ const makeApp = (options: Partial<ServerOptions> = {}) => {
 const makeTask = (overrides = {}) => ({
   id: 'task-' + Math.random().toString(36).slice(2, 8),
   title: 'Server task',
-  status: 'new',
+  status: 'backlog',
   urgency: 5,
   tags: [],
   scheduledDate: '',
@@ -187,7 +187,7 @@ it('stores profile settings and includes tasks/settings in backups', async () =>
         {
           id: 'task1',
           title: 'Backed up task',
-          status: 'new',
+          status: 'backlog',
           urgency: 5,
           tags: ['api'],
           scheduledDate: '',

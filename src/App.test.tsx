@@ -7,7 +7,7 @@ const makeTask = (overrides: Partial<Task> = {}): Task => ({
   id: 'seed-task',
   title: 'Design Database Schema',
   createdAt: '2026-06-23T09:00:00.000Z',
-  status: 'new',
+  status: 'backlog',
   urgency: 8,
   tags: ['Backend', 'High Priority'],
   scheduledDate: '',
@@ -31,29 +31,28 @@ const seedSettings = (settings: Partial<AppSettings>) => {
 };
 
 const clickNewTask = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getAllByRole('button', { name: /new task/i })[0]);
+  await user.click(screen.getAllByRole('button', { name: /backlog task/i })[0]);
 };
 
 beforeEach(() => {
   localStorage.clear();
 });
 
-it('renders tiny frontend and backend version indicators', async () => {
+it('renders a tiny app version indicator', async () => {
   render(<App />);
 
-  expect(screen.getByTestId('app-version-chip')).toHaveTextContent(/fe 0\.1\.0/);
-  await waitFor(() => {
-    expect(screen.getByTestId('app-version-chip')).toHaveTextContent(/be (offline|unknown|0\.1\.0)/);
-  });
+  expect(screen.getByTestId('app-version-chip')).toHaveTextContent(/^v1\.0$/);
+  expect(screen.getByTestId('app-version-chip')).not.toHaveTextContent(/fe|be|frontend|backend/i);
 });
 
 it('renders TheMonastery board', () => {
   render(<App />);
 
   expect(screen.getByRole('heading', { name: /themonastery/i })).toBeInTheDocument();
-  expect(screen.getByText('new')).toBeInTheDocument();
-  expect(screen.getByText('done')).toBeInTheDocument();
-  expect(screen.getByText('rejected')).toBeInTheDocument();
+  expect(screen.getByText('Backlog')).toBeInTheDocument();
+  expect(screen.getByText('In-Progress')).toBeInTheDocument();
+  expect(screen.getByText('Done')).toBeInTheDocument();
+  expect(screen.getByText('Rejected')).toBeInTheDocument();
 });
 
 it('filters commands in the command palette', async () => {
@@ -190,7 +189,7 @@ it('stores local backup history from settings backup', async () => {
   expect(screen.getByText(/1 tasks/i)).toBeInTheDocument();
 });
 
-it('adds a new task to the board', async () => {
+it('adds a backlog task to the board', async () => {
   const user = userEvent.setup();
   render(<App />);
 
@@ -285,9 +284,8 @@ it('prompts before closing dirty modal edits and can discard them', async () => 
   render(<App />);
 
   await user.click(screen.getAllByText(/design database schema/i)[0]);
-  const titleInput = screen.getByDisplayValue(/design database schema/i);
-  await user.clear(titleInput);
-  await user.type(titleInput, 'Unsaved Title');
+  await user.click(screen.getByRole('button', { name: /^notes$/i }));
+  await user.type(screen.getByPlaceholderText(/add a note/i), 'Unsaved note');
   await user.click(screen.getByRole('button', { name: /^discard$/i }));
 
   expect(screen.getByText(/save changes\?/i)).toBeInTheDocument();
@@ -295,7 +293,7 @@ it('prompts before closing dirty modal edits and can discard them', async () => 
   await user.click(screen.getAllByRole('button', { name: /^discard$/i }).at(-1)!);
 
   expect(screen.getAllByText(/design database schema/i).length).toBeGreaterThan(0);
-  expect(screen.queryByText(/unsaved title/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/unsaved note/i)).not.toBeInTheDocument();
 });
 
 it('filters tasks by tag', async () => {
@@ -524,7 +522,7 @@ it('opens board settings as a scoped section only', async () => {
   await user.click(screen.getByRole('button', { name: /board settings/i }));
 
   expect(screen.getAllByRole('button', { name: /^board$/i }).length).toBeGreaterThan(0);
-  expect(screen.getByDisplayValue(/compact split/i)).toBeInTheDocument();
+  expect(screen.getByDisplayValue(/Compact: 2 split columns/i)).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /^appearance$/i })).not.toBeInTheDocument();
 });
 
@@ -640,7 +638,7 @@ it('previews imported task conflicts before merging', async () => {
           {
             id: 'imported-task',
             title: 'Imported task',
-            status: 'new',
+            status: 'backlog',
             urgency: 4,
             tags: ['imported'],
             scheduledDate: '',

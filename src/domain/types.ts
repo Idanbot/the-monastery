@@ -1,4 +1,4 @@
-export type TaskStatus = 'new' | 'done' | 'rejected';
+export type TaskStatus = 'backlog' | 'in-progress' | 'done' | 'rejected';
 export type TaskRecurrence = 'none' | 'daily' | 'weekly' | 'monthly';
 export type VisualTheme =
   | 'default'
@@ -103,7 +103,7 @@ export type AppSettings = {
   clockDisplayMode: 'digital' | 'analog';
   modalTransparency: number;
   modalBlur: number;
-  layoutPreset: 'standard' | 'compact';
+  layoutPreset: 'compact' | 'three-column' | 'full';
   textSize: 'small' | 'medium' | 'large';
   roles: RoleDefinition[];
   tagGoals: TagGoal[];
@@ -114,9 +114,9 @@ export type AppSettings = {
   resizeHandleColor: string;
   timelineHourLinesVisible: boolean;
   timelineNowLineVisible: boolean;
-  columnWidths: { new: number; done: number; rejected: number };
+  columnWidths: { backlog: number; inProgress: number; done: number; rejected: number; new?: number };
   compactColumnWidths: { left: number; right: number };
-  compactHeights: { done: number; rejected: number };
+  compactHeights: { backlog: number; inProgress: number; done: number; rejected: number };
 };
 
 export type Profile = {

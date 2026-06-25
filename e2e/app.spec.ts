@@ -20,12 +20,12 @@ test.beforeEach(async ({ page, request }) => {
   }, activeProfileId);
 });
 
-test('shows frontend and backend version indicators', async ({ page }) => {
+test('shows the app version indicator without implementation labels', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByTestId('app-version-chip')).toContainText('fe');
-  await expect(page.getByTestId('app-version-chip')).toContainText('be');
+  await expect(page.getByTestId('app-version-chip')).toHaveText('v1.0');
+  await expect(page.getByTestId('app-version-chip')).not.toContainText(/fe|be|frontend|backend/i);
   const health = await page.request.get('/api/health');
-  expect((await health.json()).version).toBeTruthy();
+  expect((await health.json()).version).toBe('1.0.0');
 });
 
 test('creates and finds a task in the browser app', async ({ page }) => {
@@ -118,7 +118,7 @@ test('persists task notes, goals, and deletions across reloads', async ({ page }
 test('adds a task tag from the fuzzy tag pool', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByLabel('New task').click();
+  await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Pool tag smoke');
   await page.getByRole('textbox', { name: /find tag/i }).fill('py');
   await page.getByRole('button', { name: /^python$/i }).click();
@@ -134,7 +134,7 @@ test('plans day, suggests title tags, opens shortcuts, and records local backup 
 }) => {
   await page.goto('/');
 
-  await page.getByLabel('New task').click();
+  await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Python plan smoke');
   await expect(page.getByPlaceholder(/backend, high priority/i)).toHaveValue('python');
   await page.getByRole('button', { name: /save task/i }).click();
@@ -359,7 +359,7 @@ test('uses command palette, shortcuts, and task templates', async ({ page }) => 
 
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K');
   await expect(page.getByRole('dialog', { name: /command palette/i })).toBeVisible();
-  await page.getByRole('option', { name: /new focus task/i }).click();
+  await page.getByRole('option', { name: /backlog focus task/i }).click();
   await page.getByLabel('Title').fill('Palette focus task');
   await page.getByRole('button', { name: /save task/i }).click();
   await expectTaskVisible(page, 'Palette focus task');
@@ -492,7 +492,7 @@ test('completes a full profile roles tasks analytics lifecycle', async ({ page }
   await addRole('DevOps', 'devops, ci');
   await page.getByRole('button', { name: /close settings/i }).click();
 
-  await page.getByLabel('New task').click();
+  await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Backend shipped task');
   await page.getByLabel('Status').selectOption('done');
   await page.getByLabel('Tags').fill('backend');
@@ -500,20 +500,20 @@ test('completes a full profile roles tasks analytics lifecycle', async ({ page }
   await page.getByRole('button', { name: /add log/i }).click();
   await page.getByRole('button', { name: /save task/i }).click();
 
-  await page.getByLabel('New task').click();
+  await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Frontend rejected task');
   await page.getByLabel('Status').selectOption('rejected');
   await page.getByLabel('Tags').fill('frontend');
   await page.getByRole('button', { name: /add log/i }).click();
   await page.getByRole('button', { name: /save task/i }).click();
 
-  await page.getByLabel('New task').click();
+  await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Open backend task');
   await page.getByLabel('Tags').fill('backend');
   await page.getByRole('button', { name: /save task/i }).click();
 
   await page.getByRole('button', { name: 'Analytics', exact: true }).click();
-  await expect(page.getByTestId('metric-new')).toContainText('1');
+  await expect(page.getByTestId('metric-backlog')).toContainText('1');
   await expect(page.getByTestId('metric-done')).toContainText('1');
   await expect(page.getByTestId('metric-rejected')).toContainText('1');
   await expect(page.getByTestId('role-radar-chart')).toBeVisible();
@@ -561,7 +561,7 @@ test('keeps role presets and role hours scoped to the active profile', async ({ 
 test('prompts on dirty modal close and supports discard or save', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByLabel('New task').click();
+  await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Discarded dirty edit');
   await page.mouse.click(8, 8);
   await expect(page.getByRole('heading', { name: /save changes/i })).toBeVisible();
@@ -573,7 +573,7 @@ test('prompts on dirty modal close and supports discard or save', async ({ page 
   await searchTasks(page, 'Discarded dirty edit');
   await expect(page.getByText('Discarded dirty edit')).toHaveCount(0);
 
-  await page.getByLabel('New task').click();
+  await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Saved dirty edit');
   await page.mouse.click(8, 8);
   await page.getByRole('button', { name: /save changes/i }).click();
@@ -614,7 +614,7 @@ test('merges imported tasks into the active profile', async ({ page }) => {
   const task = {
     id: `imported-${Date.now()}`,
     title: importedTitle,
-    status: 'new',
+    status: 'backlog',
     urgency: 4,
     tags: ['import'],
     scheduledDate: '',
@@ -819,6 +819,33 @@ test('toggles animations from settings', async ({ page }) => {
   await page.getByLabel('Animations').uncheck();
 
   await expect(page.locator('[data-monk-mode]')).toHaveAttribute('data-animations-enabled', 'false');
+});
+
+test('supports mobile board layouts with backlog and in-progress lanes', async ({ page }) => {
+  const mobileTitle = `Mobile Layout ${Date.now()}`;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  await createTask(page, mobileTitle);
+  await page.getByText(mobileTitle).first().click();
+  await page.getByLabel('Status').selectOption('in-progress');
+  await page.getByRole('button', { name: /save task/i }).click();
+
+  await expect(page.getByTestId('board-column-backlog')).toBeVisible();
+  await expect(page.getByTestId('board-column-in-progress')).toBeVisible();
+  await expect(page.getByTestId('board-column-done')).toBeVisible();
+  await expect(page.getByTestId('board-column-rejected')).toBeVisible();
+  await expect(page.getByTestId('board-column-in-progress')).toContainText(mobileTitle);
+
+  await openSettingsSection(page, 'Board');
+  await page.getByLabel('Board layout').selectOption('full');
+  await page.getByRole('button', { name: /close settings/i }).click();
+  await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'full');
+
+  await openSettingsSection(page, 'Board');
+  await page.getByLabel('Board layout').selectOption('three-column');
+  await page.getByRole('button', { name: /close settings/i }).click();
+  await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'three-column');
 });
 
 test('keeps a mobile-created task after reload', async ({ page, request }) => {

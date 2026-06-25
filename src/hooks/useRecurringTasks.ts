@@ -19,14 +19,14 @@ export function useRecurringTasks(tasks, setTasks) {
         generated.push({
           ...cloneTask(task),
           id: generateId(),
-          status: 'new',
+          status: 'backlog',
           scheduledDate: nextDate,
           recurrenceRootId,
           logs: [],
           activeLogStart: null,
           subtasks: (task.subtasks || []).map((subtask) => ({
             ...subtask,
-            status: 'new',
+            status: 'backlog',
             logs: [],
             activeLogStart: null
           })),

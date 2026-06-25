@@ -1,7 +1,7 @@
 import { Bar, BarChart, CartesianGrid, Tooltip as RechartsTooltip, XAxis, YAxis } from 'recharts';
 import { ActivityGraph } from './ActivityGraph';
 import { calculateAnalytics } from '../../domain/analytics';
-import { formatDurationString } from '../../domain/tasks';
+import { activeTaskStatuses, formatDurationString, statusLabels, taskStatuses } from '../../domain/tasks';
 import type { AppSettings, Profile, Task } from '../../domain/types';
 
 const percentWidth = (value: number) => String(Math.min(100, value)) + '%';
@@ -127,11 +127,10 @@ export function AnalyticsView({
   openRoleSettings: () => void;
 }) {
   const analytics = calculateAnalytics({ tasks, roles: settings.roles, tagGoals: settings.tagGoals, now });
-  const statusChartData = [
-    { name: 'New', tasks: analytics.statusCounts.new },
-    { name: 'Done', tasks: analytics.statusCounts.done },
-    { name: 'Rejected', tasks: analytics.statusCounts.rejected }
-  ];
+  const statusChartData = taskStatuses.map((status) => ({
+    name: statusLabels[status],
+    tasks: analytics.statusCounts[status] || 0
+  }));
 
   return (
     <div className="flex-1 min-h-0 p-6 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -163,13 +162,13 @@ export function AnalyticsView({
               {formatDurationString(analytics.totalTrackedMs)}
             </div>
           </div>
-          {(['new', 'done', 'rejected'] as const).map((status) => (
+          {taskStatuses.map((status) => (
             <div
               key={status}
               data-testid={'metric-' + status}
               className="bg-slate-50 dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"
             >
-              <div className="text-slate-500 text-sm mb-1 capitalize">{status}</div>
+              <div className="text-slate-500 text-sm mb-1">{statusLabels[status]}</div>
               <div className="text-3xl font-mono font-bold text-slate-800 dark:text-slate-100">
                 {analytics.statusCounts[status]}
               </div>
@@ -332,7 +331,7 @@ export function AnalyticsView({
                 <span className="text-slate-500">Next scheduled</span>
                 <span className="font-medium truncate">
                   {tasks
-                    .filter((task) => task.scheduledStart && task.status === 'new')
+                    .filter((task) => task.scheduledStart && activeTaskStatuses.includes(task.status))
                     .sort((a, b) => a.scheduledStart.localeCompare(b.scheduledStart))[0]?.title || 'None'}
                 </span>
               </div>

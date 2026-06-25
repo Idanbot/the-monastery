@@ -55,7 +55,7 @@ export const parseIcsTasks = (text: string): Task[] => {
           normalizeTask({
             id: event.UID || generateId(),
             title,
-            status: 'new',
+            status: 'backlog',
             urgency: 5,
             tags: ['calendar'],
             scheduledDate: start.date,

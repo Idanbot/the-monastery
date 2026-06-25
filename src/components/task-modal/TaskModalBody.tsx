@@ -99,7 +99,8 @@ export function TaskModalBody({
             onChange={(e) => updateDraftTask({ status: e.target.value })}
             className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-400"
           >
-            <option value="new">New</option>
+            <option value="backlog">Backlog</option>
+            <option value="in-progress">In-Progress</option>
             <option value="done">Done</option>
             <option value="rejected">Rejected</option>
           </select>
@@ -316,7 +317,8 @@ export function TaskModalBody({
                 onChange={(e) => setSubtask(subtask.id, { status: e.target.value })}
                 className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-2 py-2 text-sm outline-none focus:border-indigo-400"
               >
-                <option value="new">New</option>
+                <option value="backlog">Backlog</option>
+                <option value="in-progress">In-Progress</option>
                 <option value="done">Done</option>
                 <option value="rejected">Rejected</option>
               </select>
