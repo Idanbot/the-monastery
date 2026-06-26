@@ -59,7 +59,10 @@ import {
   generateId,
   calculateTotalDuration,
   normalizeTask,
-  activeTaskStatuses
+  activeTaskStatuses,
+  defaultBoardColumnOrder,
+  statusLabels,
+  taskStatuses
 } from './domain/tasks';
 import { useBackupActions } from './hooks/useBackupActions';
 import { useImportFlows } from './hooks/useImportFlows';
@@ -554,21 +557,42 @@ export default function App() {
 
   const completeTask = (taskId) => {
     const timestamp = new Date().toISOString();
+    const nextBacklogTask = settings.autoPromoteNextTask
+      ? [...tasks]
+          .filter((task) => task.id !== taskId && task.status === 'backlog')
+          .sort((a, b) => b.urgency - a.urgency || a.createdAt.localeCompare(b.createdAt))[0]
+      : null;
 
     setTasks((prev) =>
       prev.map((task) => {
-        if (task.id !== taskId) return task;
-        return {
-          ...task,
-          status: 'done',
-          activeLogStart: null,
-          logs: task.activeLogStart
-            ? [...task.logs, { start: task.activeLogStart, end: timestamp }]
-            : task.logs,
-          activity: [...task.activity, { id: generateId(), type: 'system', text: 'Marked done', timestamp }]
-        };
+        if (task.id === taskId) {
+          return {
+            ...task,
+            status: 'done',
+            activeLogStart: null,
+            logs: task.activeLogStart
+              ? [...task.logs, { start: task.activeLogStart, end: timestamp }]
+              : task.logs,
+            activity: [...task.activity, { id: generateId(), type: 'system', text: 'Marked done', timestamp }]
+          };
+        }
+
+        if (nextBacklogTask && task.id === nextBacklogTask.id) {
+          return {
+            ...task,
+            status: 'in-progress',
+            activity: [
+              ...task.activity,
+              { id: generateId(), type: 'system', text: 'Promoted to In-Progress', timestamp }
+            ]
+          };
+        }
+
+        return task;
       })
     );
+
+    if (nextBacklogTask) toast.success('Next backlog task moved to In-Progress.');
   };
 
   const addTask = (status = 'backlog', overrides: any = {}) => {
@@ -824,6 +848,111 @@ export default function App() {
       return { ...prev, [status]: next };
     });
   };
+
+  const boardColumnOrder = settings.boardColumnOrder || defaultBoardColumnOrder;
+  const updateBoardColumnOrder = (key, order) => {
+    setSettings((previous) => ({
+      ...previous,
+      boardColumnOrder: {
+        ...defaultBoardColumnOrder,
+        ...(previous.boardColumnOrder || {}),
+        [key]: order
+      }
+    }));
+  };
+  const togglePairOrder = (key, pair) => {
+    const current = boardColumnOrder[key] || pair;
+    updateBoardColumnOrder(key, current[0] === pair[0] ? [pair[1], pair[0]] : pair);
+  };
+  const moveFullLane = (status, direction) => {
+    const current = (boardColumnOrder.full || defaultBoardColumnOrder.full).filter((item) =>
+      taskStatuses.includes(item)
+    );
+    const index = current.indexOf(status);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return;
+    const next = [...current];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    updateBoardColumnOrder('full', next);
+  };
+
+  const renderMobileBoardControls = () => (
+    <details
+      data-testid="mobile-board-controls"
+      className="lg:hidden mb-3 rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900"
+    >
+      <summary className="cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-200">
+        Board layout
+      </summary>
+      <div className="mt-3 space-y-3">
+        <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Layout
+          <select
+            aria-label="Mobile board layout"
+            value={settings.layoutPreset}
+            onChange={(event) =>
+              setSettings((previous) => ({ ...previous, layoutPreset: event.target.value }))
+            }
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm normal-case tracking-normal text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          >
+            <option value="compact">Compact</option>
+            <option value="three-column">3 columns</option>
+            <option value="full">4 columns</option>
+          </select>
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            aria-label="Swap compact active order"
+            onClick={() => togglePairOrder('compactActive', ['backlog', 'in-progress'])}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+          >
+            Active top:{' '}
+            {statusLabels[(boardColumnOrder.compactActive || defaultBoardColumnOrder.compactActive)[0]]}
+          </button>
+          <button
+            type="button"
+            aria-label="Swap compact outcome order"
+            onClick={() => togglePairOrder('compactDone', ['done', 'rejected'])}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+          >
+            Outcome top:{' '}
+            {statusLabels[(boardColumnOrder.compactDone || defaultBoardColumnOrder.compactDone)[0]]}
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {(boardColumnOrder.full || defaultBoardColumnOrder.full).map((status) => (
+            <div
+              key={status}
+              className="flex items-center justify-between gap-1 rounded-lg bg-slate-50 px-2 py-2 dark:bg-slate-800"
+            >
+              <span className="truncate text-xs font-medium text-slate-600 dark:text-slate-300">
+                {statusLabels[status]}
+              </span>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  aria-label={'Move mobile ' + statusLabels[status] + ' earlier'}
+                  onClick={() => moveFullLane(status, -1)}
+                  className="rounded border border-slate-200 px-1.5 text-[10px] dark:border-slate-700"
+                >
+                  Up
+                </button>
+                <button
+                  type="button"
+                  aria-label={'Move mobile ' + statusLabels[status] + ' later'}
+                  onClick={() => moveFullLane(status, 1)}
+                  className="rounded border border-slate-200 px-1.5 text-[10px] dark:border-slate-700"
+                >
+                  Down
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </details>
+  );
 
   const renderCurrentTaskPin = (variant = 'sidebar') => {
     const isWide = variant === 'wide';
@@ -1151,7 +1280,11 @@ export default function App() {
               {isOnline ? 'Online' : 'Offline ready'}
             </div>
 
-            <PersistenceStatusChip status={persistenceState} lastSavedAt={lastSavedAt} />
+            <PersistenceStatusChip
+              status={persistenceState}
+              lastSavedAt={lastSavedAt}
+              errorMessage={profileError}
+            />
 
             <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1 hidden md:block"></div>
 
@@ -1218,6 +1351,24 @@ export default function App() {
             </button>
           </div>
         </header>
+
+        {(persistenceState === 'error' || persistenceState === 'offline' || profileError) && (
+          <div
+            data-testid="sync-recovery-notice"
+            className={
+              'border-b px-4 py-2 text-xs font-medium ' +
+              (persistenceState === 'error' || profileError
+                ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200'
+                : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200')
+            }
+          >
+            {persistenceState === 'error' || profileError
+              ? 'Sync problem: ' +
+                (profileError ||
+                  'Your latest edits remain in this browser. Export a backup if this persists.')
+              : 'Local mode: backend unavailable. Changes are saved on this device until sync is available.'}
+          </div>
+        )}
 
         {}
         {/* The workspace is purely flex, with strict hidden overflow so only columns scroll */}
@@ -1317,6 +1468,7 @@ export default function App() {
                     </button>
                   </div>
                 </div>
+                {renderMobileBoardControls()}
                 <KanbanBoard
                   filteredTasks={filteredTasks}
                   settings={settings}

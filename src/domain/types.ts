@@ -108,6 +108,7 @@ export type AppSettings = {
   roles: RoleDefinition[];
   tagGoals: TagGoal[];
   collapseTasks: boolean;
+  autoPromoteNextTask: boolean;
   resizeHandleVisible: boolean;
   resizeHandleThickness: number;
   resizeHandleLength: number;

@@ -49,10 +49,10 @@ it('renders TheMonastery board', () => {
   render(<App />);
 
   expect(screen.getByRole('heading', { name: /themonastery/i })).toBeInTheDocument();
-  expect(screen.getByText('Backlog')).toBeInTheDocument();
-  expect(screen.getByText('In-Progress')).toBeInTheDocument();
-  expect(screen.getByText('Done')).toBeInTheDocument();
-  expect(screen.getByText('Rejected')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Backlog' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'In-Progress' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Done' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Rejected' })).toBeInTheDocument();
 });
 
 it('filters commands in the command palette', async () => {
@@ -195,6 +195,50 @@ it('stores local backup history from settings backup', async () => {
 
   expect(screen.getByText(/local backup history/i)).toBeInTheDocument();
   expect(screen.getByText(/1 tasks/i)).toBeInTheDocument();
+});
+
+it('auto-promotes the next backlog task when completing current work', async () => {
+  const user = userEvent.setup();
+  seedSettings({ autoPromoteNextTask: true });
+  seedTasks([
+    makeTask({ id: 'active', title: 'Active task', status: 'in-progress' }),
+    makeTask({ id: 'next', title: 'Next high urgency', status: 'backlog', urgency: 9 }),
+    makeTask({ id: 'later', title: 'Later low urgency', status: 'backlog', urgency: 2 })
+  ]);
+  render(<App />);
+
+  const pin = screen.getByTestId('current-task-pin');
+  expect(pin).toHaveTextContent('Active task');
+
+  await user.click(within(pin).getByRole('button', { name: /^done$/i }));
+
+  await waitFor(() => expect(screen.getByTestId('current-task-pin')).toHaveTextContent('Next high urgency'));
+  expect(screen.getByTestId('board-column-in-progress')).toHaveTextContent('Next high urgency');
+});
+
+it('shows mobile board controls that persist layout and compact lane order', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  const controls = screen.getByTestId('mobile-board-controls');
+  await user.click(within(controls).getByText(/board layout/i));
+  await user.selectOptions(within(controls).getByLabelText(/mobile board layout/i), 'full');
+
+  expect(screen.getByTestId('kanban-board')).toHaveAttribute('data-layout-preset', 'full');
+
+  await user.click(within(controls).getByRole('button', { name: /swap compact active order/i }));
+  await user.selectOptions(within(controls).getByLabelText(/mobile board layout/i), 'compact');
+
+  const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
+  expect(headings.slice(0, 2)).toEqual(['In-Progress', 'Backlog']);
+});
+
+it('shows a recovery notice when backend sync is unavailable', async () => {
+  render(<App />);
+
+  await waitFor(() => {
+    expect(screen.getByTestId('sync-recovery-notice')).toHaveTextContent(/local mode/i);
+  });
 });
 
 it('adds a backlog task to the board', async () => {

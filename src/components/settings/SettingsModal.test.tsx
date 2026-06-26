@@ -115,5 +115,8 @@ describe('SettingsModal', () => {
 
     fireEvent.change(screen.getByLabelText(/resize bar color/i), { target: { value: '#ff2d55' } });
     expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, resizeHandleColor: '#ff2d55' });
+
+    fireEvent.click(screen.getByLabelText(/auto-start next backlog/i));
+    expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, autoPromoteNextTask: true });
   });
 });

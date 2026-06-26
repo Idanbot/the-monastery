@@ -912,6 +912,16 @@ export function SettingsModal({
                       className="h-4 w-4 accent-indigo-600"
                     />
                   </label>
+                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
+                    <span>Auto-start next backlog</span>
+                    <input
+                      aria-label="Auto-start next backlog"
+                      type="checkbox"
+                      checked={Boolean(settings.autoPromoteNextTask)}
+                      onChange={(e) => updateSetting('autoPromoteNextTask', e.target.checked)}
+                      className="h-4 w-4 accent-indigo-600"
+                    />
+                  </label>
                 </SettingSection>
               )}
 

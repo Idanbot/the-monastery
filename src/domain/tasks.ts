@@ -181,6 +181,7 @@ export const defaultSettings: AppSettings = {
   roles: [],
   tagGoals: [],
   collapseTasks: false,
+  autoPromoteNextTask: false,
   resizeHandleVisible: true,
   resizeHandleThickness: 4,
   resizeHandleLength: 48,
@@ -293,6 +294,10 @@ export const mergeSettings = (saved) => ({
   modalBlur: Math.min(64, Math.max(0, Number(saved?.modalBlur ?? defaultSettings.modalBlur))),
   roles: normalizeRoles(saved?.roles),
   tagGoals: normalizeTagGoals(saved?.tagGoals),
+  autoPromoteNextTask:
+    saved?.autoPromoteNextTask === undefined
+      ? defaultSettings.autoPromoteNextTask
+      : Boolean(saved.autoPromoteNextTask),
   resizeHandleVisible:
     saved?.resizeHandleVisible === undefined
       ? defaultSettings.resizeHandleVisible

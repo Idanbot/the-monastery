@@ -55,6 +55,16 @@ describe('TaskModal', () => {
     expect(closeAfterSave).toHaveBeenCalledTimes(1);
   });
 
+  it('offers explicit status transition actions', async () => {
+    const user = userEvent.setup();
+    const updateDraftTask = vi.fn();
+
+    render(<TaskModal {...defaultProps({ updateDraftTask })} />);
+
+    await user.click(screen.getByRole('button', { name: /move task to in-progress/i }));
+    expect(updateDraftTask).toHaveBeenCalledWith({ status: 'in-progress' });
+  });
+
   it('adds a note through the notes section without opening activity by default', async () => {
     const user = userEvent.setup();
     const updateDraftTask = vi.fn();

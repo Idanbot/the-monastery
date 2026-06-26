@@ -6,7 +6,12 @@ describe('persistence status presentation', () => {
     expect(getPersistenceStatusPresentation('saving', null).label).toBe('Saving');
     expect(getPersistenceStatusPresentation('saved', null).label).toBe('Saved');
     expect(getPersistenceStatusPresentation('error', null).label).toBe('Save failed');
-    expect(getPersistenceStatusPresentation('offline', null).label).toBe('Offline local');
+    expect(getPersistenceStatusPresentation('offline', null).label).toBe('Local mode');
+  });
+
+  it('explains recovery behavior for offline and failed sync states', () => {
+    expect(getPersistenceStatusPresentation('offline', null).description).toMatch(/stored locally/i);
+    expect(getPersistenceStatusPresentation('error', null).description).toMatch(/export a backup/i);
   });
 
   it('keeps last saved time in the title', () => {

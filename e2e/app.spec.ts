@@ -843,13 +843,25 @@ test('supports mobile board layouts with backlog and in-progress lanes', async (
   await expect(page.getByTestId('board-column-rejected')).toBeVisible();
   await expect(page.getByTestId('board-column-in-progress')).toContainText(mobileTitle);
 
+  const mobileControls = page.getByTestId('mobile-board-controls');
+  await expect(mobileControls).toBeVisible();
+  await mobileControls.getByText('Board layout').click();
+  await mobileControls.getByLabel('Mobile board layout').selectOption('full');
+  await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'full');
+  await mobileControls.getByLabel('Mobile board layout').selectOption('compact');
+  await mobileControls.getByRole('button', { name: /swap compact active order/i }).click();
+  await expect(page.getByTestId('board-column-in-progress')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'compact');
+  await expect(page.getByTestId('board-column-in-progress')).toBeVisible();
+
   await openSettingsSection(page, 'Board');
-  await page.getByLabel('Board layout').selectOption('full');
+  await page.getByLabel('Board layout', { exact: true }).selectOption('full');
   await page.getByRole('button', { name: /close settings/i }).click();
   await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'full');
 
   await openSettingsSection(page, 'Board');
-  await page.getByLabel('Board layout').selectOption('three-column');
+  await page.getByLabel('Board layout', { exact: true }).selectOption('three-column');
   await page.getByRole('button', { name: /close settings/i }).click();
   await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'three-column');
 });

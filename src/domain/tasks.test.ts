@@ -167,6 +167,11 @@ describe('task domain helpers', () => {
     expect(settings.timelineNowLineVisible).toBe(false);
   });
 
+  it('normalizes auto promotion setting', () => {
+    expect(mergeSettings({ autoPromoteNextTask: true }).autoPromoteNextTask).toBe(true);
+    expect(mergeSettings({}).autoPromoteNextTask).toBe(false);
+  });
+
   it('normalizes persisted board column order', () => {
     const settings = mergeSettings({
       boardColumnOrder: {
