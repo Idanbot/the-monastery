@@ -39,18 +39,33 @@ export const createDataStore = (dbPath: string) => {
   const getProfileStmt = db.prepare(
     'SELECT id, name, created_at, updated_at, revision FROM profiles WHERE id = ?'
   );
-  const getProfileRevisionStmt = db.prepare('SELECT revision FROM profiles WHERE id = ?');
+  const getTasksRevisionStmt = db.prepare('SELECT tasks_revision FROM profiles WHERE id = ?');
+  const getSettingsRevisionStmt = db.prepare('SELECT settings_revision FROM profiles WHERE id = ?');
   const createProfileStmt = db.prepare(
     'INSERT INTO profiles (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)'
   );
-  const touchProfileStmt = db.prepare(
-    'UPDATE profiles SET updated_at = ?, revision = revision + 1 WHERE id = ?'
+  const touchTasksRevisionStmt = db.prepare(
+    'UPDATE profiles SET updated_at = ?, tasks_revision = tasks_revision + 1 WHERE id = ?'
+  );
+  const touchSettingsRevisionStmt = db.prepare(
+    'UPDATE profiles SET updated_at = ?, settings_revision = settings_revision + 1 WHERE id = ?'
   );
   const deleteProfileStmt = db.prepare('DELETE FROM profiles WHERE id = ?');
   const resetProfileTasksStmt = db.prepare('DELETE FROM tasks WHERE profile_id = ?');
   const resetProfileSettingsStmt = db.prepare('DELETE FROM profile_settings WHERE profile_id = ?');
-  const listTasksStmt = db.prepare('SELECT task_json FROM tasks WHERE profile_id = ? ORDER BY position ASC');
+  const listTasksStmt = db.prepare(
+    'SELECT task_id, task_json, position FROM tasks WHERE profile_id = ? ORDER BY position ASC'
+  );
   const deleteTaskStmt = db.prepare('DELETE FROM tasks WHERE profile_id = ? AND task_id = ?');
+  const getTaskPositionStmt = db.prepare('SELECT position FROM tasks WHERE profile_id = ? AND task_id = ?');
+  const upsertTaskStmt = db.prepare(`
+    INSERT INTO tasks (profile_id, task_id, task_json, position, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(profile_id, task_id) DO UPDATE SET
+      task_json = excluded.task_json,
+      position = excluded.position,
+      updated_at = excluded.updated_at
+  `);
   const getSettingsStmt = db.prepare('SELECT settings_json FROM profile_settings WHERE profile_id = ?');
   const upsertSettingsStmt = db.prepare(`
     INSERT INTO profile_settings (profile_id, settings_json, updated_at)
@@ -81,11 +96,29 @@ export const createDataStore = (dbPath: string) => {
       insertTaskStmt.run(profileId, taskId, JSON.stringify({ ...task, id: taskId }), index, timestamp);
     });
 
-    touchProfileStmt.run(timestamp, profileId);
+    touchTasksRevisionStmt.run(timestamp, profileId);
   });
 
+  /**
+   * Persist a single task. Uses a fast path that UPSERTs only the touched row
+   * when the task already exists and its position is unchanged (the common
+   * case — e.g. editing a title). Falls back to a full `replaceTasks` rewrite
+   * only when the task is new or is being moved, so a single-field edit no
+   * longer rewrites every task row in the profile.
+   */
   const saveTask = db.transaction((profileId: string, task: Task, position?: number) => {
-    const tasks = (listTasksStmt.all(profileId) as { task_json: string }[]).map(
+    const taskId = typeof task.id === 'string' ? task.id : createId();
+    const existing = getTaskPositionStmt.get(profileId, taskId) as { position: number } | undefined;
+    const serialized = JSON.stringify({ ...task, id: taskId });
+
+    if (existing && (position === undefined || position === existing.position)) {
+      const timestamp = nowIso();
+      upsertTaskStmt.run(profileId, taskId, serialized, existing.position, timestamp);
+      touchTasksRevisionStmt.run(timestamp, profileId);
+      return;
+    }
+
+    const tasks = (listTasksStmt.all(profileId) as { task_json: string; task_id: string }[]).map(
       (row) => JSON.parse(row.task_json) as Task
     );
     const existingIndex = tasks.findIndex((item) => item.id === task.id);
@@ -104,13 +137,15 @@ export const createDataStore = (dbPath: string) => {
   const deleteTask = db.transaction((profileId: string, taskId: string) => {
     const timestamp = nowIso();
     deleteTaskStmt.run(profileId, taskId);
-    touchProfileStmt.run(timestamp, profileId);
+    touchTasksRevisionStmt.run(timestamp, profileId);
   });
 
   const resetProfileData = db.transaction((profileId: string) => {
+    const timestamp = nowIso();
     resetProfileTasksStmt.run(profileId);
     resetProfileSettingsStmt.run(profileId);
-    touchProfileStmt.run(nowIso(), profileId);
+    touchTasksRevisionStmt.run(timestamp, profileId);
+    touchSettingsRevisionStmt.run(timestamp, profileId);
   });
 
   ensureDefaultProfile();
@@ -125,8 +160,10 @@ export const createDataStore = (dbPath: string) => {
       };
     },
     getProfile: (id: string) => getProfileStmt.get(id),
-    getProfileRevision: (id: string) =>
-      (getProfileRevisionStmt.get(id) as { revision: number } | undefined)?.revision ?? 0,
+    getTasksRevision: (id: string) =>
+      (getTasksRevisionStmt.get(id) as { tasks_revision: number } | undefined)?.tasks_revision ?? 0,
+    getSettingsRevision: (id: string) =>
+      (getSettingsRevisionStmt.get(id) as { settings_revision: number } | undefined)?.settings_revision ?? 0,
     countProfiles: () =>
       (db.prepare('SELECT COUNT(*) AS count FROM profiles').get() as { count: number }).count,
     listProfiles: () => (listProfilesStmt.all() as ProfileRow[]).map(serializeProfile),
@@ -156,7 +193,7 @@ export const createDataStore = (dbPath: string) => {
     saveSettings: (profileId: string, settings: unknown) => {
       const timestamp = nowIso();
       upsertSettingsStmt.run(profileId, JSON.stringify(settings), timestamp);
-      touchProfileStmt.run(timestamp, profileId);
+      touchSettingsRevisionStmt.run(timestamp, profileId);
     },
     backup: () => {
       const profiles = (listProfilesStmt.all() as ProfileRow[]).map((row) => {

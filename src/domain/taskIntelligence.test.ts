@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inferTaskTags } from './taskIntelligence';
+import { inferTaskTags, suggestTaskTags } from './taskIntelligence';
 import { normalizeTask } from './tasks';
 
 describe('task intelligence', () => {
@@ -41,6 +41,69 @@ describe('task intelligence', () => {
     });
 
     expect(tags).toEqual(['urgent', 'backend', 'queue', 'distributed-systems']);
+  });
+});
+
+describe('suggestTaskTags', () => {
+  it('returns only tags the task does not already carry', () => {
+    const suggested = suggestTaskTags({
+      title: 'GKE networking migration plan',
+      existingTags: ['gke'],
+      tagPool: ['gke', 'networking', 'migration'],
+      roles: [
+        {
+          id: 'cloud',
+          name: 'Cloud Architect',
+          tags: ['gcp', 'gke', 'networking'],
+          dailyTargetHours: 0,
+          weeklyTargetHours: 0,
+          monthlyTargetHours: 0
+        }
+      ]
+    });
+
+    expect(suggested).toEqual(['networking', 'migration', 'gcp']);
+  });
+
+  it('respects the maxTags limit', () => {
+    const suggested = suggestTaskTags({
+      title: 'GKE networking migration plan',
+      existingTags: [],
+      tagPool: ['gke', 'networking', 'migration'],
+      roles: [
+        {
+          id: 'cloud',
+          name: 'Cloud Architect',
+          tags: ['gcp', 'gke', 'networking'],
+          dailyTargetHours: 0,
+          weeklyTargetHours: 0,
+          monthlyTargetHours: 0
+        }
+      ],
+      maxTags: 2
+    });
+
+    expect(suggested).toHaveLength(2);
+  });
+
+  it('returns nothing when all inferred tags are already present', () => {
+    const suggested = suggestTaskTags({
+      title: 'GKE networking',
+      existingTags: ['gke', 'networking', 'gcp'],
+      tagPool: ['gke', 'networking'],
+      roles: [
+        {
+          id: 'cloud',
+          name: 'Cloud Architect',
+          tags: ['gcp', 'gke', 'networking'],
+          dailyTargetHours: 0,
+          weeklyTargetHours: 0,
+          monthlyTargetHours: 0
+        }
+      ]
+    });
+
+    expect(suggested).toEqual([]);
   });
 });
 

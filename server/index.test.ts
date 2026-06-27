@@ -39,6 +39,55 @@ const makeTask = (overrides = {}) => ({
   ...overrides
 });
 
+const fullSettings = (overrides: Record<string, unknown> = {}) => ({
+  theme: 'dark',
+  visualTheme: 'default',
+  colorScheme: { main: '', secondary: '', text: '' },
+  fontMain: '',
+  fontSecondary: '',
+  fontUI: '',
+  customThemeName: '',
+  monkMode: false,
+  dailyGoal: '',
+  shutdownChecklist: {},
+  sidebarVisible: true,
+  animationsEnabled: true,
+  clockFormat: '24h',
+  showSeconds: true,
+  sidebarWidgets: ['clock', 'agenda'],
+  sidebarWidth: 320,
+  clockHeight: 160,
+  clockTextScale: 1,
+  clockBackgroundVisible: true,
+  clockTextColor: '',
+  clockBackgroundColor: '',
+  clockDisplayMode: 'digital',
+  modalTransparency: 35,
+  modalBlur: 1,
+  layoutPreset: 'compact',
+  textSize: 'medium',
+  roles: [],
+  tagGoals: [],
+  collapseTasks: false,
+  autoPromoteNextTask: false,
+  resizeHandleVisible: true,
+  resizeHandleThickness: 4,
+  resizeHandleLength: 48,
+  resizeHandleColor: '#94a3b8',
+  timelineHourLinesVisible: true,
+  timelineNowLineVisible: true,
+  columnWidths: { backlog: 1, inProgress: 1, done: 1, rejected: 1 },
+  compactColumnWidths: { left: 50, right: 50 },
+  compactHeights: { backlog: 1, inProgress: 1, done: 1, rejected: 1 },
+  boardColumnOrder: {
+    compactActive: ['in-progress', 'backlog'],
+    compactDone: ['done', 'rejected'],
+    threeColumn: ['in-progress', 'backlog', 'done', 'rejected'],
+    full: ['backlog', 'in-progress', 'done', 'rejected']
+  },
+  ...overrides
+});
+
 beforeEach(() => {
   testDir = '';
 });
@@ -114,7 +163,7 @@ it('supports task action endpoints for create, update, and delete', async () => 
   expect(afterDelete.json().tasks).toHaveLength(0);
 });
 
-it('rejects stale profile writes and returns the latest revision', async () => {
+it('rejects stale task writes against the tasks revision and returns the latest revision', async () => {
   const app = makeApp();
   const initial = await app.inject({ method: 'GET', url: '/api/profiles/default/tasks' });
   const revision = initial.json().revision;
@@ -125,9 +174,9 @@ it('rejects stale profile writes and returns the latest revision', async () => {
     payload: { task: makeTask({ id: 'revision-task' }), position: 0, baseRevision: revision }
   });
   const stale = await app.inject({
-    method: 'PUT',
-    url: '/api/profiles/default/settings',
-    payload: { settings: { theme: 'dark' }, baseRevision: revision }
+    method: 'POST',
+    url: '/api/profiles/default/tasks',
+    payload: { task: makeTask({ id: 'stale-task' }), position: 0, baseRevision: revision }
   });
   await app.close();
 
@@ -137,7 +186,32 @@ it('rejects stale profile writes and returns the latest revision', async () => {
   expect(stale.json()).toMatchObject({ error: 'Profile changed elsewhere.', revision: revision + 1 });
 });
 
-it('rejects malformed task and settings payloads with validation errors', async () => {
+it('allows a settings save with a stale tasks revision (independent resource revisions)', async () => {
+  const app = makeApp();
+  const initialTasks = await app.inject({ method: 'GET', url: '/api/profiles/default/tasks' });
+  const tasksRevision = initialTasks.json().revision;
+  const initialSettings = await app.inject({ method: 'GET', url: '/api/profiles/default/settings' });
+  const settingsRevision = initialSettings.json().revision;
+
+  // Bump the tasks revision by saving a task...
+  await app.inject({
+    method: 'POST',
+    url: '/api/profiles/default/tasks',
+    payload: { task: makeTask({ id: 'independent-task' }), position: 0, baseRevision: tasksRevision }
+  });
+
+  // ...a settings save using the (now stale for tasks) settings revision still succeeds.
+  const settingsSave = await app.inject({
+    method: 'PUT',
+    url: '/api/profiles/default/settings',
+    payload: { settings: fullSettings({ theme: 'dark' }), baseRevision: settingsRevision }
+  });
+  await app.close();
+
+  expect(settingsSave.statusCode).toBe(200);
+});
+
+it('rejects malformed task and settings payloads with field-level validation errors', async () => {
   const app = makeApp();
 
   const invalidTask = await app.inject({
@@ -153,9 +227,11 @@ it('rejects malformed task and settings payloads with validation errors', async 
   await app.close();
 
   expect(invalidTask.statusCode).toBe(400);
-  expect(invalidTask.json()).toEqual({ error: 'valid task object is required.' });
+  expect(invalidTask.json()).toMatchObject({ error: 'Validation failed.' });
+  expect(Array.isArray(invalidTask.json().issues)).toBe(true);
   expect(invalidSettings.statusCode).toBe(400);
-  expect(invalidSettings.json()).toEqual({ error: 'settings object is required.' });
+  expect(invalidSettings.json()).toMatchObject({ error: 'Validation failed.' });
+  expect(Array.isArray(invalidSettings.json().issues)).toBe(true);
 });
 
 it('stores tasks independently per profile and resets a profile', async () => {
@@ -196,10 +272,19 @@ it('stores profile settings and includes tasks/settings in backups', async () =>
     method: 'PUT',
     url: '/api/profiles/default/settings',
     payload: {
-      settings: {
+      settings: fullSettings({
         theme: 'dark',
-        roles: [{ id: 'role1', name: 'Backend', tags: ['api'], weeklyTargetHours: 4 }]
-      }
+        roles: [
+          {
+            id: 'role1',
+            name: 'Backend',
+            tags: ['api'],
+            dailyTargetHours: 0,
+            weeklyTargetHours: 4,
+            monthlyTargetHours: 0
+          }
+        ]
+      })
     }
   });
   await app.inject({

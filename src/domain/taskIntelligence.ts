@@ -70,3 +70,33 @@ export function inferTaskTags({
 
   return inferred;
 }
+
+/**
+ * Returns the tags that should be *suggested* (shown as clickable chips) for a
+ * task title: tags from the pool and the role graph that the title implies but
+ * the task does not already carry. This is the single source of tag-suggestion
+ * truth — there is no longer a parallel auto-add path in the task modal.
+ */
+export function suggestTaskTags({
+  title,
+  existingTags = [],
+  tagPool = [],
+  roles = [],
+  maxTags = 5
+}: {
+  title: string;
+  existingTags?: string[];
+  tagPool?: string[];
+  roles?: RoleDefinition[];
+  maxTags?: number;
+}): string[] {
+  const inferred = inferTaskTags({
+    title,
+    existingTags,
+    tagPool,
+    roles,
+    maxTags: maxTags + existingTags.length
+  });
+  const present = new Set((existingTags || []).map((tag) => tag.toLowerCase()));
+  return inferred.filter((tag) => !present.has(tag.toLowerCase())).slice(0, maxTags);
+}

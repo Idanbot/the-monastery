@@ -99,7 +99,7 @@ it('shows the breathing intro before monk mode focus controls', async () => {
   expect(screen.getByRole('button', { name: /skip breathing intro/i })).toBeInTheDocument();
 });
 
-it('auto-adds tags from the task title and role graph', async () => {
+it('suggests tags from the task title and role graph as clickable chips', async () => {
   const user = userEvent.setup();
   seedSettings({
     roles: [
@@ -117,6 +117,16 @@ it('auto-adds tags from the task title and role graph', async () => {
 
   await clickNewTask(user);
   await user.type(screen.getByLabelText(/title/i), 'GKE migration plan');
+
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: /add suggested tag gke/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add suggested tag gcp/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add suggested tag networking/i })).toBeInTheDocument();
+  });
+
+  await user.click(screen.getByRole('button', { name: /add suggested tag gke/i }));
+  await user.click(screen.getByRole('button', { name: /add suggested tag gcp/i }));
+  await user.click(screen.getByRole('button', { name: /add suggested tag networking/i }));
 
   await waitFor(() => {
     expect(screen.getByPlaceholderText(/backend, high priority/i)).toHaveValue('gke, gcp, networking');
@@ -373,6 +383,7 @@ it('adds task tags from the fuzzy tag pool', async () => {
 
   await clickNewTask(user);
   await user.type(screen.getByLabelText(/title/i), 'Python study');
+  await user.click(screen.getByRole('button', { name: /add suggested tag python/i }));
   await user.type(screen.getByRole('textbox', { name: /find tag/i }), 'py');
   await user.click(screen.getByRole('button', { name: /^pytorch$/i }));
   await user.click(screen.getByRole('button', { name: /save task/i }));

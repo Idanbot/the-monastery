@@ -55,7 +55,123 @@ export const taskMutationPayloadSchema = z.object({
   baseRevision: z.number().int().min(0).optional()
 });
 
+const visualThemeSchema = z.enum([
+  'default',
+  'zen',
+  'tokyo-night',
+  'liquid-glass',
+  'obsidian-glass',
+  'terminal',
+  'terminal-white',
+  'catppuccin',
+  'gruvbox',
+  'dracula',
+  'github-light',
+  'github-dark',
+  'nord',
+  'night-owl'
+]);
+
+const taskStatusEnumSchema = z.enum(['backlog', 'in-progress', 'done', 'rejected']);
+
+const goalCadenceSchema = z.object({
+  dailyTargetHours: z.number(),
+  weeklyTargetHours: z.number(),
+  monthlyTargetHours: z.number()
+});
+
+const roleDefinitionSchema = goalCadenceSchema.extend({
+  id: z.string(),
+  name: z.string(),
+  tags: z.array(z.string())
+});
+
+const tagGoalSchema = goalCadenceSchema.extend({
+  id: z.string(),
+  tag: z.string()
+});
+
+/**
+ * Server-side validation for the settings payload. Previously the server
+ * accepted any `Record<string, unknown>` and silently stored garbage that the
+ * client's `mergeSettings` would drop. This schema mirrors `AppSettings` from
+ * `src/domain/types.ts` and rejects unknown/garbage writes at the boundary.
+ */
+export const appSettingsSchema = z.object({
+  theme: z.enum(['system', 'light', 'dark']),
+  visualTheme: visualThemeSchema,
+  colorScheme: z.object({ main: z.string(), secondary: z.string(), text: z.string() }),
+  fontMain: z.string(),
+  fontSecondary: z.string(),
+  fontUI: z.string(),
+  customThemeName: z.string(),
+  monkMode: z.boolean(),
+  monkModeOpenedAt: z.string().optional(),
+  dailyGoal: z.string(),
+  shutdownChecklist: z.record(z.string(), z.boolean()),
+  sidebarVisible: z.boolean(),
+  animationsEnabled: z.boolean(),
+  clockFormat: z.enum(['12h', '24h']),
+  showSeconds: z.boolean(),
+  sidebarWidgets: z.array(z.string()),
+  sidebarWidth: z.number(),
+  clockHeight: z.number(),
+  clockTextScale: z.number(),
+  clockBackgroundVisible: z.boolean(),
+  clockTextColor: z.string(),
+  clockBackgroundColor: z.string(),
+  clockDisplayMode: z.enum(['digital', 'analog']),
+  modalTransparency: z.number(),
+  modalBlur: z.number(),
+  layoutPreset: z.enum(['compact', 'three-column', 'full']),
+  textSize: z.enum(['small', 'medium', 'large']),
+  roles: z.array(roleDefinitionSchema),
+  tagGoals: z.array(tagGoalSchema),
+  collapseTasks: z.boolean(),
+  autoPromoteNextTask: z.boolean(),
+  resizeHandleVisible: z.boolean(),
+  resizeHandleThickness: z.number(),
+  resizeHandleLength: z.number(),
+  resizeHandleColor: z.string(),
+  timelineHourLinesVisible: z.boolean(),
+  timelineNowLineVisible: z.boolean(),
+  columnWidths: z.object({
+    backlog: z.number(),
+    inProgress: z.number(),
+    done: z.number(),
+    rejected: z.number(),
+    new: z.number().optional()
+  }),
+  compactColumnWidths: z.object({ left: z.number(), right: z.number() }),
+  compactHeights: z.object({
+    backlog: z.number(),
+    inProgress: z.number(),
+    done: z.number(),
+    rejected: z.number()
+  }),
+  boardColumnOrder: z.object({
+    compactActive: z.array(taskStatusEnumSchema),
+    compactDone: z.array(taskStatusEnumSchema),
+    threeColumn: z.array(taskStatusEnumSchema),
+    full: z.array(taskStatusEnumSchema)
+  })
+});
+
 export const settingsPayloadSchema = z.object({
-  settings: z.record(z.string(), z.unknown()),
+  settings: appSettingsSchema,
   baseRevision: z.number().int().min(0).optional()
+});
+
+/**
+ * Shape returned to clients when zod validation fails. Field-level issues let
+ * the UI surface specific problems instead of a generic "is required" string.
+ */
+export const validationErrorResponse = (
+  issues: readonly { path: readonly PropertyKey[]; message: string }[] | undefined
+) => ({
+  error: 'Validation failed.',
+  issues: (issues ?? []).map((issue) => ({
+    path: issue.path.map(String).join('.'),
+    message: issue.message
+  }))
 });

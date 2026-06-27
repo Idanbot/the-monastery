@@ -1,17 +1,4 @@
-import { QueryClient } from '@tanstack/react-query';
 import { Workbox } from 'workbox-window';
-
-export const createAppQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 30_000,
-        gcTime: 5 * 60_000,
-        refetchOnWindowFocus: false,
-        retry: 1
-      }
-    }
-  });
 
 export async function registerAppServiceWorker({
   supported = typeof navigator !== 'undefined' && 'serviceWorker' in navigator,

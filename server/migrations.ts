@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 
-export const currentDatabaseVersion = 2;
+export const currentDatabaseVersion = 3;
 
 const migrationOne = (db: Database.Database) => {
   db.exec(`
@@ -39,9 +39,26 @@ const migrationTwo = (db: Database.Database) => {
   }
 };
 
+/**
+ * Split the single `revision` counter into independent `tasks_revision` and
+ * `settings_revision` counters. Previously a settings save invalidated a
+ * concurrent task save's base revision (and vice versa) because both resources
+ * shared one counter. The original `revision` column is preserved for
+ * backward compatibility / total ordering.
+ */
+const migrationThree = (db: Database.Database) => {
+  const columns = db.pragma('table_info(profiles)') as { name: string }[];
+  if (!columns.some((column) => column.name === 'tasks_revision')) {
+    db.exec('ALTER TABLE profiles ADD COLUMN tasks_revision INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!columns.some((column) => column.name === 'settings_revision')) {
+    db.exec('ALTER TABLE profiles ADD COLUMN settings_revision INTEGER NOT NULL DEFAULT 0');
+  }
+};
+
 export const runDatabaseMigrations = (db: Database.Database) => {
   const version = db.pragma('user_version', { simple: true }) as number;
-  const migrations = [migrationOne, migrationTwo];
+  const migrations = [migrationOne, migrationTwo, migrationThree];
 
   db.transaction(() => {
     for (let index = version; index < migrations.length; index += 1) migrations[index](db);

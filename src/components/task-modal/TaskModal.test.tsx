@@ -25,7 +25,7 @@ const defaultProps = (overrides = {}) => ({
   modalSections: { timer: false, notes: false, activity: false },
   setModalSections: vi.fn(),
   now: new Date('2026-06-23T09:30:00.000Z').getTime(),
-  clockFormat: '24h',
+  clockFormat: '24h' as const,
   updateDraftTask: vi.fn(),
   closeTaskModal: vi.fn(),
   saveDraftTask: vi.fn(),

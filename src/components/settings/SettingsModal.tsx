@@ -31,7 +31,7 @@ import { createRoleFromPreset, rolePresets } from '../../domain/rolePresets';
 import { parseTagString } from '../../domain/tags';
 import { createThemeRecipe, themeRecipeSchema } from '../../domain/themeStudio';
 import { generateId } from '../../domain/tasks';
-import { getModalEffectStyle, getThemeContract, getThemeStyle } from '../../domain/themes';
+import { useThemeStyle } from '../../hooks/useThemeStyle';
 import { themeChoiceOptions } from '../../domain/themeGallery';
 
 const sectionIds = ['appearance', 'time', 'board', 'roles', 'sidebar', 'profiles', 'data'];
@@ -81,32 +81,17 @@ export function SettingsModal({
     ? themeChoice
     : 'system:default';
   const themeScopeClassName = isDarkMode ? 'dark' : '';
-  const animationsEnabled = settings.animationsEnabled !== false;
-  const terminalTheme = settings.visualTheme.startsWith('terminal');
-  const motionDuration = animationsEnabled && !terminalTheme ? 0.08 : 0;
-  const motionEase = settings.visualTheme === 'liquid-glass' ? ([0.22, 1, 0.36, 1] as const) : 'easeOut';
-  const themeTokens = useMemo(
-    () => getThemeContract(settings.visualTheme, isDarkMode),
-    [isDarkMode, settings.visualTheme]
-  );
-  const hexColor = (value, fallback) => (/^#[0-9a-f]{6}$/i.test(value || '') ? value : fallback);
-  const effectiveMainColor = hexColor(
-    settings.colorScheme?.main || themeTokens.main || themeTokens.accent,
-    '#007aff'
-  );
-  const effectiveSecondaryColor = hexColor(
-    settings.colorScheme?.secondary || themeTokens.secondary || themeTokens.mutedText,
-    '#af52de'
-  );
-  const effectiveTextColor = hexColor(settings.colorScheme?.text || themeTokens.text, '#152033');
-  const effectiveClockTextColor = hexColor(
-    settings.clockTextColor || settings.colorScheme?.text || themeTokens.text,
-    '#152033'
-  );
-  const effectiveClockBackgroundColor = hexColor(
-    settings.clockBackgroundColor || themeTokens.bgColor,
-    '#ffffff'
-  );
+  const {
+    animationsEnabled,
+    motionDuration,
+    motionEase,
+    themeStyle,
+    effectiveMainColor,
+    effectiveSecondaryColor,
+    effectiveTextColor,
+    effectiveClockTextColor,
+    effectiveClockBackgroundColor
+  } = useThemeStyle(settings, isDarkMode);
   const themeRecipeForm = useForm({
     resolver: zodResolver(themeRecipeSchema),
     values: createThemeRecipe(settings),
@@ -115,24 +100,6 @@ export function SettingsModal({
   const themeNameField = themeRecipeForm.register('name', {
     onChange: (event) => updateSetting('customThemeName', event.target.value)
   });
-  const themeStyle = useMemo(
-    () => ({
-      ...getThemeStyle(settings.visualTheme, isDarkMode, animationsEnabled, {
-        ...settings.colorScheme,
-        fontFamily: settings.fontFamily
-      }),
-      ...getModalEffectStyle(settings.modalTransparency, settings.modalBlur)
-    }),
-    [
-      animationsEnabled,
-      isDarkMode,
-      settings.modalTransparency,
-      settings.modalBlur,
-      settings.visualTheme,
-      settings.colorScheme,
-      settings.fontFamily
-    ]
-  );
   const roleTagValues = useMemo(
     () => Object.fromEntries((settings.roles || []).map((role) => [role.id, (role.tags || []).join(', ')])),
     [settings.roles]
@@ -161,28 +128,31 @@ export function SettingsModal({
     setOpenSections(Object.fromEntries(sectionIds.map((id) => [id, isOpen])));
   };
 
-  const updateSetting = (key, value) => {
-    setSettings({ ...settings, [key]: value });
+  const patchSettings = (partial: Partial<typeof settings>) => {
+    setSettings((previous) => ({ ...previous, ...partial }));
   };
 
-  const updateColorScheme = (key, value) => {
-    setSettings({
-      ...settings,
+  const updateSetting = (key: keyof typeof settings, value: unknown) => {
+    setSettings((previous) => ({ ...previous, [key]: value }));
+  };
+
+  const updateColorScheme = (key: 'main' | 'secondary' | 'text', value: string) => {
+    setSettings((previous) => ({
+      ...previous,
       colorScheme: {
-        ...(settings.colorScheme || { main: '', secondary: '', text: '' }),
+        ...(previous.colorScheme || { main: '', secondary: '', text: '' }),
         [key]: value
       }
-    });
+    }));
   };
 
-  const updateClockSetting = (key, value) => {
+  const updateClockSetting = (key: keyof typeof settings, value: unknown) => {
     updateSetting(key, value);
   };
 
-  const setThemeChoice = (value) => {
+  const setThemeChoice = (value: string) => {
     const option = themeChoiceOptions.find((item) => item.value === value) || themeChoiceOptions[0];
-    setSettings({
-      ...settings,
+    patchSettings({
       theme: option.theme,
       visualTheme: option.visualTheme,
       colorScheme: { main: '', secondary: '', text: '' },
@@ -193,7 +163,7 @@ export function SettingsModal({
     });
   };
 
-  const setThemeColor = (key, value) => {
+  const setThemeColor = (key: 'main' | 'secondary' | 'text', value: string) => {
     updateColorScheme(key, value);
   };
 
@@ -456,8 +426,7 @@ export function SettingsModal({
                           key={label}
                           type="button"
                           onClick={() =>
-                            setSettings({
-                              ...settings,
+                            patchSettings({
                               visualTheme,
                               theme,
                               colorScheme: { main, secondary, text },
@@ -499,12 +468,10 @@ export function SettingsModal({
                       min="0"
                       max="100"
                       value={settings.modalTransparency}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          modalTransparency: Math.max(0, Math.min(100, Number(e.target.value)))
-                        })
-                      }
+                      onChange={(e) => {
+                        const transparency = Math.max(0, Math.min(100, Number(e.target.value)));
+                        setSettings((previous) => ({ ...previous, modalTransparency: transparency }));
+                      }}
                       className="accent-indigo-600"
                     />
                   </label>
@@ -518,12 +485,10 @@ export function SettingsModal({
                       min="0"
                       max="64"
                       value={settings.modalBlur}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          modalBlur: Math.max(0, Math.min(64, Number(e.target.value)))
-                        })
-                      }
+                      onChange={(e) => {
+                        const blur = Math.max(0, Math.min(64, Number(e.target.value)));
+                        setSettings((previous) => ({ ...previous, modalBlur: blur }));
+                      }}
                       className="accent-indigo-600"
                     />
                   </label>
@@ -668,10 +633,10 @@ export function SettingsModal({
                       aria-label="Decrease clock size"
                       type="button"
                       onClick={() =>
-                        setSettings({
-                          ...settings,
-                          clockTextScale: Math.max(0.7, Number(settings.clockTextScale || 1) - 0.1)
-                        })
+                        setSettings((previous) => ({
+                          ...previous,
+                          clockTextScale: Math.max(0.7, Number(previous.clockTextScale || 1) - 0.1)
+                        }))
                       }
                       className="h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 text-lg font-semibold"
                     >
@@ -681,10 +646,10 @@ export function SettingsModal({
                       aria-label="Increase clock size"
                       type="button"
                       onClick={() =>
-                        setSettings({
-                          ...settings,
-                          clockTextScale: Math.min(1.4, Number(settings.clockTextScale || 1) + 0.1)
-                        })
+                        setSettings((previous) => ({
+                          ...previous,
+                          clockTextScale: Math.min(1.4, Number(previous.clockTextScale || 1) + 0.1)
+                        }))
                       }
                       className="h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 text-lg font-semibold"
                     >
@@ -837,10 +802,10 @@ export function SettingsModal({
                         <button
                           type="button"
                           onClick={() =>
-                            setSettings({
-                              ...settings,
+                            setSettings((previous) => ({
+                              ...previous,
                               tagGoals: [
-                                ...(settings.tagGoals || []),
+                                ...(previous.tagGoals || []),
                                 {
                                   id: generateId(),
                                   tag: '',
@@ -849,7 +814,7 @@ export function SettingsModal({
                                   monthlyTargetHours: 0
                                 }
                               ]
-                            })
+                            }))
                           }
                           className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-xs font-medium"
                         >
@@ -866,14 +831,15 @@ export function SettingsModal({
                               aria-label="Tag goal"
                               value={goal.tag}
                               placeholder="tag"
-                              onChange={(e) =>
-                                setSettings({
-                                  ...settings,
-                                  tagGoals: (settings.tagGoals || []).map((item) =>
-                                    item.id === goal.id ? { ...item, tag: e.target.value } : item
+                              onChange={(e) => {
+                                const tag = e.target.value;
+                                setSettings((previous) => ({
+                                  ...previous,
+                                  tagGoals: (previous.tagGoals || []).map((item) =>
+                                    item.id === goal.id ? { ...item, tag } : item
                                   )
-                                })
-                              }
+                                }));
+                              }}
                               className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
                             />
                             <div className="grid grid-cols-3 gap-2">
@@ -892,16 +858,15 @@ export function SettingsModal({
                                     min="0"
                                     step="0.25"
                                     value={goal[key] || 0}
-                                    onChange={(e) =>
-                                      setSettings({
-                                        ...settings,
-                                        tagGoals: (settings.tagGoals || []).map((item) =>
-                                          item.id === goal.id
-                                            ? { ...item, [key]: Math.max(0, Number(e.target.value) || 0) }
-                                            : item
+                                    onChange={(e) => {
+                                      const amount = Math.max(0, Number(e.target.value) || 0);
+                                      setSettings((previous) => ({
+                                        ...previous,
+                                        tagGoals: (previous.tagGoals || []).map((item) =>
+                                          item.id === goal.id ? { ...item, [key]: amount } : item
                                         )
-                                      })
-                                    }
+                                      }));
+                                    }}
                                     className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-indigo-400"
                                   />
                                 </label>
@@ -911,10 +876,10 @@ export function SettingsModal({
                           <button
                             type="button"
                             onClick={() =>
-                              setSettings({
-                                ...settings,
-                                tagGoals: (settings.tagGoals || []).filter((item) => item.id !== goal.id)
-                              })
+                              setSettings((previous) => ({
+                                ...previous,
+                                tagGoals: (previous.tagGoals || []).filter((item) => item.id !== goal.id)
+                              }))
                             }
                             className="self-start p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
                           >
@@ -967,12 +932,12 @@ export function SettingsModal({
                         type="checkbox"
                         checked={settings.sidebarWidgets.includes(widget)}
                         onChange={(e) =>
-                          setSettings({
-                            ...settings,
+                          setSettings((previous) => ({
+                            ...previous,
                             sidebarWidgets: e.target.checked
-                              ? Array.from(new Set([...settings.sidebarWidgets, widget]))
-                              : settings.sidebarWidgets.filter((item) => item !== widget)
-                          })
+                              ? Array.from(new Set([...previous.sidebarWidgets, widget]))
+                              : previous.sidebarWidgets.filter((item) => item !== widget)
+                          }))
                         }
                         className="h-4 w-4 accent-indigo-600"
                       />

@@ -1,7 +1,38 @@
 import { ListTodo, Trash2, X } from 'lucide-react';
+import { useMemo } from 'react';
 import { generateId } from '../../domain/tasks';
+import { suggestTaskTags } from '../../domain/taskIntelligence';
+import type { RoleDefinition, Task } from '../../domain/types';
 import { ThemedSurface } from '../ui/ThemedSurface';
 import { TaskModalBody } from './TaskModalBody';
+
+type ModalSections = { timer: boolean; notes: boolean; activity: boolean };
+type DraftSaveStatus = 'saved' | 'saving' | 'unsaved';
+
+type TaskModalProps = {
+  draftTask: Task | null;
+  draftNote: string;
+  setDraftNote: (note: string) => void;
+  draftIsDirty?: boolean;
+  draftSavedAt?: Date | null;
+  draftSaveStatus?: DraftSaveStatus;
+  modalSections: ModalSections;
+  setModalSections: (sections: ModalSections) => void;
+  now: number;
+  clockFormat: '12h' | '24h';
+  updateDraftTask: (updates: Partial<Task>) => void;
+  closeTaskModal: (options?: { promptToSave?: boolean }) => void;
+  saveDraftTask: () => void;
+  closeAfterSave: () => void;
+  showDeleteTaskPrompt: boolean;
+  setShowDeleteTaskPrompt: (show: boolean) => void;
+  deleteDraftTask: () => void;
+  showDirtyClosePrompt: boolean;
+  setShowDirtyClosePrompt: (show: boolean) => void;
+  discardDraftTask: () => void;
+  tagPool?: string[];
+  roles?: RoleDefinition[];
+};
 
 export function TaskModal({
   draftTask,
@@ -24,8 +55,22 @@ export function TaskModal({
   showDirtyClosePrompt,
   setShowDirtyClosePrompt,
   discardDraftTask,
-  tagPool = []
-}) {
+  tagPool = [],
+  roles = []
+}: TaskModalProps) {
+  const suggestedTags = useMemo(
+    () =>
+      draftTask
+        ? suggestTaskTags({
+            title: draftTask.title,
+            existingTags: draftTask.tags || [],
+            tagPool,
+            roles
+          })
+        : [],
+    [draftTask, tagPool, roles]
+  );
+
   if (!draftTask) return null;
 
   const setSubtask = (subtaskId, updates) => {
@@ -86,17 +131,6 @@ export function TaskModal({
     saveDraftTask();
     closeAfterSave();
   };
-
-  const suggestedTags = tagPool
-    .filter((tag) => {
-      const normalizedTag = String(tag || '').toLowerCase();
-      return (
-        normalizedTag &&
-        !(draftTask.tags || []).some((taskTag) => taskTag.toLowerCase() === normalizedTag) &&
-        draftTask.title.toLowerCase().includes(normalizedTag)
-      );
-    })
-    .slice(0, 5);
 
   const sectionButtonClass =
     'w-full flex items-center justify-between text-left text-sm font-bold text-slate-700 dark:text-slate-200';

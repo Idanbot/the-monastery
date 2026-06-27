@@ -53,13 +53,15 @@ describe('SettingsModal', () => {
     const props = renderSettings({ initialSection: 'appearance' });
 
     fireEvent.change(screen.getByLabelText(/main color/i), { target: { value: '#123456' } });
-    expect(props.setSettings).toHaveBeenLastCalledWith({
+    const colorUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(colorUpdate(props.settings)).toEqual({
       ...props.settings,
       colorScheme: { ...props.settings.colorScheme, main: '#123456' }
     });
 
     fireEvent.change(screen.getByLabelText(/modal blur/i), { target: { value: '12' } });
-    expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, modalBlur: 12 });
+    const blurUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(blurUpdate(props.settings)).toEqual({ ...props.settings, modalBlur: 12 });
 
     await user.click(screen.getByRole('button', { name: /close settings/i }));
     expect(props.onClose).toHaveBeenCalledTimes(1);
@@ -70,16 +72,20 @@ describe('SettingsModal', () => {
     const props = renderSettings({ initialSection: 'time' });
 
     await user.click(screen.getByLabelText(/show seconds/i));
-    expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, showSeconds: false });
+    const secondsUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(secondsUpdate(props.settings)).toEqual({ ...props.settings, showSeconds: false });
 
     await user.click(screen.getByRole('button', { name: /analog clock/i }));
-    expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, clockDisplayMode: 'analog' });
+    const clockModeUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(clockModeUpdate(props.settings)).toEqual({ ...props.settings, clockDisplayMode: 'analog' });
 
     fireEvent.change(screen.getByLabelText(/clock text color/i), { target: { value: '#abcdef' } });
-    expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, clockTextColor: '#abcdef' });
+    const clockColorUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(clockColorUpdate(props.settings)).toEqual({ ...props.settings, clockTextColor: '#abcdef' });
 
     await user.click(screen.getByRole('button', { name: /increase clock size/i }));
-    expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, clockTextScale: 1.1 });
+    const sizeUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(sizeUpdate(props.settings)).toEqual({ ...props.settings, clockTextScale: 1.1 });
   });
 
   it('updates board lane order controls', () => {

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { DataStore } from '../db.js';
-import { settingsPayloadSchema } from '../validation.js';
-import { rejectStaleRevision } from './revisions.js';
+import { settingsPayloadSchema, validationErrorResponse } from '../validation.js';
+import { rejectStaleSettingsRevision } from './revisions.js';
 
 export const registerSettingsRoutes = (app: FastifyInstance, store: DataStore) => {
   app.get('/api/profiles/:id/settings', async (request, reply) => {
@@ -11,7 +11,7 @@ export const registerSettingsRoutes = (app: FastifyInstance, store: DataStore) =
       return reply.code(404).send({ error: 'Profile not found.' });
     }
 
-    return { settings: store.getSettings(id), revision: store.getProfileRevision(id) };
+    return { settings: store.getSettings(id), revision: store.getSettingsRevision(id) };
   });
 
   app.put('/api/profiles/:id/settings', async (request, reply) => {
@@ -23,15 +23,12 @@ export const registerSettingsRoutes = (app: FastifyInstance, store: DataStore) =
 
     const parsed = settingsPayloadSchema.safeParse(request.body);
     if (!parsed.success) {
-      request.log.warn(
-        { profileId: id, validationError: parsed.error.issues.map((issue) => issue.message).join('; ') },
-        'invalid settings payload'
-      );
-      return reply.code(400).send({ error: 'settings object is required.' });
+      request.log.warn({ profileId: id, validationError: parsed.error.issues }, 'invalid settings payload');
+      return reply.code(400).send(validationErrorResponse(parsed.error.issues ?? []));
     }
-    if (rejectStaleRevision(store, id, parsed.data.baseRevision, reply)) return;
+    if (rejectStaleSettingsRevision(store, id, parsed.data.baseRevision, reply)) return;
 
     store.saveSettings(id, parsed.data.settings);
-    return { ok: true, revision: store.getProfileRevision(id) };
+    return { ok: true, revision: store.getSettingsRevision(id) };
   });
 };

@@ -73,7 +73,7 @@ function useActiveProfileLoader({
       try {
         const data = await apiRequest(`/api/profiles/${activeProfileId}/tasks`);
         if (!cancelled) {
-          syncQueue.setRevision(data.revision);
+          syncQueue.setTasksRevision(data.revision);
           setTasks(normalizeTasksPayload(data.tasks || []));
           setProfileError('');
         }
@@ -110,7 +110,7 @@ function useActiveProfileLoader({
       try {
         const data = await apiRequest(`/api/profiles/${activeProfileId}/settings`);
         if (!cancelled) {
-          syncQueue.setRevision(data.revision);
+          syncQueue.setSettingsRevision(data.revision);
           setSettings(mergeSettings(data.settings));
         }
         if (!cancelled) setProfileError('');
@@ -234,7 +234,7 @@ function useDebouncedProfileSave({
       const generation = saveGenerationRef.current;
       pendingWritesRef.current += 1;
       syncQueue
-        .enqueue((baseRevision) => saveTasksDelta(activeProfileId, previousTasks, tasks, baseRevision))
+        .enqueueTask((baseRevision) => saveTasksDelta(activeProfileId, previousTasks, tasks, baseRevision))
         .then(() => {
           if (generation !== saveGenerationRef.current) return;
           pendingWritesRef.current -= 1;
@@ -273,7 +273,7 @@ function useDebouncedProfileSave({
       const generation = saveGenerationRef.current;
       pendingWritesRef.current += 1;
       syncQueue
-        .enqueue((baseRevision) =>
+        .enqueueSettings((baseRevision) =>
           apiRequest(`/api/profiles/${activeProfileId}/settings`, {
             method: 'PUT',
             body: JSON.stringify({ settings, baseRevision })

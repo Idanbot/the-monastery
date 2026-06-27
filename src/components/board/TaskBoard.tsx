@@ -1,9 +1,8 @@
 import { useMemo, useRef } from 'react';
-import { DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDownUp, CheckSquare, Clock, Flame, GripHorizontal, Play, Repeat } from 'lucide-react';
 import { UrgencyBadge } from '../UrgencyBadge';
+import { cssVars } from '../../lib/cssVars';
 import {
   calculateTotalDuration,
   formatDate,
@@ -369,8 +368,6 @@ export function KanbanBoard({
   now,
   startResize
 }) {
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
-  const sortableTaskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
   const layoutPreset =
     settings.layoutPreset === 'standard' ? 'three-column' : settings.layoutPreset || 'compact';
   const resizeVisible = settings.resizeHandleVisible !== false;
@@ -413,141 +410,124 @@ export function KanbanBoard({
     ) : null;
 
   return (
-    <DndContext sensors={sensors}>
-      <SortableContext items={sortableTaskIds} strategy={verticalListSortingStrategy}>
+    <div
+      id="kanban-board"
+      data-testid="kanban-board"
+      data-layout-preset={layoutPreset}
+      className="min-h-0 flex-1 overflow-y-auto sm:overflow-hidden"
+    >
+      {layoutPreset === 'full' && (
         <div
-          id="kanban-board"
-          data-testid="kanban-board"
-          data-layout-preset={layoutPreset}
-          className="min-h-0 flex-1 overflow-y-auto sm:overflow-hidden"
+          className="kanban-board-grid min-h-full gap-3 pb-3 sm:h-full sm:pb-0"
+          style={cssVars({
+            '--kanban-grid-template': gridTemplate(
+              order.full.map((status) => String(columnWidth(settings, status)) + 'fr'),
+              resizeVisible
+            )
+          })}
         >
-          {layoutPreset === 'full' && (
-            <div
-              className="kanban-board-grid min-h-full gap-3 pb-3 sm:h-full sm:pb-0"
-              style={
-                {
-                  '--kanban-grid-template': gridTemplate(
-                    order.full.map((status) => String(columnWidth(settings, status)) + 'fr'),
-                    resizeVisible
-                  )
-                } as any
-              }
-            >
-              {order.full.flatMap((status, index) => [
-                column(status),
-                index < order.full.length - 1 ? verticalHandle(status, order.full[index + 1]) : null
-              ])}
-            </div>
-          )}
-
-          {layoutPreset === 'three-column' && (
-            <div
-              className="kanban-board-grid min-h-full gap-3 pb-3 sm:h-full sm:pb-0"
-              style={
-                {
-                  '--kanban-grid-template': gridTemplate(
-                    [
-                      String(columnWidth(settings, order.threeColumn[0])) + 'fr',
-                      String(columnWidth(settings, order.threeColumn[1])) + 'fr',
-                      String(
-                        columnWidth(settings, order.threeColumn[2]) +
-                          columnWidth(settings, order.threeColumn[3])
-                      ) + 'fr'
-                    ],
-                    resizeVisible
-                  )
-                } as any
-              }
-            >
-              {column(order.threeColumn[0])}
-              {verticalHandle(order.threeColumn[0], order.threeColumn[1])}
-              {column(order.threeColumn[1])}
-              {resizeVisible && (
-                <ResizeHandle
-                  id={
-                    'columns-group:' +
-                    order.threeColumn[1] +
-                    ':' +
-                    order.threeColumn[2] +
-                    ',' +
-                    order.threeColumn[3]
-                  }
-                  startResize={startResize}
-                  title={'Resize ' + statusLabels[order.threeColumn[1]] + ' and outcomes'}
-                />
-              )}
-              <div
-                id="three-outcomes-col"
-                className="kanban-stack min-h-[28rem] gap-3 sm:min-h-0"
-                style={
-                  {
-                    '--kanban-stack-template': stackTemplate(
-                      settings,
-                      [order.threeColumn[2], order.threeColumn[3]],
-                      resizeVisible
-                    )
-                  } as any
-                }
-              >
-                {column(order.threeColumn[2])}
-                {stackHandle(order.threeColumn[2], order.threeColumn[3], 'three-outcomes-col')}
-                {column(order.threeColumn[3])}
-              </div>
-            </div>
-          )}
-
-          {layoutPreset === 'compact' && (
-            <div
-              className="kanban-board-grid min-h-full gap-3 pb-3 sm:h-full sm:pb-0"
-              style={
-                {
-                  '--kanban-grid-template': gridTemplate(
-                    [
-                      String(settings.compactColumnWidths?.left || 50) + 'fr',
-                      String(settings.compactColumnWidths?.right || 50) + 'fr'
-                    ],
-                    resizeVisible
-                  )
-                } as any
-              }
-            >
-              <div
-                id="compact-left-col"
-                className="kanban-stack min-h-[28rem] gap-3 sm:min-h-0"
-                style={
-                  {
-                    '--kanban-stack-template': stackTemplate(settings, order.compactActive, resizeVisible)
-                  } as any
-                }
-              >
-                {column(order.compactActive[0])}
-                {stackHandle(order.compactActive[0], order.compactActive[1], 'compact-left-col')}
-                {column(order.compactActive[1])}
-              </div>
-              {resizeVisible && (
-                <ResizeHandle
-                  id="compact-horizontal"
-                  startResize={startResize}
-                  title="Resize active and outcome lanes"
-                />
-              )}
-              <div
-                id="compact-right-col"
-                className="kanban-stack min-h-[28rem] gap-3 sm:min-h-0"
-                style={
-                  {
-                    '--kanban-stack-template': stackTemplate(settings, order.compactDone, resizeVisible)
-                  } as any
-                }
-              >
-                {column(order.compactDone[0])}
-                {stackHandle(order.compactDone[0], order.compactDone[1], 'compact-right-col')}
-                {column(order.compactDone[1])}
-              </div>
-            </div>
-          )}
+          {order.full.flatMap((status, index) => [
+            column(status),
+            index < order.full.length - 1 ? verticalHandle(status, order.full[index + 1]) : null
+          ])}
         </div>
-      </SortableContext>
-    </DndContext>
+      )}
+
+      {layoutPreset === 'three-column' && (
+        <div
+          className="kanban-board-grid min-h-full gap-3 pb-3 sm:h-full sm:pb-0"
+          style={cssVars({
+            '--kanban-grid-template': gridTemplate(
+              [
+                String(columnWidth(settings, order.threeColumn[0])) + 'fr',
+                String(columnWidth(settings, order.threeColumn[1])) + 'fr',
+                String(
+                  columnWidth(settings, order.threeColumn[2]) + columnWidth(settings, order.threeColumn[3])
+                ) + 'fr'
+              ],
+              resizeVisible
+            )
+          })}
+        >
+          {column(order.threeColumn[0])}
+          {verticalHandle(order.threeColumn[0], order.threeColumn[1])}
+          {column(order.threeColumn[1])}
+          {resizeVisible && (
+            <ResizeHandle
+              id={
+                'columns-group:' +
+                order.threeColumn[1] +
+                ':' +
+                order.threeColumn[2] +
+                ',' +
+                order.threeColumn[3]
+              }
+              startResize={startResize}
+              title={'Resize ' + statusLabels[order.threeColumn[1]] + ' and outcomes'}
+            />
+          )}
+          <div
+            id="three-outcomes-col"
+            className="kanban-stack min-h-[28rem] gap-3 sm:min-h-0"
+            style={cssVars({
+              '--kanban-stack-template': stackTemplate(
+                settings,
+                [order.threeColumn[2], order.threeColumn[3]],
+                resizeVisible
+              )
+            })}
+          >
+            {column(order.threeColumn[2])}
+            {stackHandle(order.threeColumn[2], order.threeColumn[3], 'three-outcomes-col')}
+            {column(order.threeColumn[3])}
+          </div>
+        </div>
+      )}
+
+      {layoutPreset === 'compact' && (
+        <div
+          className="kanban-board-grid min-h-full gap-3 pb-3 sm:h-full sm:pb-0"
+          style={cssVars({
+            '--kanban-grid-template': gridTemplate(
+              [
+                String(settings.compactColumnWidths?.left || 50) + 'fr',
+                String(settings.compactColumnWidths?.right || 50) + 'fr'
+              ],
+              resizeVisible
+            )
+          })}
+        >
+          <div
+            id="compact-left-col"
+            className="kanban-stack min-h-[28rem] gap-3 sm:min-h-0"
+            style={cssVars({
+              '--kanban-stack-template': stackTemplate(settings, order.compactActive, resizeVisible)
+            })}
+          >
+            {column(order.compactActive[0])}
+            {stackHandle(order.compactActive[0], order.compactActive[1], 'compact-left-col')}
+            {column(order.compactActive[1])}
+          </div>
+          {resizeVisible && (
+            <ResizeHandle
+              id="compact-horizontal"
+              startResize={startResize}
+              title="Resize active and outcome lanes"
+            />
+          )}
+          <div
+            id="compact-right-col"
+            className="kanban-stack min-h-[28rem] gap-3 sm:min-h-0"
+            style={cssVars({
+              '--kanban-stack-template': stackTemplate(settings, order.compactDone, resizeVisible)
+            })}
+          >
+            {column(order.compactDone[0])}
+            {stackHandle(order.compactDone[0], order.compactDone[1], 'compact-right-col')}
+            {column(order.compactDone[1])}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

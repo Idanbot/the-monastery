@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { AppProviders } from './lib/AppProviders';
 import { registerAppServiceWorker } from './lib/runtimeIntegrations';
 import './index.css';
 
@@ -11,9 +10,7 @@ declare global {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AppProviders>
-      <App />
-    </AppProviders>
+    <App />
   </React.StrictMode>
 );
 

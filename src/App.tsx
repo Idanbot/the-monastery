@@ -1,21 +1,15 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { autoUpdate, flip, offset, shift, useFloating } from '@floating-ui/react';
-import { Command } from 'cmdk';
 import { Toaster, toast } from 'sonner';
 import {
   Activity,
-  BarChart2,
   ChevronDown,
   Clock,
   Filter,
-  Keyboard,
-  LayoutDashboard,
-  ListTodo,
   Menu,
   PanelRightClose,
   PanelRightOpen,
   Plus,
-  Search,
   Settings,
   Target,
   Users,
@@ -34,6 +28,9 @@ import { MonkModeView } from './components/monk-mode/MonkModeView';
 import { PersistenceStatusChip } from './components/PersistenceStatusChip';
 import { CurrentTaskPin } from './components/CurrentTaskPin';
 import { MobileBoardControls } from './components/board/MobileBoardControls';
+import { ViewSwitcher } from './components/ViewSwitcher';
+import { TaskSearchInput } from './components/TaskSearchInput';
+import { ClockWidget } from './components/ClockWidget';
 import type { PersistenceStatus } from './domain/persistenceStatus';
 import { usePersistenceNotifier } from './hooks/usePersistenceNotifier';
 import { executeTaskCommand } from './domain/taskCommands';
@@ -49,7 +46,7 @@ const MANTRAS = [
 import { rolePresets } from './domain/rolePresets';
 import { parseQuickAddTask } from './domain/quickAdd';
 import { inferTaskTags } from './domain/taskIntelligence';
-import { getModalEffectStyle, getThemeStyle, visualThemeOptions, themeContracts } from './domain/themes';
+import { visualThemeOptions, themeContracts } from './domain/themes';
 import {
   formatDateInputValue,
   formatTime,
@@ -70,6 +67,8 @@ import { useRecurringTasks } from './hooks/useRecurringTasks';
 import { useResizableLayout } from './hooks/useResizableLayout';
 import { useTaskDraft } from './hooks/useTaskDraft';
 import { useTaskFilters } from './hooks/useTaskFilters';
+import { useThemeStyle } from './hooks/useThemeStyle';
+import { cssVars } from './lib/cssVars';
 
 const frontendVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
 const formatVisibleVersion = (version: string) => {
@@ -441,32 +440,7 @@ export default function App() {
     setIsSettingsOpen(true);
   };
   const isSidebarVisible = settings.sidebarVisible !== false;
-  const themeStyle = useMemo(
-    () =>
-      getThemeStyle(settings.visualTheme, systemIsDark, true, {
-        ...settings.colorScheme,
-        fontMain: settings.fontMain,
-        fontSecondary: settings.fontSecondary,
-        fontUI: settings.fontUI
-      }),
-    [
-      settings.visualTheme,
-      settings.colorScheme,
-      settings.fontMain,
-      settings.fontSecondary,
-      settings.fontUI,
-      systemIsDark
-    ]
-  );
-  const modalEffectStyle = useMemo(
-    () => getModalEffectStyle(settings.modalTransparency, settings.modalBlur),
-    [settings.modalTransparency, settings.modalBlur]
-  );
-
-  const clockDate = new Date(now);
-  const clockMinuteAngle = clockDate.getMinutes() * 6 + clockDate.getSeconds() * 0.1;
-  const clockSecondAngle = clockDate.getSeconds() * 6;
-  const clockHourAngle = ((clockDate.getHours() % 12) + clockDate.getMinutes() / 60) * 30;
+  const { themeStyle, modalEffectStyle } = useThemeStyle(settings, systemIsDark);
 
   const toggleSidebarVisible = () => {
     setSettings((prev) => ({ ...prev, sidebarVisible: prev.sidebarVisible === false }));
@@ -585,10 +559,10 @@ export default function App() {
       const target = event.target;
       const isTyping =
         target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setIsCommandOpen((open) => !open);
-        return;
+      if (isCommandOpen || selectedTaskId) {
+        if (event.key === 'Escape') {
+          setIsCommandOpen(false);
+        }
       }
       if (isTyping || isCommandOpen || selectedTaskId) return;
       const navigationKeys = ['j', 'k', 'Enter'];
@@ -734,6 +708,108 @@ export default function App() {
   const persistenceState = persistenceStatus as PersistenceStatus;
   usePersistenceNotifier(persistenceState, lastSavedAt);
 
+  const commandPaletteGroups = useMemo(
+    () => [
+      {
+        heading: 'Actions',
+        commands: [
+          { value: 'backlog focus task', label: 'Backlog focus task', onSelect: () => startFocusTask() },
+          { value: 'backlog task', label: 'Backlog task', onSelect: () => addTask('backlog') },
+          {
+            value: 'monk mode',
+            label: settings.monkMode ? 'Exit Monk Mode' : 'Enter Monk Mode',
+            onSelect: () => setMonkMode(!settings.monkMode)
+          },
+          { value: 'open settings', label: 'Open settings', onSelect: () => openSettings() },
+          {
+            value: 'go to analytics dashboard',
+            label: 'Go to analytics',
+            onSelect: () => setView('dashboard')
+          },
+          {
+            value: 'theme studio appearance',
+            label: 'Theme Studio',
+            onSelect: () => openSettings('appearance')
+          },
+          { value: 'plan my day', label: 'Plan my day', onSelect: () => planMyDay() },
+          {
+            value: 'keyboard shortcuts help',
+            label: 'Keyboard shortcuts',
+            onSelect: () => setIsShortcutHelpOpen(true)
+          },
+          {
+            value: 'create role routines',
+            label: 'Create role routines',
+            onSelect: () => createRoleRoutineTasks()
+          }
+        ]
+      },
+      {
+        heading: 'Themes',
+        commands: visualThemeOptions.map((theme) => ({
+          value: `theme ${theme.label}`,
+          label: `Theme: ${theme.label}`,
+          leading: (
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{
+                backgroundColor: (
+                  themeContracts[theme.id]?.tokens?.light || themeContracts[theme.id]?.tokens?.dark
+                )?.bg
+              }}
+            />
+          ),
+          onSelect: () =>
+            setSettings((s) => ({
+              ...s,
+              visualTheme: theme.id,
+              theme: themeContracts[theme.id]?.preferredMode === 'dark' ? 'dark' : 'light',
+              colorScheme: { main: '', secondary: '', text: '' },
+              fontMain: '',
+              fontSecondary: '',
+              clockTextColor: '',
+              clockBackgroundColor: ''
+            }))
+        }))
+      },
+      {
+        heading: 'Navigation',
+        commands: (
+          [
+            ['Liquid Glass', 'liquid-glass', 'light'],
+            ['Zen', 'zen', 'light'],
+            ['Terminal White', 'terminal-white', 'dark']
+          ] as const
+        ).map(([label, visualTheme, theme]) => ({
+          value: String(label),
+          label,
+          onSelect: () => setSettings((previous) => ({ ...previous, visualTheme, theme }))
+        }))
+      },
+      {
+        heading: 'Profiles',
+        commands: profiles.slice(0, 4).map((profile) => ({
+          value: profile.name,
+          label: profile.name,
+          onSelect: () => selectProfile(profile.id)
+        }))
+      }
+    ],
+    [
+      settings.monkMode,
+      profiles,
+      startFocusTask,
+      addTask,
+      setMonkMode,
+      openSettings,
+      setView,
+      planMyDay,
+      createRoleRoutineTasks,
+      setSettings,
+      selectProfile
+    ]
+  );
+
   return (
     <div
       className={`${isDarkMode ? 'dark' : ''} app-shell h-screen w-full flex flex-col overflow-hidden`}
@@ -742,15 +818,13 @@ export default function App() {
       data-monk-mode={settings.monkMode ? 'true' : 'false'}
       data-animations-enabled={settings.animationsEnabled === false ? 'false' : 'true'}
       data-resize-bars={settings.resizeHandleVisible === false ? 'false' : 'true'}
-      style={
-        {
-          ...themeStyle,
-          ...modalEffectStyle,
-          '--resize-handle-thickness': String(settings.resizeHandleThickness || 4) + 'px',
-          '--resize-handle-length': String(settings.resizeHandleLength || 48) + 'px',
-          '--resize-handle-color': settings.resizeHandleColor || '#94a3b8'
-        } as React.CSSProperties
-      }
+      style={cssVars({
+        ...themeStyle,
+        ...modalEffectStyle,
+        '--resize-handle-thickness': String(settings.resizeHandleThickness || 4) + 'px',
+        '--resize-handle-length': String(settings.resizeHandleLength || 48) + 'px',
+        '--resize-handle-color': settings.resizeHandleColor || '#94a3b8'
+      })}
     >
       <div className="app-frame h-full w-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans overflow-hidden transition-colors duration-200">
         <Toaster richColors position="top-right" theme={isDarkMode ? 'dark' : 'light'} />
@@ -783,62 +857,13 @@ export default function App() {
           </div>
 
           <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
-            {!settings.monkMode && (
-              <select
-                aria-label="Current view"
-                value={view}
-                onChange={(event) => setView(event.target.value)}
-                className="max-w-24 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:hidden"
-              >
-                <option value="board">Board</option>
-                <option value="mobile">List</option>
-                <option value="dashboard">Analytics</option>
-              </select>
-            )}
-            {!settings.monkMode && (
-              <div className="hidden sm:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-                <button
-                  onClick={() => setView('board')}
-                  className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-all ${view === 'board' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
-                >
-                  <LayoutDashboard size={14} /> <span className="hidden md:inline">Board</span>
-                </button>
-                <button
-                  onClick={() => setView('mobile')}
-                  className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-all ${view === 'mobile' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
-                >
-                  <ListTodo size={14} /> <span className="hidden md:inline">List</span>
-                </button>
-                <button
-                  onClick={() => setView('dashboard')}
-                  className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-all ${view === 'dashboard' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
-                >
-                  <BarChart2 size={14} /> <span className="hidden md:inline">Analytics</span>
-                </button>
-              </div>
-            )}
-
-            {!settings.monkMode && (
-              <label className="hidden lg:flex items-center gap-2 w-64 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-500">
-                <Search size={15} className="shrink-0" />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search tasks"
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                    title="Clear search"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </label>
-            )}
+            <ViewSwitcher view={view} onChange={setView} disabled={settings.monkMode} />
+            <TaskSearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              variant="header"
+              disabled={settings.monkMode}
+            />
 
             {isBackendAvailable && (
               <div className="hidden sm:block relative">
@@ -1068,25 +1093,7 @@ export default function App() {
           {/* Main Content Area (Kanban or Analytics) */}
           <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
             {!settings.monkMode && view !== 'dashboard' && (
-              <label className="lg:hidden mb-2 flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-slate-500 sm:mb-3 sm:py-2">
-                <Search size={15} className="shrink-0" />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search tasks"
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                    title="Clear search"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </label>
+              <TaskSearchInput value={searchQuery} onChange={setSearchQuery} variant="inline" />
             )}
 
             {settings.monkMode && (
@@ -1224,90 +1231,7 @@ export default function App() {
               )}
 
               {settings.sidebarWidgets.includes('clock') && (
-                <div
-                  data-material="widget"
-                  data-clock-background={settings.clockBackgroundVisible === false ? 'false' : 'true'}
-                  data-clock-mode={settings.clockDisplayMode === 'analog' ? 'analog' : 'digital'}
-                  className="clock-widget rounded-2xl border p-4 flex flex-col items-center justify-center relative overflow-hidden shrink-0"
-                  style={
-                    {
-                      height: String(settings.clockHeight || 160) + 'px',
-                      background:
-                        settings.clockBackgroundVisible === false
-                          ? 'transparent'
-                          : 'var(--clock-background-color)',
-                      borderColor:
-                        settings.clockBackgroundVisible === false ? 'transparent' : 'var(--theme-border)',
-                      '--clock-text-color':
-                        settings.clockTextColor || settings.colorScheme?.text || 'var(--theme-text)',
-                      '--clock-background-color': settings.clockBackgroundColor || 'var(--theme-surface)',
-                      color: 'var(--clock-text-color)',
-                      boxShadow: settings.clockBackgroundVisible === false ? 'none' : undefined
-                    } as React.CSSProperties
-                  }
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/10 pointer-events-none"></div>
-                  <div className="clock-widget-controls absolute top-2 right-2 z-20 flex items-center gap-1 rounded-lg border border-[color:var(--theme-border)] bg-[color:var(--theme-muted-surface)] p-1 backdrop-blur-sm">
-                    <button
-                      type="button"
-                      aria-label="Open clock settings"
-                      onClick={() => openSettings('time')}
-                      className="grid h-6 w-6 place-items-center rounded-md text-[color:var(--theme-muted-text)] hover:bg-[color:var(--theme-muted-surface)] hover:text-[color:var(--theme-text)]"
-                    >
-                      <Settings size={13} />
-                    </button>
-                  </div>
-                  {settings.clockDisplayMode === 'analog' ? (
-                    <div
-                      data-testid="clock-analog"
-                      className="relative z-10 mb-2 grid place-items-center rounded-full border-2"
-                      style={{
-                        width: Math.min(92, Math.max(58, (settings.clockHeight || 160) - 76)) + 'px',
-                        height: Math.min(92, Math.max(58, (settings.clockHeight || 160) - 76)) + 'px',
-                        color: 'var(--clock-text-color)',
-                        borderColor: 'currentColor'
-                      }}
-                    >
-                      <div className="absolute h-1.5 w-1.5 rounded-full bg-current" />
-                      <div
-                        className="absolute bottom-1/2 left-1/2 h-[28%] w-0.5 origin-bottom rounded-full bg-current"
-                        style={{ transform: 'translateX(-50%) rotate(' + clockHourAngle + 'deg)' }}
-                      />
-                      <div
-                        className="absolute bottom-1/2 left-1/2 h-[38%] w-px origin-bottom rounded-full bg-current"
-                        style={{ transform: 'translateX(-50%) rotate(' + clockMinuteAngle + 'deg)' }}
-                      />
-                      {settings.showSeconds && (
-                        <div
-                          data-testid="clock-second-hand"
-                          className="absolute bottom-1/2 left-1/2 h-[42%] w-px origin-bottom rounded-full bg-rose-500"
-                          style={{ transform: 'translateX(-50%) rotate(' + clockSecondAngle + 'deg)' }}
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <div
-                      data-testid="clock-time"
-                      className="font-mono font-bold mb-1 relative z-10 drop-shadow-md leading-none whitespace-nowrap max-w-full text-center"
-                      style={{
-                        color: 'var(--clock-text-color)',
-                        fontSize: `clamp(1.75rem, ${(settings.clockTextScale || 1) * 2.25}rem, ${Math.max(
-                          2,
-                          ((settings.clockHeight || 160) - 58) / 28
-                        )}rem)`
-                      }}
-                    >
-                      {formatTime(now, settings.clockFormat, settings.showSeconds)}
-                    </div>
-                  )}
-                  <div className="text-sm font-medium text-[color:var(--theme-muted-text)] relative z-10">
-                    {new Intl.DateTimeFormat('en-US', {
-                      weekday: 'long',
-                      month: 'long',
-                      day: 'numeric'
-                    }).format(now)}
-                  </div>
-                </div>
+                <ClockWidget settings={settings} now={now} onOpenSettings={openSettings} />
               )}
 
               {settings.resizeHandleVisible !== false &&
@@ -1341,203 +1265,6 @@ export default function App() {
           </div>
         </main>
 
-        {}
-        {isCommandOpen && (
-          <ThemedSurface
-            variant="overlay"
-            className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-24"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setIsCommandOpen(false);
-            }}
-          >
-            <ThemedSurface
-              role="dialog"
-              aria-label="Command palette"
-              variant="modal"
-              className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden pointer-events-auto"
-            >
-              <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2">
-                <Keyboard size={16} className="text-indigo-500" />
-                <h3 className="font-bold text-sm">Command Palette</h3>
-              </div>
-              <Command className="p-2" shouldFilter loop>
-                <Command.Input
-                  aria-label="Search commands"
-                  placeholder="Search commands"
-                  className="mb-2 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                />
-                <Command.List className="max-h-[22rem] overflow-y-auto custom-scrollbar space-y-1">
-                  <Command.Empty className="px-3 py-4 text-sm text-slate-400">
-                    No command found.
-                  </Command.Empty>
-                  <Command.Group heading="Actions">
-                    <Command.Item
-                      value="backlog focus task"
-                      onSelect={() => {
-                        setIsCommandOpen(false);
-                        startFocusTask();
-                      }}
-                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                    >
-                      Backlog focus task
-                    </Command.Item>
-                    <Command.Item
-                      value="backlog task"
-                      onSelect={() => {
-                        setIsCommandOpen(false);
-                        addTask('backlog');
-                      }}
-                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                    >
-                      Backlog task
-                    </Command.Item>
-                    <Command.Item
-                      value="monk mode"
-                      onSelect={() => {
-                        setIsCommandOpen(false);
-                        setMonkMode(!settings.monkMode);
-                      }}
-                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                    >
-                      {settings.monkMode ? 'Exit Monk Mode' : 'Enter Monk Mode'}
-                    </Command.Item>
-                    <Command.Item
-                      value="open settings"
-                      onSelect={() => {
-                        setIsCommandOpen(false);
-                        openSettings();
-                      }}
-                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                    >
-                      Open settings
-                    </Command.Item>
-                    <Command.Item
-                      value="go to analytics dashboard"
-                      onSelect={() => {
-                        setIsCommandOpen(false);
-                        setView('dashboard');
-                      }}
-                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                    >
-                      Go to analytics
-                    </Command.Item>
-                    <Command.Item
-                      value="theme studio appearance"
-                      onSelect={() => {
-                        setIsCommandOpen(false);
-                        openSettings('appearance');
-                      }}
-                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                    >
-                      Theme Studio
-                    </Command.Item>
-                    <Command.Item
-                      value="plan my day"
-                      onSelect={() => {
-                        setIsCommandOpen(false);
-                        planMyDay();
-                      }}
-                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                    >
-                      Plan my day
-                    </Command.Item>
-                    <Command.Item
-                      value="keyboard shortcuts help"
-                      onSelect={() => {
-                        setIsCommandOpen(false);
-                        setIsShortcutHelpOpen(true);
-                      }}
-                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                    >
-                      Keyboard shortcuts
-                    </Command.Item>
-                    <Command.Item
-                      value="create role routines"
-                      onSelect={() => {
-                        setIsCommandOpen(false);
-                        createRoleRoutineTasks();
-                      }}
-                      className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                    >
-                      Create role routines
-                    </Command.Item>
-                  </Command.Group>
-                  <Command.Group heading="Themes">
-                    {visualThemeOptions.map((theme) => (
-                      <Command.Item
-                        key={theme.id}
-                        value={`theme ${theme.label}`}
-                        onSelect={() => {
-                          setIsCommandOpen(false);
-                          setSettings((s) => ({
-                            ...s,
-                            visualTheme: theme.id,
-                            theme: themeContracts[theme.id]?.preferredMode === 'dark' ? 'dark' : 'light',
-                            colorScheme: { main: '', secondary: '', text: '' },
-                            fontMain: '',
-                            fontSecondary: '',
-                            clockTextColor: '',
-                            clockBackgroundColor: ''
-                          }));
-                        }}
-                        className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800 flex items-center gap-2"
-                      >
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{
-                            backgroundColor: (
-                              themeContracts[theme.id]?.tokens?.light ||
-                              themeContracts[theme.id]?.tokens?.dark
-                            )?.bg
-                          }}
-                        ></div>
-                        Theme: {theme.label}
-                      </Command.Item>
-                    ))}
-                  </Command.Group>
-                  <Command.Group heading="Navigation">
-                    {(
-                      [
-                        ['Liquid Glass', 'liquid-glass', 'light'],
-                        ['Zen', 'zen', 'light'],
-                        ['Terminal White', 'terminal-white', 'dark']
-                      ] as const
-                    ).map(([label, visualTheme, theme]) => (
-                      <Command.Item
-                        key={visualTheme}
-                        value={String(label)}
-                        onSelect={() => {
-                          setIsCommandOpen(false);
-                          setSettings((previous) => ({ ...previous, visualTheme, theme }));
-                        }}
-                        className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                      >
-                        {label}
-                      </Command.Item>
-                    ))}
-                  </Command.Group>
-                  {profiles.length > 0 && (
-                    <Command.Group heading="Profiles">
-                      {profiles.slice(0, 4).map((profile) => (
-                        <Command.Item
-                          key={profile.id}
-                          value={profile.name}
-                          onSelect={() => {
-                            setIsCommandOpen(false);
-                            selectProfile(profile.id);
-                          }}
-                          className="rounded-lg px-3 py-2 text-sm cursor-pointer aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800"
-                        >
-                          {profile.name}
-                        </Command.Item>
-                      ))}
-                    </Command.Group>
-                  )}
-                </Command.List>
-              </Command>
-            </ThemedSurface>
-          </ThemedSurface>
-        )}
         {isShortcutHelpOpen && (
           <ThemedSurface
             variant="overlay"
@@ -1835,13 +1562,7 @@ export default function App() {
             </ThemedSurface>
           </ThemedSurface>
         )}
-        <CommandPalette
-          settings={settings}
-          setSettings={setSettings}
-          setMonkMode={setMonkMode}
-          setView={setView}
-          openTaskModal={() => addTask('backlog')}
-        />
+        <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} groups={commandPaletteGroups} />
         <TaskModal
           draftTask={draftTask}
           draftNote={draftNote}
@@ -1853,21 +1574,7 @@ export default function App() {
           setModalSections={setModalSections}
           now={now}
           clockFormat={settings.clockFormat}
-          updateDraftTask={(updates) => {
-            if (!draftTask || typeof updates.title !== 'string') {
-              updateDraftTask(updates);
-              return;
-            }
-            updateDraftTask({
-              ...updates,
-              tags: inferTaskTags({
-                title: updates.title,
-                existingTags: draftTask.tags || [],
-                tagPool,
-                roles: tagRoles
-              })
-            });
-          }}
+          updateDraftTask={updateDraftTask}
           closeTaskModal={closeTaskModal}
           saveDraftTask={handleSaveDraftTask}
           closeAfterSave={() => setSelectedTaskId(null)}
@@ -1878,6 +1585,7 @@ export default function App() {
           setShowDirtyClosePrompt={setShowDirtyClosePrompt}
           discardDraftTask={discardDraftTask}
           tagPool={tagPool}
+          roles={tagRoles}
         />
       </div>
     </div>
