@@ -67,7 +67,7 @@ describe('useProfilesSync', () => {
     const { result } = renderHook(() => {
       const [tasks, setTasks] = useState<Task[]>([]);
       const [settings, setSettings] = useState(defaultSettings);
-      const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+      const [, setSelectedTaskId] = useState<string | null>(null);
       const sync = useProfilesSync({ tasks, setTasks, settings, setSettings, setSelectedTaskId });
       return { ...sync, tasks, setTasks, settings, setSettings };
     });
@@ -106,7 +106,7 @@ describe('useProfilesSync', () => {
     const { result } = renderHook(() => {
       const [tasks, setTasks] = useState<Task[]>([]);
       const [settings, setSettings] = useState(defaultSettings);
-      const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+      const [, setSelectedTaskId] = useState<string | null>(null);
       const sync = useProfilesSync({ tasks, setTasks, settings, setSettings, setSelectedTaskId });
       return { ...sync, tasks, setTasks };
     });

@@ -49,7 +49,6 @@ import { inferTaskTags } from './domain/taskIntelligence';
 import { visualThemeOptions, themeContracts } from './domain/themes';
 import {
   formatDateInputValue,
-  formatTime,
   generateId,
   normalizeTask,
   activeTaskStatuses
@@ -354,7 +353,7 @@ export default function App() {
       roles: (prev.roles || []).filter((role) => role.id !== roleId)
     }));
   };
-  const createRoleRoutineTasks = () => {
+  const createRoleRoutineTasks = useCallback(() => {
     const today = formatDateInputValue(new Date());
     const routineTasks = (settings.roles || []).map((role) =>
       normalizeTask({
@@ -382,7 +381,7 @@ export default function App() {
       })
     );
     if (routineTasks.length) setTasks((previous) => [...routineTasks, ...previous]);
-  };
+  }, [settings.roles, setTasks]);
 
   useEffect(() => {
     const minutesToClockTime = (minutes) => {
@@ -421,7 +420,7 @@ export default function App() {
     return () => window.removeEventListener('mouseup', handleTimelineMouseUp);
   }, [setTasks]);
 
-  const setMonkMode = (enabled) => {
+  const setMonkMode = useCallback((enabled) => {
     setSettings((prev) => ({
       ...prev,
       monkMode: enabled,
@@ -433,12 +432,12 @@ export default function App() {
     } else {
       setIsEnteringMonkMode(false);
     }
-  };
+  }, [setSettings]);
 
-  const openSettings = (section = null) => {
+  const openSettings = useCallback((section = null) => {
     setSettingsInitialSection(section);
     setIsSettingsOpen(true);
-  };
+  }, []);
   const isSidebarVisible = settings.sidebarVisible !== false;
   const { themeStyle, modalEffectStyle } = useThemeStyle(settings, systemIsDark);
 
@@ -496,7 +495,7 @@ export default function App() {
     );
   };
 
-  const addTask = (status = 'backlog', overrides: any = {}) => {
+  const addTask = useCallback((status = 'backlog', overrides: any = {}) => {
     const createdAt = new Date().toISOString();
     const title = typeof overrides.title === 'string' ? overrides.title : '';
     const baseTags = Array.isArray(overrides.tags) ? overrides.tags : [];
@@ -525,7 +524,7 @@ export default function App() {
     });
     setTasks((previous) => executeTaskCommand(previous, { type: 'create', task: newTask }).tasks);
     setSelectedTaskId(newTask.id);
-  };
+  }, [tagPool, tagRoles, setTasks, setSelectedTaskId]);
 
   const submitQuickAddTask = (event) => {
     event.preventDefault();
@@ -535,16 +534,16 @@ export default function App() {
     setQuickAddText('');
   };
 
-  const startFocusTask = () => {
+  const startFocusTask = useCallback(() => {
     addTask('backlog', {
       title: '',
       urgency: 7,
       tags: ['focus'],
       scheduledDate: formatDateInputValue(new Date())
     });
-  };
+  }, [addTask]);
 
-  const planMyDay = () => {
+  const planMyDay = useCallback(() => {
     const today = formatDateInputValue(new Date());
     const startHour = Math.max(9, new Date().getHours() + 1);
     setTasks(
@@ -552,7 +551,7 @@ export default function App() {
         executeTaskCommand(previous, { type: 'plan-day', date: today, startMinutes: startHour * 60 }).tasks
     );
     setView('board');
-  };
+  }, [setTasks]);
 
   useEffect(() => {
     const handleShortcut = (event) => {
