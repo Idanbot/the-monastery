@@ -85,13 +85,18 @@ export function SettingsModal({
     animationsEnabled,
     motionDuration,
     motionEase,
-    themeStyle,
+    themeStyle: resolvedThemeStyle,
+    modalEffectStyle,
     effectiveMainColor,
     effectiveSecondaryColor,
     effectiveTextColor,
     effectiveClockTextColor,
     effectiveClockBackgroundColor
   } = useThemeStyle(settings, isDarkMode);
+  const themeStyle = useMemo(
+    () => ({ ...resolvedThemeStyle, ...modalEffectStyle }),
+    [resolvedThemeStyle, modalEffectStyle]
+  );
   const themeRecipeForm = useForm({
     resolver: zodResolver(themeRecipeSchema),
     values: createThemeRecipe(settings),

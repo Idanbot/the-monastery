@@ -51,6 +51,10 @@ describe('SettingsModal', () => {
   it('updates appearance colors, modal effects, and closes from the header', async () => {
     const user = userEvent.setup();
     const props = renderSettings({ initialSection: 'appearance' });
+    const dialog = screen.getByRole('dialog', { name: /preferences/i });
+
+    expect(dialog.style.getPropertyValue('--modal-surface-alpha')).toBe('0.72');
+    expect(dialog.style.getPropertyValue('--modal-surface-blur')).toBe('1px');
 
     fireEvent.change(screen.getByLabelText(/main color/i), { target: { value: '#123456' } });
     const colorUpdate = props.setSettings.mock.lastCall?.[0];

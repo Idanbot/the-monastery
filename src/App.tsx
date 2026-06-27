@@ -47,12 +47,7 @@ import { rolePresets } from './domain/rolePresets';
 import { parseQuickAddTask } from './domain/quickAdd';
 import { inferTaskTags } from './domain/taskIntelligence';
 import { visualThemeOptions, themeContracts } from './domain/themes';
-import {
-  formatDateInputValue,
-  generateId,
-  normalizeTask,
-  activeTaskStatuses
-} from './domain/tasks';
+import { formatDateInputValue, generateId, normalizeTask, activeTaskStatuses } from './domain/tasks';
 import { useBackupActions } from './hooks/useBackupActions';
 import { useImportFlows } from './hooks/useImportFlows';
 import {
@@ -420,19 +415,22 @@ export default function App() {
     return () => window.removeEventListener('mouseup', handleTimelineMouseUp);
   }, [setTasks]);
 
-  const setMonkMode = useCallback((enabled) => {
-    setSettings((prev) => ({
-      ...prev,
-      monkMode: enabled,
-      monkModeOpenedAt: enabled ? new Date().toISOString() : undefined
-    }));
-    if (enabled) {
-      setView('board');
-      setIsEnteringMonkMode(true);
-    } else {
-      setIsEnteringMonkMode(false);
-    }
-  }, [setSettings]);
+  const setMonkMode = useCallback(
+    (enabled) => {
+      setSettings((prev) => ({
+        ...prev,
+        monkMode: enabled,
+        monkModeOpenedAt: enabled ? new Date().toISOString() : undefined
+      }));
+      if (enabled) {
+        setView('board');
+        setIsEnteringMonkMode(true);
+      } else {
+        setIsEnteringMonkMode(false);
+      }
+    },
+    [setSettings]
+  );
 
   const openSettings = useCallback((section = null) => {
     setSettingsInitialSection(section);
@@ -495,36 +493,39 @@ export default function App() {
     );
   };
 
-  const addTask = useCallback((status = 'backlog', overrides: any = {}) => {
-    const createdAt = new Date().toISOString();
-    const title = typeof overrides.title === 'string' ? overrides.title : '';
-    const baseTags = Array.isArray(overrides.tags) ? overrides.tags : [];
-    const smartTags = inferTaskTags({ title, existingTags: baseTags, tagPool, roles: tagRoles });
-    const activity = [
-      { id: generateId(), type: 'system' as const, text: 'Task created', timestamp: createdAt },
-      ...(Array.isArray(overrides.activity) ? overrides.activity : [])
-    ];
-    const newTask = normalizeTask({
-      id: generateId(),
-      status,
-      urgency: 5,
-      scheduledDate: formatDateInputValue(new Date(createdAt)),
-      scheduledStart: '',
-      scheduledEnd: '',
-      recurrence: 'none',
-      recurrenceRootId: null,
-      subtasks: [],
-      logs: [],
-      activeLogStart: null,
-      activity,
-      ...overrides,
-      title,
-      createdAt,
-      tags: smartTags
-    });
-    setTasks((previous) => executeTaskCommand(previous, { type: 'create', task: newTask }).tasks);
-    setSelectedTaskId(newTask.id);
-  }, [tagPool, tagRoles, setTasks, setSelectedTaskId]);
+  const addTask = useCallback(
+    (status = 'backlog', overrides: any = {}) => {
+      const createdAt = new Date().toISOString();
+      const title = typeof overrides.title === 'string' ? overrides.title : '';
+      const baseTags = Array.isArray(overrides.tags) ? overrides.tags : [];
+      const smartTags = inferTaskTags({ title, existingTags: baseTags, tagPool, roles: tagRoles });
+      const activity = [
+        { id: generateId(), type: 'system' as const, text: 'Task created', timestamp: createdAt },
+        ...(Array.isArray(overrides.activity) ? overrides.activity : [])
+      ];
+      const newTask = normalizeTask({
+        id: generateId(),
+        status,
+        urgency: 5,
+        scheduledDate: formatDateInputValue(new Date(createdAt)),
+        scheduledStart: '',
+        scheduledEnd: '',
+        recurrence: 'none',
+        recurrenceRootId: null,
+        subtasks: [],
+        logs: [],
+        activeLogStart: null,
+        activity,
+        ...overrides,
+        title,
+        createdAt,
+        tags: smartTags
+      });
+      setTasks((previous) => executeTaskCommand(previous, { type: 'create', task: newTask }).tasks);
+      setSelectedTaskId(newTask.id);
+    },
+    [tagPool, tagRoles, setTasks, setSelectedTaskId]
+  );
 
   const submitQuickAddTask = (event) => {
     event.preventDefault();
@@ -558,6 +559,11 @@ export default function App() {
       const target = event.target;
       const isTyping =
         target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setIsCommandOpen((open) => !open);
+        return;
+      }
       if (isCommandOpen || selectedTaskId) {
         if (event.key === 'Escape') {
           setIsCommandOpen(false);

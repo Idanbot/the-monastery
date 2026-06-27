@@ -136,6 +136,7 @@ test('plans day, suggests title tags, opens shortcuts, and records local backup 
 
   await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Python plan smoke');
+  await page.getByRole('button', { name: /add suggested tag python/i }).click();
   await expect(page.getByPlaceholder(/backend, high priority/i)).toHaveValue('python');
   await page.getByRole('button', { name: /save task/i }).click();
 

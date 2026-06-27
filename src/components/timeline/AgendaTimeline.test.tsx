@@ -1,11 +1,11 @@
 import { createRef } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { defaultSettings, normalizeTask } from '../../domain/tasks';
+import { defaultSettings, formatDateInputValue, normalizeTask } from '../../domain/tasks';
 import type { AppSettings } from '../../domain/types';
 import { AgendaTimeline } from './AgendaTimeline';
 
-const today = new Date().toISOString().slice(0, 10);
+const today = formatDateInputValue(new Date());
 
 const makeTask = (overrides = {}) =>
   normalizeTask({

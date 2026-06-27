@@ -41,17 +41,6 @@ export function CommandPalette({
     return () => document.removeEventListener('keydown', down);
   }, [open, onOpenChange]);
 
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        onOpenChange(!open);
-      }
-    };
-    document.addEventListener('keydown', down);
-    return () => document.removeEventListener('keydown', down);
-  }, [open, onOpenChange]);
-
   if (!open) return null;
 
   const close = () => onOpenChange(false);

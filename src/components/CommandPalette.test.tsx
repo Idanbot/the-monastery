@@ -41,24 +41,4 @@ describe('CommandPalette', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
-
-  it('toggles open via Cmd+K and reports the next state', async () => {
-    const user = userEvent.setup();
-    const onOpenChange = vi.fn();
-    render(
-      <CommandPalette
-        open={false}
-        onOpenChange={onOpenChange}
-        groups={[
-          {
-            heading: 'Actions',
-            commands: [{ value: 'plan my day', label: 'Plan my day', onSelect: vi.fn() }]
-          }
-        ]}
-      />
-    );
-
-    await user.keyboard('{Control>}k{/Control}');
-    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(true));
-  });
 });
