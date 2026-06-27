@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { parseIcsTasks } from '../domain/calendar';
-import { normalizePlanningImportPayload, normalizeTasksPayload } from '../domain/tasks';
+import { normalizePlanningImportPayload } from '../domain/tasks';
+import { migrateStoredTasks } from '../domain/dataMigrations';
 
 export function useImportFlows({ tasks, setTasks, setSettings, setSelectedTaskId }) {
   const [importPreview, setImportPreview] = useState(null);
@@ -31,7 +32,7 @@ export function useImportFlows({ tasks, setTasks, setSettings, setSelectedTaskId
     if (!file) return;
     try {
       const text = await file.text();
-      const imported = normalizeTasksPayload(JSON.parse(text));
+      const imported = migrateStoredTasks(JSON.parse(text));
       const currentById = new Map(tasks.map((task) => [task.id, task]));
       const newTasks = imported.filter((task) => !currentById.has(task.id));
       const updatedTasks = imported.filter((task) => {

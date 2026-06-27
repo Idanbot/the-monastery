@@ -1,5 +1,6 @@
 import type { AppSettings, Task, TaskRecurrence, TaskStatus } from './types';
 import { visualThemeIds } from './themes';
+import { normalizeSchemaSettings, schemaSettingDefaults } from './settingsSchema';
 
 export const validStatuses: TaskStatus[] = ['backlog', 'in-progress', 'done', 'rejected'];
 export const taskStatuses = validStatuses;
@@ -152,6 +153,7 @@ export const getEffectiveTags = (task) => {
 export const defaultTasks: Task[] = [];
 
 export const defaultSettings: AppSettings = {
+  ...schemaSettingDefaults,
   theme: 'system',
   visualTheme: 'liquid-glass',
   colorScheme: { main: '#4f46e5', secondary: '#64748b', text: '#1e293b' },
@@ -162,10 +164,6 @@ export const defaultSettings: AppSettings = {
   monkMode: false,
   dailyGoal: '',
   shutdownChecklist: { review: false, plan: false, clear: false },
-  sidebarVisible: true,
-  animationsEnabled: true,
-  clockFormat: '24h',
-  showSeconds: true,
   sidebarWidgets: ['now', 'clock', 'agenda'],
   sidebarWidth: 320,
   clockHeight: 160,
@@ -173,21 +171,9 @@ export const defaultSettings: AppSettings = {
   clockBackgroundVisible: true,
   clockTextColor: '',
   clockBackgroundColor: '',
-  clockDisplayMode: 'digital',
-  modalTransparency: 35,
-  modalBlur: 1,
-  layoutPreset: 'compact',
-  textSize: 'medium',
   roles: [],
   tagGoals: [],
-  collapseTasks: false,
-  autoPromoteNextTask: false,
-  resizeHandleVisible: true,
-  resizeHandleThickness: 4,
-  resizeHandleLength: 48,
   resizeHandleColor: '#94a3b8',
-  timelineHourLinesVisible: true,
-  timelineNowLineVisible: true,
   columnWidths: { backlog: 25, inProgress: 25, done: 25, rejected: 25 },
   compactColumnWidths: { left: 50, right: 50 },
   compactHeights: { backlog: 50, inProgress: 50, done: 50, rejected: 50 },
@@ -323,6 +309,10 @@ export const mergeSettings = (saved) => ({
     : saved?.layoutPreset === 'standard'
       ? 'three-column'
       : defaultSettings.layoutPreset,
+  ...normalizeSchemaSettings({
+    ...(saved || {}),
+    layoutPreset: saved?.layoutPreset === 'standard' ? 'three-column' : saved?.layoutPreset
+  }),
   columnWidths: {
     ...defaultSettings.columnWidths,
     ...(saved?.columnWidths || {}),

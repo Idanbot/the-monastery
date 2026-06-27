@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { mergeSettings, normalizeTasksPayload } from '../domain/tasks';
+import { mergeSettings } from '../domain/tasks';
+import { currentDataSchemaVersion, migrateProfileData } from '../domain/dataMigrations';
 import { downloadJson } from '../lib/download';
 
 export function useProfileImportExport({
@@ -16,7 +17,7 @@ export function useProfileImportExport({
 
   const exportActiveProfile = () => {
     downloadJson('the-monastery-profile-' + (activeProfile?.name || 'profile') + '.json', {
-      schemaVersion: 1,
+      schemaVersion: currentDataSchemaVersion,
       exportedAt: new Date().toISOString(),
       profile: {
         id: activeProfileId || 'local',
@@ -32,11 +33,14 @@ export function useProfileImportExport({
     try {
       const parsed = JSON.parse(await file.text());
       const source = parsed.profile || parsed.profiles?.[0] || parsed;
-      const importedTasks = source.tasks ? normalizeTasksPayload({ tasks: source.tasks }) : [];
+      const migrated = migrateProfileData({
+        ...source,
+        schemaVersion: parsed.schemaVersion ?? source.schemaVersion
+      });
       setProfileImportPreview({
         name: source.name || 'Imported profile',
-        settings: source.settings || null,
-        tasks: importedTasks,
+        settings: migrated.settings,
+        tasks: migrated.tasks,
         currentTaskCount: tasks.length
       });
     } catch (error) {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cloneTask, generateId, normalizeTask } from '../domain/tasks';
+import { executeTaskCommand } from '../domain/taskCommands';
 
 export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskId }) {
   const [draftTask, setDraftTask] = useState(null);
@@ -77,10 +78,19 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
           }
         : draftTask;
       const normalized = normalizeTask(withPendingNote);
-      setTasks((prev) => prev.map((task) => (task.id === normalized.id ? normalized : task)));
-      modalBaselineRef.current = cloneTask(normalized);
+      const currentTask = tasksRef.current.find((task) => task.id === normalized.id);
+      const persisted =
+        currentTask && currentTask.status !== normalized.status
+          ? executeTaskCommand([{ ...normalized, status: currentTask.status }], {
+              type: 'move',
+              taskId: normalized.id,
+              status: normalized.status
+            }).tasks[0]
+          : normalized;
+      setTasks((prev) => prev.map((task) => (task.id === persisted.id ? persisted : task)));
+      modalBaselineRef.current = cloneTask(persisted);
       setModalBaselineSnapshot(JSON.stringify(modalBaselineRef.current));
-      setDraftTask(normalized);
+      setDraftTask(persisted);
       if (includePendingNote) setDraftNoteState('');
       setDraftSavedAt(new Date());
       setDraftSaveStatus(!includePendingNote && draftNote.trim() ? 'unsaved' : 'saved');
@@ -118,7 +128,7 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
 
   const deleteDraftTask = () => {
     if (!draftTask) return;
-    setTasks((prev) => prev.filter((task) => task.id !== draftTask.id));
+    setTasks((prev) => executeTaskCommand(prev, { type: 'delete', taskId: draftTask.id }).tasks);
     setSelectedTaskId(null);
   };
 

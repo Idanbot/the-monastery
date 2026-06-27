@@ -45,14 +45,17 @@ export const taskSchema = z.object({
 });
 
 export const tasksPayloadSchema = z.object({
-  tasks: z.array(taskSchema)
+  tasks: z.array(taskSchema),
+  baseRevision: z.number().int().min(0).optional()
 });
 
 export const taskMutationPayloadSchema = z.object({
   task: taskSchema,
-  position: z.number().int().min(0).optional()
+  position: z.number().int().min(0).optional(),
+  baseRevision: z.number().int().min(0).optional()
 });
 
 export const settingsPayloadSchema = z.object({
-  settings: z.record(z.string(), z.unknown())
+  settings: z.record(z.string(), z.unknown()),
+  baseRevision: z.number().int().min(0).optional()
 });

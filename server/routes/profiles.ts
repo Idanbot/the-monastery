@@ -38,6 +38,6 @@ export const registerProfileRoutes = (app: FastifyInstance, store: DataStore) =>
     }
 
     store.resetProfile(id);
-    return { ok: true };
+    return { ok: true, revision: store.getProfileRevision(id) };
   });
 };

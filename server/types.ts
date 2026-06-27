@@ -8,6 +8,7 @@ export type ProfileRow = {
   created_at: string;
   updated_at: string;
   task_count: number;
+  revision?: number;
 };
 
 export type SettingsRow = {

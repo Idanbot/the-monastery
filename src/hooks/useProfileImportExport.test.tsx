@@ -48,7 +48,7 @@ describe('useProfileImportExport', () => {
     expect(downloadJson).toHaveBeenCalledWith(
       'the-monastery-profile-Deep Work.json',
       expect.objectContaining({
-        schemaVersion: 1,
+        schemaVersion: 2,
         profile: expect.objectContaining({ id: 'profile-1', name: 'Deep Work' })
       })
     );

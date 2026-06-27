@@ -86,7 +86,8 @@ describe('SettingsModal', () => {
     const props = renderSettings({ initialSection: 'board' });
 
     fireEvent.change(screen.getByLabelText(/compact active top lane/i), { target: { value: 'in-progress' } });
-    expect(props.setSettings).toHaveBeenLastCalledWith({
+    const compactUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(compactUpdate(props.settings)).toEqual({
       ...props.settings,
       boardColumnOrder: {
         ...props.settings.boardColumnOrder,
@@ -95,7 +96,8 @@ describe('SettingsModal', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /move backlog right/i }));
-    expect(props.setSettings).toHaveBeenLastCalledWith({
+    const fullUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(fullUpdate(props.settings)).toEqual({
       ...props.settings,
       boardColumnOrder: {
         ...props.settings.boardColumnOrder,
@@ -108,15 +110,19 @@ describe('SettingsModal', () => {
     const props = renderSettings({ initialSection: 'board' });
 
     fireEvent.change(screen.getByLabelText(/resize bar thickness/i), { target: { value: '0' } });
-    expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, resizeHandleThickness: 4 });
+    const thicknessUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(thicknessUpdate(props.settings)).toEqual({ ...props.settings, resizeHandleThickness: 1 });
 
     fireEvent.change(screen.getByLabelText(/resize bar length/i), { target: { value: '999' } });
-    expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, resizeHandleLength: 160 });
+    const lengthUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(lengthUpdate(props.settings)).toEqual({ ...props.settings, resizeHandleLength: 160 });
 
     fireEvent.change(screen.getByLabelText(/resize bar color/i), { target: { value: '#ff2d55' } });
-    expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, resizeHandleColor: '#ff2d55' });
+    const colorUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(colorUpdate(props.settings)).toEqual({ ...props.settings, resizeHandleColor: '#ff2d55' });
 
     fireEvent.click(screen.getByLabelText(/auto-start next backlog/i));
-    expect(props.setSettings).toHaveBeenLastCalledWith({ ...props.settings, autoPromoteNextTask: true });
+    const promoteUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(promoteUpdate(props.settings)).toEqual({ ...props.settings, autoPromoteNextTask: true });
   });
 });

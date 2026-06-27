@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { mergeSettings, normalizeTasksPayload } from '../domain/tasks';
 import { apiRequest, shouldUseBackend } from '../lib/api';
 import { activeProfileStorageKey } from '../lib/storage';
+import { createProfileSyncQueue, type ProfileSyncQueue } from '../domain/profileSyncQueue';
 
 const getErrorMessage = (error, fallback) => (error instanceof Error ? error.message : fallback);
 
@@ -56,7 +57,9 @@ function useActiveProfileLoader({
   setSelectedTaskId,
   setIsProfileReady,
   setIsProfileSettingsReady,
-  setProfileError
+  setProfileError,
+  syncQueue,
+  reloadVersion
 }) {
   useEffect(() => {
     if (!isBackendAvailable || !activeProfileId) return;
@@ -70,6 +73,7 @@ function useActiveProfileLoader({
       try {
         const data = await apiRequest(`/api/profiles/${activeProfileId}/tasks`);
         if (!cancelled) {
+          syncQueue.setRevision(data.revision);
           setTasks(normalizeTasksPayload(data.tasks || []));
           setProfileError('');
         }
@@ -85,7 +89,16 @@ function useActiveProfileLoader({
     return () => {
       cancelled = true;
     };
-  }, [activeProfileId, isBackendAvailable, setIsProfileReady, setProfileError, setSelectedTaskId, setTasks]);
+  }, [
+    activeProfileId,
+    isBackendAvailable,
+    reloadVersion,
+    setIsProfileReady,
+    setProfileError,
+    setSelectedTaskId,
+    setTasks,
+    syncQueue
+  ]);
 
   useEffect(() => {
     if (!isBackendAvailable || !activeProfileId) return;
@@ -97,6 +110,7 @@ function useActiveProfileLoader({
       try {
         const data = await apiRequest(`/api/profiles/${activeProfileId}/settings`);
         if (!cancelled) {
+          syncQueue.setRevision(data.revision);
           setSettings(mergeSettings(data.settings));
         }
         if (!cancelled) setProfileError('');
@@ -112,12 +126,20 @@ function useActiveProfileLoader({
     return () => {
       cancelled = true;
     };
-  }, [activeProfileId, isBackendAvailable, setIsProfileSettingsReady, setProfileError, setSettings]);
+  }, [
+    activeProfileId,
+    isBackendAvailable,
+    reloadVersion,
+    setIsProfileSettingsReady,
+    setProfileError,
+    setSettings,
+    syncQueue
+  ]);
 }
 
 const tasksEqual = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 
-const saveTasksDelta = async (activeProfileId, previousTasks, nextTasks) => {
+const saveTasksDelta = async (activeProfileId, previousTasks, nextTasks, baseRevision) => {
   const previousById = new Map(previousTasks.map((task) => [task.id, task]));
   const nextById = new Map(nextTasks.map((task) => [task.id, task]));
   const added = nextTasks.filter((task) => !previousById.has(task.id));
@@ -129,30 +151,38 @@ const saveTasksDelta = async (activeProfileId, previousTasks, nextTasks) => {
 
   if (added.length === 1 && deleted.length === 0 && updated.length === 0) {
     const task = added[0];
-    await apiRequest(`/api/profiles/${activeProfileId}/tasks`, {
+    return apiRequest(`/api/profiles/${activeProfileId}/tasks`, {
       method: 'POST',
-      body: JSON.stringify({ task, position: nextTasks.findIndex((item) => item.id === task.id) })
+      body: JSON.stringify({
+        task,
+        position: nextTasks.findIndex((item) => item.id === task.id),
+        baseRevision
+      })
     });
-    return;
   }
 
   if (added.length === 0 && deleted.length === 1 && updated.length === 0) {
-    await apiRequest(`/api/profiles/${activeProfileId}/tasks/${deleted[0].id}`, { method: 'DELETE' });
-    return;
+    return apiRequest(`/api/profiles/${activeProfileId}/tasks/${deleted[0].id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ baseRevision })
+    });
   }
 
   if (added.length === 0 && deleted.length === 0 && updated.length === 1) {
     const task = updated[0];
-    await apiRequest(`/api/profiles/${activeProfileId}/tasks/${task.id}`, {
+    return apiRequest(`/api/profiles/${activeProfileId}/tasks/${task.id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ task, position: nextTasks.findIndex((item) => item.id === task.id) })
+      body: JSON.stringify({
+        task,
+        position: nextTasks.findIndex((item) => item.id === task.id),
+        baseRevision
+      })
     });
-    return;
   }
 
-  await apiRequest(`/api/profiles/${activeProfileId}/tasks`, {
+  return apiRequest(`/api/profiles/${activeProfileId}/tasks`, {
     method: 'PUT',
-    body: JSON.stringify({ tasks: nextTasks })
+    body: JSON.stringify({ tasks: nextTasks, baseRevision })
   });
 };
 
@@ -163,18 +193,24 @@ function useDebouncedProfileSave({
   isProfileSettingsReady,
   tasks,
   settings,
-  setProfileError
+  setProfileError,
+  syncQueue,
+  reloadVersion
 }) {
   const [persistenceStatus, setPersistenceStatus] = useState('idle');
   const [lastSavedAt, setLastSavedAt] = useState(null);
   const tasksBaselineRef = useRef(null);
   const settingsBaselineRef = useRef(null);
+  const pendingWritesRef = useRef(0);
+  const saveGenerationRef = useRef(0);
 
   useEffect(() => {
     tasksBaselineRef.current = null;
     settingsBaselineRef.current = null;
+    pendingWritesRef.current = 0;
+    saveGenerationRef.current += 1;
     setPersistenceStatus(isBackendAvailable ? 'loading' : 'offline');
-  }, [activeProfileId, isBackendAvailable]);
+  }, [activeProfileId, isBackendAvailable, reloadVersion]);
 
   useEffect(() => {
     if (!isBackendAvailable) setPersistenceStatus('offline');
@@ -183,7 +219,9 @@ function useDebouncedProfileSave({
   useEffect(() => {
     if (!isBackendAvailable || !activeProfileId || !isProfileReady) return;
     if (tasksBaselineRef.current === null) {
-      tasksBaselineRef.current = [];
+      tasksBaselineRef.current = tasks;
+      setPersistenceStatus('saved');
+      return;
     }
     if (tasksEqual(tasksBaselineRef.current, tasks)) {
       setPersistenceStatus('saved');
@@ -193,14 +231,21 @@ function useDebouncedProfileSave({
     setPersistenceStatus('saving');
     const saveTimer = window.setTimeout(() => {
       const previousTasks = tasksBaselineRef.current || [];
-      saveTasksDelta(activeProfileId, previousTasks, tasks)
+      const generation = saveGenerationRef.current;
+      pendingWritesRef.current += 1;
+      syncQueue
+        .enqueue((baseRevision) => saveTasksDelta(activeProfileId, previousTasks, tasks, baseRevision))
         .then(() => {
+          if (generation !== saveGenerationRef.current) return;
+          pendingWritesRef.current -= 1;
           tasksBaselineRef.current = tasks;
           setLastSavedAt(new Date());
-          setPersistenceStatus('saved');
+          setPersistenceStatus(pendingWritesRef.current > 0 ? 'saving' : 'saved');
           setProfileError('');
         })
         .catch((error) => {
+          if (generation !== saveGenerationRef.current) return;
+          pendingWritesRef.current -= 1;
           const message = getErrorMessage(error, 'Could not save tasks.');
           setPersistenceStatus('error');
           setProfileError(message);
@@ -209,12 +254,14 @@ function useDebouncedProfileSave({
     }, 350);
 
     return () => window.clearTimeout(saveTimer);
-  }, [tasks, activeProfileId, isBackendAvailable, isProfileReady, setProfileError]);
+  }, [tasks, activeProfileId, isBackendAvailable, isProfileReady, setProfileError, syncQueue]);
 
   useEffect(() => {
     if (!isBackendAvailable || !activeProfileId || !isProfileSettingsReady) return;
     if (settingsBaselineRef.current === null) {
-      settingsBaselineRef.current = {};
+      settingsBaselineRef.current = settings;
+      setPersistenceStatus((status) => (status === 'saving' ? status : 'saved'));
+      return;
     }
     if (tasksEqual(settingsBaselineRef.current, settings)) {
       setPersistenceStatus((status) => (status === 'saving' ? status : 'saved'));
@@ -223,17 +270,26 @@ function useDebouncedProfileSave({
 
     setPersistenceStatus('saving');
     const saveTimer = window.setTimeout(() => {
-      apiRequest(`/api/profiles/${activeProfileId}/settings`, {
-        method: 'PUT',
-        body: JSON.stringify({ settings })
-      })
+      const generation = saveGenerationRef.current;
+      pendingWritesRef.current += 1;
+      syncQueue
+        .enqueue((baseRevision) =>
+          apiRequest(`/api/profiles/${activeProfileId}/settings`, {
+            method: 'PUT',
+            body: JSON.stringify({ settings, baseRevision })
+          })
+        )
         .then(() => {
+          if (generation !== saveGenerationRef.current) return;
+          pendingWritesRef.current -= 1;
           settingsBaselineRef.current = settings;
           setLastSavedAt(new Date());
-          setPersistenceStatus('saved');
+          setPersistenceStatus(pendingWritesRef.current > 0 ? 'saving' : 'saved');
           setProfileError('');
         })
         .catch((error) => {
+          if (generation !== saveGenerationRef.current) return;
+          pendingWritesRef.current -= 1;
           const message = getErrorMessage(error, 'Could not save settings.');
           setPersistenceStatus('error');
           setProfileError(message);
@@ -242,12 +298,13 @@ function useDebouncedProfileSave({
     }, 450);
 
     return () => window.clearTimeout(saveTimer);
-  }, [settings, activeProfileId, isBackendAvailable, isProfileSettingsReady, setProfileError]);
+  }, [settings, activeProfileId, isBackendAvailable, isProfileSettingsReady, setProfileError, syncQueue]);
 
   return { persistenceStatus, lastSavedAt };
 }
 
 export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSelectedTaskId }) {
+  const [syncQueue] = useState<ProfileSyncQueue>(() => createProfileSyncQueue());
   const [isBackendAvailable, setIsBackendAvailable] = useState(false);
   const [isProfileReady, setIsProfileReady] = useState(false);
   const [isProfileSettingsReady, setIsProfileSettingsReady] = useState(false);
@@ -256,6 +313,11 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
   const [newProfileName, setNewProfileName] = useState('');
   const [profileAction, setProfileAction] = useState(null);
   const [profileError, setProfileError] = useState('');
+  const [reloadVersion, setReloadVersion] = useState(0);
+
+  useEffect(() => {
+    syncQueue.resetRevision();
+  }, [activeProfileId, syncQueue]);
 
   useProfileBootstrap({
     setProfiles,
@@ -273,7 +335,9 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     setSelectedTaskId,
     setIsProfileReady,
     setIsProfileSettingsReady,
-    setProfileError
+    setProfileError,
+    syncQueue,
+    reloadVersion
   });
 
   const { persistenceStatus, lastSavedAt } = useDebouncedProfileSave({
@@ -283,7 +347,9 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     isProfileSettingsReady,
     tasks,
     settings,
-    setProfileError
+    setProfileError,
+    syncQueue,
+    reloadVersion
   });
 
   const refreshProfiles = useCallback(async () => {
@@ -294,7 +360,16 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     return nextProfiles;
   }, [isBackendAvailable]);
 
+  const reloadActiveProfile = useCallback(() => {
+    syncQueue.resetRevision();
+    setProfileError('');
+    setIsProfileReady(false);
+    setIsProfileSettingsReady(false);
+    setReloadVersion((version) => version + 1);
+  }, [syncQueue]);
+
   const selectProfile = useCallback((profileId) => {
+    setIsProfileReady(false);
     setIsProfileSettingsReady(false);
     setActiveProfileId(profileId);
   }, []);
@@ -309,6 +384,7 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
         body: JSON.stringify({ name })
       });
       setProfiles((prev) => [...prev, data.profile]);
+      setIsProfileReady(false);
       setIsProfileSettingsReady(false);
       setActiveProfileId(data.profile.id);
       setNewProfileName('');
@@ -323,16 +399,15 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
 
     try {
       await apiRequest(`/api/profiles/${activeProfileId}/reset`, { method: 'POST' });
-      setTasks([]);
-      setSettings(mergeSettings(null));
       setSelectedTaskId(null);
       setProfileAction(null);
+      reloadActiveProfile();
       await refreshProfiles();
       setProfileError('');
     } catch (error) {
       setProfileError(getErrorMessage(error, 'Could not reset profile.'));
     }
-  }, [activeProfileId, refreshProfiles, setSelectedTaskId, setSettings, setTasks]);
+  }, [activeProfileId, refreshProfiles, reloadActiveProfile, setSelectedTaskId]);
 
   const removeActiveProfile = useCallback(async () => {
     if (!activeProfileId) return;
@@ -340,6 +415,7 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     try {
       await apiRequest(`/api/profiles/${activeProfileId}`, { method: 'DELETE' });
       const nextProfiles = await refreshProfiles();
+      setIsProfileReady(false);
       setIsProfileSettingsReady(false);
       setActiveProfileId(nextProfiles[0]?.id || '');
       setSelectedTaskId(null);
@@ -369,6 +445,7 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     setProfileAction,
     profileError,
     activeProfile,
+    reloadActiveProfile,
     createProfile,
     resetActiveProfile,
     removeActiveProfile

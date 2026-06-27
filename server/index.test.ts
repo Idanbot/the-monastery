@@ -114,6 +114,29 @@ it('supports task action endpoints for create, update, and delete', async () => 
   expect(afterDelete.json().tasks).toHaveLength(0);
 });
 
+it('rejects stale profile writes and returns the latest revision', async () => {
+  const app = makeApp();
+  const initial = await app.inject({ method: 'GET', url: '/api/profiles/default/tasks' });
+  const revision = initial.json().revision;
+
+  const saved = await app.inject({
+    method: 'POST',
+    url: '/api/profiles/default/tasks',
+    payload: { task: makeTask({ id: 'revision-task' }), position: 0, baseRevision: revision }
+  });
+  const stale = await app.inject({
+    method: 'PUT',
+    url: '/api/profiles/default/settings',
+    payload: { settings: { theme: 'dark' }, baseRevision: revision }
+  });
+  await app.close();
+
+  expect(saved.statusCode).toBe(201);
+  expect(saved.json().revision).toBe(revision + 1);
+  expect(stale.statusCode).toBe(409);
+  expect(stale.json()).toMatchObject({ error: 'Profile changed elsewhere.', revision: revision + 1 });
+});
+
 it('rejects malformed task and settings payloads with validation errors', async () => {
   const app = makeApp();
 
@@ -212,7 +235,7 @@ it('stores profile settings and includes tasks/settings in backups', async () =>
   expect(settings.json().settings.theme).toBe('dark');
   expect(backup.statusCode).toBe(200);
   expect(backup.json()).toMatchObject({
-    schemaVersion: 1,
+    schemaVersion: 2,
     profiles: [
       {
         id: 'default',

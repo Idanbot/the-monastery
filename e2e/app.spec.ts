@@ -832,6 +832,11 @@ test('supports mobile board layouts with backlog and in-progress lanes', async (
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
 
+  await expect(page.getByLabel('Current view')).toBeVisible();
+  await expect(page.getByLabel('Shortcuts & Guide')).toBeHidden();
+  await expect(page.getByLabel('Open settings')).toBeVisible();
+  await expect(page.getByLabel('Backlog task')).toBeVisible();
+
   await createTask(page, mobileTitle);
   await page.getByText(mobileTitle).first().click();
   await page.getByLabel('Status').selectOption('in-progress');
@@ -849,7 +854,8 @@ test('supports mobile board layouts with backlog and in-progress lanes', async (
   await mobileControls.getByLabel('Mobile board layout').selectOption('full');
   await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'full');
   await mobileControls.getByLabel('Mobile board layout').selectOption('compact');
-  await mobileControls.getByRole('button', { name: /swap compact active order/i }).click();
+  await mobileControls.getByRole('button', { name: /customize lane order/i }).click();
+  await mobileControls.getByLabel('Compact active top lane').selectOption('in-progress');
   await expect(page.getByTestId('board-column-in-progress')).toBeVisible();
   await page.reload();
   await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'compact');

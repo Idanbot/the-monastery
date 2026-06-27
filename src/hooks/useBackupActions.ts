@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { createThemeCss, createThemeRecipe } from '../domain/themeStudio';
-import { generateId, mergeSettings, normalizeTasksPayload } from '../domain/tasks';
+import { generateId } from '../domain/tasks';
 import { apiRequest } from '../lib/api';
 import { downloadJson } from '../lib/download';
 import { backupHistoryStorageKey, parseStoredJson } from '../lib/storage';
 import taskSchema from '../task.schema.json';
+import { currentDataSchemaVersion, migrateProfileData } from '../domain/dataMigrations';
 
 const taskSchemaId = (taskSchema as { $id?: string }).$id || 'https://the-monastery.local/task.schema.json';
 
@@ -30,6 +31,7 @@ export function useBackupActions({
 
   const saveLocalBackupSnapshot = (label = 'Manual backup') => {
     const snapshot = {
+      schemaVersion: currentDataSchemaVersion,
       id: generateId(),
       label,
       createdAt: new Date().toISOString(),
@@ -45,8 +47,9 @@ export function useBackupActions({
   const restoreLocalBackup = (backupId) => {
     const backup = localBackups.find((item) => item.id === backupId);
     if (!backup) return;
-    setSettings(mergeSettings(backup.settings));
-    setTasks(normalizeTasksPayload({ tasks: backup.tasks || [] }));
+    const migrated = migrateProfileData(backup);
+    setSettings(migrated.settings);
+    setTasks(migrated.tasks);
     setSelectedTaskId(null);
     setIsSettingsOpen(false);
     toast.success('Local backup restored.');
@@ -78,7 +81,7 @@ export function useBackupActions({
       }
 
       downloadJson(`the-monastery-backup-${new Date().toISOString().slice(0, 10)}.json`, {
-        schemaVersion: 1,
+        schemaVersion: currentDataSchemaVersion,
         exportedAt: new Date().toISOString(),
         profiles: [
           {

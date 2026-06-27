@@ -5,7 +5,6 @@ import { Toaster, toast } from 'sonner';
 import {
   Activity,
   BarChart2,
-  CheckCircle2,
   ChevronDown,
   Clock,
   Filter,
@@ -15,17 +14,14 @@ import {
   Menu,
   PanelRightClose,
   PanelRightOpen,
-  Play,
   Plus,
   Search,
   Settings,
-  Square,
   Target,
   Users,
   X,
   HelpCircle
 } from 'lucide-react';
-import { UrgencyBadge } from './components/UrgencyBadge';
 import { AgendaTimeline } from './components/timeline/AgendaTimeline';
 import { KanbanBoard, TaskListView } from './components/board/TaskBoard';
 import { SettingsModal } from './components/settings/SettingsModal';
@@ -36,8 +32,11 @@ import { AnalyticsView } from './components/dashboard/AnalyticsView';
 import { ThemedSurface } from './components/ui/ThemedSurface';
 import { MonkModeView } from './components/monk-mode/MonkModeView';
 import { PersistenceStatusChip } from './components/PersistenceStatusChip';
+import { CurrentTaskPin } from './components/CurrentTaskPin';
+import { MobileBoardControls } from './components/board/MobileBoardControls';
 import type { PersistenceStatus } from './domain/persistenceStatus';
 import { usePersistenceNotifier } from './hooks/usePersistenceNotifier';
+import { executeTaskCommand } from './domain/taskCommands';
 
 const MANTRAS = [
   'You have power over your mind - not outside events.',
@@ -53,16 +52,10 @@ import { inferTaskTags } from './domain/taskIntelligence';
 import { getModalEffectStyle, getThemeStyle, visualThemeOptions, themeContracts } from './domain/themes';
 import {
   formatDateInputValue,
-  formatDurationString,
-  formatLiveTimer,
   formatTime,
   generateId,
-  calculateTotalDuration,
   normalizeTask,
-  activeTaskStatuses,
-  defaultBoardColumnOrder,
-  statusLabels,
-  taskStatuses
+  activeTaskStatuses
 } from './domain/tasks';
 import { useBackupActions } from './hooks/useBackupActions';
 import { useImportFlows } from './hooks/useImportFlows';
@@ -143,6 +136,7 @@ export default function App() {
     setProfileAction,
     profileError,
     activeProfile,
+    reloadActiveProfile,
     createProfile,
     resetActiveProfile,
     removeActiveProfile
@@ -201,7 +195,6 @@ export default function App() {
     setTasks,
     settings,
     setSettings,
-    isBackendAvailable,
     isProfileReady
   });
   const {
@@ -502,52 +495,15 @@ export default function App() {
   }, [tasks]);
 
   const updateTaskTimer = (taskId) => {
-    const timestamp = new Date().toISOString();
-
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (task.id !== taskId) {
-          if (!task.activeLogStart) return task;
-          return {
-            ...task,
-            activeLogStart: null,
-            logs: [...task.logs, { start: task.activeLogStart, end: timestamp }],
-            activity: [
-              ...task.activity,
-              { id: generateId(), type: 'system', text: 'Timer stopped', timestamp }
-            ]
-          };
-        }
-
-        if (task.activeLogStart) {
-          return {
-            ...task,
-            activeLogStart: null,
-            logs: [...task.logs, { start: task.activeLogStart, end: timestamp }],
-            activity: [
-              ...task.activity,
-              { id: generateId(), type: 'system', text: 'Timer stopped', timestamp }
-            ]
-          };
-        }
-
-        return {
-          ...task,
-          activeLogStart: timestamp,
-          activity: [...task.activity, { id: generateId(), type: 'system', text: 'Timer started', timestamp }]
-        };
-      })
-    );
+    setTasks((previous) => executeTaskCommand(previous, { type: 'toggle-timer', taskId }).tasks);
   };
 
   const handleSaveDraftTask = () => {
     saveDraftTask();
-    toast.success('Task saved.');
   };
 
   const handleDeleteDraftTask = () => {
     deleteDraftTask();
-    toast.success('Task deleted.');
   };
 
   const handleConfirmProfileImport = () => {
@@ -556,43 +512,14 @@ export default function App() {
   };
 
   const completeTask = (taskId) => {
-    const timestamp = new Date().toISOString();
-    const nextBacklogTask = settings.autoPromoteNextTask
-      ? [...tasks]
-          .filter((task) => task.id !== taskId && task.status === 'backlog')
-          .sort((a, b) => b.urgency - a.urgency || a.createdAt.localeCompare(b.createdAt))[0]
-      : null;
-
-    setTasks((prev) =>
-      prev.map((task) => {
-        if (task.id === taskId) {
-          return {
-            ...task,
-            status: 'done',
-            activeLogStart: null,
-            logs: task.activeLogStart
-              ? [...task.logs, { start: task.activeLogStart, end: timestamp }]
-              : task.logs,
-            activity: [...task.activity, { id: generateId(), type: 'system', text: 'Marked done', timestamp }]
-          };
-        }
-
-        if (nextBacklogTask && task.id === nextBacklogTask.id) {
-          return {
-            ...task,
-            status: 'in-progress',
-            activity: [
-              ...task.activity,
-              { id: generateId(), type: 'system', text: 'Promoted to In-Progress', timestamp }
-            ]
-          };
-        }
-
-        return task;
-      })
+    setTasks(
+      (previous) =>
+        executeTaskCommand(previous, {
+          type: 'complete',
+          taskId,
+          promoteNext: settings.autoPromoteNextTask
+        }).tasks
     );
-
-    if (nextBacklogTask) toast.success('Next backlog task moved to In-Progress.');
   };
 
   const addTask = (status = 'backlog', overrides: any = {}) => {
@@ -622,7 +549,7 @@ export default function App() {
       createdAt,
       tags: smartTags
     });
-    setTasks((previous) => [newTask, ...previous]);
+    setTasks((previous) => executeTaskCommand(previous, { type: 'create', task: newTask }).tasks);
     setSelectedTaskId(newTask.id);
   };
 
@@ -646,41 +573,9 @@ export default function App() {
   const planMyDay = () => {
     const today = formatDateInputValue(new Date());
     const startHour = Math.max(9, new Date().getHours() + 1);
-    const minutesToClockTime = (minutes) => {
-      const clamped = Math.max(0, Math.min(1439, minutes));
-      const hours = Math.floor(clamped / 60)
-        .toString()
-        .padStart(2, '0');
-      const mins = Math.floor(clamped % 60)
-        .toString()
-        .padStart(2, '0');
-      return hours + ':' + mins;
-    };
-    let slot = startHour * 60;
-
-    setTasks((previous) =>
-      previous.map((task) => {
-        const needsPlan =
-          activeTaskStatuses.includes(task.status) && (!task.scheduledDate || !task.scheduledStart);
-        if (!needsPlan) return task;
-        const start = Math.min(slot, 22 * 60);
-        slot = start + 60;
-        return {
-          ...task,
-          scheduledDate: today,
-          scheduledStart: minutesToClockTime(start),
-          scheduledEnd: minutesToClockTime(start + 45),
-          activity: [
-            ...task.activity,
-            {
-              id: generateId(),
-              type: 'system',
-              text: 'Planned into today',
-              timestamp: new Date().toISOString()
-            }
-          ]
-        };
-      })
+    setTasks(
+      (previous) =>
+        executeTaskCommand(previous, { type: 'plan-day', date: today, startMinutes: startHour * 60 }).tasks
     );
     setView('board');
   };
@@ -798,29 +693,10 @@ export default function App() {
     if (!draggedTaskId) return;
 
     setTasks((prev) => {
-      const draggedTask = prev.find((t) => t.id === draggedTaskId);
-      const newTasks = prev.filter((t) => t.id !== draggedTaskId);
-
-      const statusChanged = draggedTask.status !== status;
-      draggedTask.status = status;
-
-      if (status === 'done' && draggedTask.activeLogStart) {
-        draggedTask.logs.push({ start: draggedTask.activeLogStart, end: new Date().toISOString() });
-        draggedTask.activeLogStart = null;
-        draggedTask.activity.push({
-          id: generateId(),
-          type: 'system',
-          text: 'Status changed to done (Timer stopped)',
-          timestamp: new Date().toISOString()
-        });
-      } else if (statusChanged) {
-        draggedTask.activity.push({
-          id: generateId(),
-          type: 'system',
-          text: `Status changed to ${status}`,
-          timestamp: new Date().toISOString()
-        });
-      }
+      const movedTasks = executeTaskCommand(prev, { type: 'move', taskId: draggedTaskId, status }).tasks;
+      const draggedTask = movedTasks.find((task) => task.id === draggedTaskId);
+      if (!draggedTask) return prev;
+      const newTasks = movedTasks.filter((task) => task.id !== draggedTaskId);
 
       if (!dragOverInfo || !dragOverInfo.id) {
         newTasks.push(draggedTask);
@@ -849,219 +725,10 @@ export default function App() {
     });
   };
 
-  const boardColumnOrder = settings.boardColumnOrder || defaultBoardColumnOrder;
-  const updateBoardColumnOrder = (key, order) => {
-    setSettings((previous) => ({
-      ...previous,
-      boardColumnOrder: {
-        ...defaultBoardColumnOrder,
-        ...(previous.boardColumnOrder || {}),
-        [key]: order
-      }
-    }));
-  };
-  const togglePairOrder = (key, pair) => {
-    const current = boardColumnOrder[key] || pair;
-    updateBoardColumnOrder(key, current[0] === pair[0] ? [pair[1], pair[0]] : pair);
-  };
-  const moveFullLane = (status, direction) => {
-    const current = (boardColumnOrder.full || defaultBoardColumnOrder.full).filter((item) =>
-      taskStatuses.includes(item)
-    );
-    const index = current.indexOf(status);
-    const nextIndex = index + direction;
-    if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return;
-    const next = [...current];
-    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-    updateBoardColumnOrder('full', next);
-  };
-
-  const renderMobileBoardControls = () => (
-    <details
-      data-testid="mobile-board-controls"
-      className="lg:hidden mb-3 rounded-xl border border-slate-200 bg-white p-3 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900"
-    >
-      <summary className="cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-200">
-        Board layout
-      </summary>
-      <div className="mt-3 space-y-3">
-        <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Layout
-          <select
-            aria-label="Mobile board layout"
-            value={settings.layoutPreset}
-            onChange={(event) =>
-              setSettings((previous) => ({ ...previous, layoutPreset: event.target.value }))
-            }
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm normal-case tracking-normal text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-          >
-            <option value="compact">Compact</option>
-            <option value="three-column">3 columns</option>
-            <option value="full">4 columns</option>
-          </select>
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            aria-label="Swap compact active order"
-            onClick={() => togglePairOrder('compactActive', ['backlog', 'in-progress'])}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-          >
-            Active top:{' '}
-            {statusLabels[(boardColumnOrder.compactActive || defaultBoardColumnOrder.compactActive)[0]]}
-          </button>
-          <button
-            type="button"
-            aria-label="Swap compact outcome order"
-            onClick={() => togglePairOrder('compactDone', ['done', 'rejected'])}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-          >
-            Outcome top:{' '}
-            {statusLabels[(boardColumnOrder.compactDone || defaultBoardColumnOrder.compactDone)[0]]}
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {(boardColumnOrder.full || defaultBoardColumnOrder.full).map((status) => (
-            <div
-              key={status}
-              className="flex items-center justify-between gap-1 rounded-lg bg-slate-50 px-2 py-2 dark:bg-slate-800"
-            >
-              <span className="truncate text-xs font-medium text-slate-600 dark:text-slate-300">
-                {statusLabels[status]}
-              </span>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  aria-label={'Move mobile ' + statusLabels[status] + ' earlier'}
-                  onClick={() => moveFullLane(status, -1)}
-                  className="rounded border border-slate-200 px-1.5 text-[10px] dark:border-slate-700"
-                >
-                  Up
-                </button>
-                <button
-                  type="button"
-                  aria-label={'Move mobile ' + statusLabels[status] + ' later'}
-                  onClick={() => moveFullLane(status, 1)}
-                  className="rounded border border-slate-200 px-1.5 text-[10px] dark:border-slate-700"
-                >
-                  Down
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </details>
-  );
-
-  const renderCurrentTaskPin = (variant = 'sidebar') => {
-    const isWide = variant === 'wide';
-
-    if (!currentTask) {
-      return (
-        <section
-          data-testid="current-task-pin"
-          className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl ${
-            isWide ? 'p-6' : 'p-4'
-          }`}
-        >
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Now</div>
-          <div className="text-sm text-slate-500 dark:text-slate-400 mb-4">No active task pinned.</div>
-          <button
-            onClick={() => addTask('backlog')}
-            className="w-full px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium flex items-center justify-center gap-2"
-          >
-            <Plus size={15} /> Backlog task
-          </button>
-        </section>
-      );
-    }
-
-    const trackedLabel = currentTask.activeLogStart
-      ? formatLiveTimer(currentTask.activeLogStart, now)
-      : formatDurationString(calculateTotalDuration(currentTask.logs));
-
-    return (
-      <section
-        data-testid="current-task-pin"
-        className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl ${
-          isWide ? 'p-6' : 'p-4'
-        }`}
-      >
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">Now</div>
-          <button
-            onClick={() => setSelectedTaskId(currentTask.id)}
-            className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-          >
-            Open
-          </button>
-        </div>
-        <button onClick={() => setSelectedTaskId(currentTask.id)} className="block w-full text-left group">
-          <h2
-            className={`font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-300 ${
-              isWide ? 'text-3xl' : 'text-base'
-            }`}
-          >
-            {currentTask.title || 'Untitled task'}
-          </h2>
-        </button>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <span className="font-mono rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-1">
-            {trackedLabel}
-          </span>
-          <UrgencyBadge urgency={currentTask.urgency} />
-          {(currentTask.tags || []).slice(0, isWide ? 5 : 2).map((tag) => (
-            <span key={tag} className="rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-1">
-              {tag}
-            </span>
-          ))}
-        </div>
-        <div className={`mt-4 grid gap-2 ${isWide ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          <button
-            onClick={() => updateTaskTimer(currentTask.id)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 ${
-              currentTask.activeLogStart
-                ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-            }`}
-          >
-            {currentTask.activeLogStart ? <Square size={14} /> : <Play size={14} />}
-            {currentTask.activeLogStart ? 'Stop' : 'Start'}
-          </button>
-          <button
-            onClick={() => completeTask(currentTask.id)}
-            className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-emerald-300 text-sm font-medium flex items-center justify-center gap-2"
-          >
-            <CheckCircle2 size={14} /> Done
-          </button>
-        </div>
-      </section>
-    );
-  };
-
   const handlePomodoroComplete = (minutes) => {
     if (!currentTask) return;
-    const timestamp = new Date().toISOString();
-    const pastTime = new Date(Date.now() - minutes * 60 * 1000).toISOString();
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === currentTask.id
-          ? {
-              ...task,
-              logs: [...task.logs, { start: pastTime, end: timestamp }],
-              activity: [
-                ...task.activity,
-                {
-                  id: generateId(),
-                  type: 'system',
-                  text: `Completed ${minutes}m Pomodoro`,
-                  timestamp
-                }
-              ]
-            }
-          : task
-      )
+    setTasks(
+      (prev) => executeTaskCommand(prev, { type: 'record-focus', taskId: currentTask.id, minutes }).tasks
     );
   };
   const persistenceState = persistenceStatus as PersistenceStatus;
@@ -1090,7 +757,7 @@ export default function App() {
         {/* Header - Fixed Height */}
         <header
           data-material="control"
-          className="app-header bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-3 flex justify-between items-center shrink-0 z-[70] shadow-sm"
+          className="app-header bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-2 sm:px-4 md:px-6 py-2 sm:py-3 flex justify-between items-center shrink-0 z-[70] shadow-sm"
         >
           <div className="flex items-center gap-3">
             <button
@@ -1115,9 +782,21 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
             {!settings.monkMode && (
-              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+              <select
+                aria-label="Current view"
+                value={view}
+                onChange={(event) => setView(event.target.value)}
+                className="max-w-24 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:hidden"
+              >
+                <option value="board">Board</option>
+                <option value="mobile">List</option>
+                <option value="dashboard">Analytics</option>
+              </select>
+            )}
+            {!settings.monkMode && (
+              <div className="hidden sm:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
                 <button
                   onClick={() => setView('board')}
                   className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-all ${view === 'board' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
@@ -1216,7 +895,7 @@ export default function App() {
 
             {/* Global Tags Filter */}
             {!settings.monkMode && (
-              <div>
+              <div className="hidden sm:block">
                 <ThemedSurface
                   as="button"
                   variant="menuTrigger"
@@ -1291,7 +970,7 @@ export default function App() {
             <button
               aria-label={settings.monkMode ? 'Exit monk mode' : 'Enter monk mode'}
               onClick={() => setMonkMode(!settings.monkMode)}
-              className={`px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium border transition-colors ${
+              className={`hidden sm:flex px-3 py-2 rounded-lg items-center gap-2 text-sm font-medium border transition-colors ${
                 settings.monkMode
                   ? 'bg-emerald-600 border-emerald-600 text-white'
                   : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
@@ -1304,7 +983,7 @@ export default function App() {
               aria-label={isSidebarVisible ? 'Hide right container' : 'Show right container'}
               title={isSidebarVisible ? 'Hide right container' : 'Show right container'}
               onClick={toggleSidebarVisible}
-              className={`p-2 rounded-lg flex items-center gap-2 text-sm font-medium border transition-colors ${
+              className={`hidden md:flex p-2 rounded-lg items-center gap-2 text-sm font-medium border transition-colors ${
                 isSidebarVisible
                   ? 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
                   : 'bg-indigo-600 border-indigo-600 text-white'
@@ -1317,7 +996,7 @@ export default function App() {
               aria-label={settings.sidebarWidgets.includes('clock') ? 'Hide clock' : 'Show clock'}
               title={settings.sidebarWidgets.includes('clock') ? 'Hide clock' : 'Show clock'}
               onClick={() => toggleSidebarWidget('clock')}
-              className={`p-2 rounded-lg flex items-center gap-2 text-sm font-medium border transition-colors ${
+              className={`hidden md:flex p-2 rounded-lg items-center gap-2 text-sm font-medium border transition-colors ${
                 settings.sidebarWidgets.includes('clock')
                   ? 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
                   : 'bg-slate-100 border-slate-200 text-slate-400 dark:bg-slate-900 dark:border-slate-800'
@@ -1329,7 +1008,7 @@ export default function App() {
             <button
               aria-label="Shortcuts & Guide"
               onClick={() => setIsShortcutHelpOpen(true)}
-              className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400"
+              className="hidden md:block p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400"
             >
               <HelpCircle size={18} />
             </button>
@@ -1362,21 +1041,34 @@ export default function App() {
                 : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200')
             }
           >
-            {persistenceState === 'error' || profileError
-              ? 'Sync problem: ' +
-                (profileError ||
-                  'Your latest edits remain in this browser. Export a backup if this persists.')
-              : 'Local mode: backend unavailable. Changes are saved on this device until sync is available.'}
+            <div className="flex items-center justify-between gap-3">
+              <span>
+                {persistenceState === 'error' || profileError
+                  ? 'Sync problem: ' +
+                    (profileError ||
+                      'Your latest edits remain in this browser. Export a backup if this persists.')
+                  : 'Local mode: backend unavailable. Changes are saved on this device until sync is available.'}
+              </span>
+              {(persistenceState === 'error' || profileError) && isBackendAvailable && (
+                <button
+                  type="button"
+                  onClick={reloadActiveProfile}
+                  className="shrink-0 rounded border border-current px-2 py-1 text-[11px]"
+                >
+                  Reload profile
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {}
         {/* The workspace is purely flex, with strict hidden overflow so only columns scroll */}
-        <main className="app-main flex-1 min-h-0 flex flex-col md:flex-row relative bg-slate-100 dark:bg-slate-950 p-4 gap-4 overflow-hidden">
+        <main className="app-main flex-1 min-h-0 flex flex-col md:flex-row relative bg-slate-100 dark:bg-slate-950 p-2 gap-2 sm:p-4 sm:gap-4 overflow-hidden">
           {/* Main Content Area (Kanban or Analytics) */}
           <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
             {!settings.monkMode && view !== 'dashboard' && (
-              <label className="lg:hidden mb-3 flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-slate-500">
+              <label className="lg:hidden mb-2 flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-slate-500 sm:mb-3 sm:py-2">
                 <Search size={15} className="shrink-0" />
                 <input
                   value={searchQuery}
@@ -1453,7 +1145,7 @@ export default function App() {
                       Add
                     </button>
                   </form>
-                  <div className="flex justify-end gap-2">
+                  <div className="hidden justify-end gap-2 sm:flex">
                     <button
                       onClick={planMyDay}
                       className="px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-900 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:border-emerald-400"
@@ -1468,7 +1160,7 @@ export default function App() {
                     </button>
                   </div>
                 </div>
-                {renderMobileBoardControls()}
+                <MobileBoardControls settings={settings} setSettings={setSettings} />
                 <KanbanBoard
                   filteredTasks={filteredTasks}
                   settings={settings}
@@ -1520,7 +1212,16 @@ export default function App() {
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col p-4 gap-3">
-              {settings.sidebarWidgets.includes('now') && renderCurrentTaskPin('sidebar')}
+              {settings.sidebarWidgets.includes('now') && (
+                <CurrentTaskPin
+                  task={currentTask}
+                  now={now}
+                  onOpen={setSelectedTaskId}
+                  onAdd={() => addTask('backlog')}
+                  onToggleTimer={updateTaskTimer}
+                  onComplete={completeTask}
+                />
+              )}
 
               {settings.sidebarWidgets.includes('clock') && (
                 <div
@@ -1795,11 +1496,13 @@ export default function App() {
                     ))}
                   </Command.Group>
                   <Command.Group heading="Navigation">
-                    {[
-                      ['Liquid Glass', 'liquid-glass', 'light'],
-                      ['Zen', 'zen', 'light'],
-                      ['Terminal White', 'terminal-white', 'dark']
-                    ].map(([label, visualTheme, theme]) => (
+                    {(
+                      [
+                        ['Liquid Glass', 'liquid-glass', 'light'],
+                        ['Zen', 'zen', 'light'],
+                        ['Terminal White', 'terminal-white', 'dark']
+                      ] as const
+                    ).map(([label, visualTheme, theme]) => (
                       <Command.Item
                         key={visualTheme}
                         value={String(label)}

@@ -226,7 +226,8 @@ it('shows mobile board controls that persist layout and compact lane order', asy
 
   expect(screen.getByTestId('kanban-board')).toHaveAttribute('data-layout-preset', 'full');
 
-  await user.click(within(controls).getByRole('button', { name: /swap compact active order/i }));
+  await user.click(within(controls).getByRole('button', { name: /customize lane order/i }));
+  await user.selectOptions(within(controls).getByLabelText(/compact active top lane/i), 'in-progress');
   await user.selectOptions(within(controls).getByLabelText(/mobile board layout/i), 'compact');
 
   const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);

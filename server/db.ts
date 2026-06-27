@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { ProfileRow, SettingsRow, Task } from './types.js';
+import { runDatabaseMigrations } from './migrations.js';
 
 const nowIso = () => new Date().toISOString();
 const createId = () => Math.random().toString(36).slice(2, 11);
@@ -21,32 +22,7 @@ export const createDataStore = (dbPath: string) => {
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS profiles (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS tasks (
-      profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-      task_id TEXT NOT NULL,
-      task_json TEXT NOT NULL,
-      position INTEGER NOT NULL,
-      updated_at TEXT NOT NULL,
-      PRIMARY KEY (profile_id, task_id)
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_tasks_profile_position
-      ON tasks(profile_id, position);
-
-    CREATE TABLE IF NOT EXISTS profile_settings (
-      profile_id TEXT PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
-      settings_json TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-  `);
+  runDatabaseMigrations(db);
 
   const listProfilesStmt = db.prepare(`
     SELECT
@@ -60,11 +36,16 @@ export const createDataStore = (dbPath: string) => {
     GROUP BY p.id
     ORDER BY p.created_at ASC
   `);
-  const getProfileStmt = db.prepare('SELECT id, name, created_at, updated_at FROM profiles WHERE id = ?');
+  const getProfileStmt = db.prepare(
+    'SELECT id, name, created_at, updated_at, revision FROM profiles WHERE id = ?'
+  );
+  const getProfileRevisionStmt = db.prepare('SELECT revision FROM profiles WHERE id = ?');
   const createProfileStmt = db.prepare(
     'INSERT INTO profiles (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)'
   );
-  const touchProfileStmt = db.prepare('UPDATE profiles SET updated_at = ? WHERE id = ?');
+  const touchProfileStmt = db.prepare(
+    'UPDATE profiles SET updated_at = ?, revision = revision + 1 WHERE id = ?'
+  );
   const deleteProfileStmt = db.prepare('DELETE FROM profiles WHERE id = ?');
   const resetProfileTasksStmt = db.prepare('DELETE FROM tasks WHERE profile_id = ?');
   const resetProfileSettingsStmt = db.prepare('DELETE FROM profile_settings WHERE profile_id = ?');
@@ -144,6 +125,8 @@ export const createDataStore = (dbPath: string) => {
       };
     },
     getProfile: (id: string) => getProfileStmt.get(id),
+    getProfileRevision: (id: string) =>
+      (getProfileRevisionStmt.get(id) as { revision: number } | undefined)?.revision ?? 0,
     countProfiles: () =>
       (db.prepare('SELECT COUNT(*) AS count FROM profiles').get() as { count: number }).count,
     listProfiles: () => (listProfilesStmt.all() as ProfileRow[]).map(serializeProfile),
@@ -191,7 +174,7 @@ export const createDataStore = (dbPath: string) => {
       });
 
       return {
-        schemaVersion: 1,
+        schemaVersion: 2,
         exportedAt: nowIso(),
         profiles
       };

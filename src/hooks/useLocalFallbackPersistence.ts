@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { defaultSettings, defaultTasks, mergeSettings, normalizeTasksPayload } from '../domain/tasks';
+import { defaultSettings, defaultTasks } from '../domain/tasks';
+import { createStoredEnvelope, migrateStoredSettings, migrateStoredTasks } from '../domain/dataMigrations';
 import {
   getIndexedDbValue,
   hasIndexedDb,
@@ -11,23 +12,16 @@ import {
 
 export const loadInitialLocalTasks = () => {
   try {
-    return normalizeTasksPayload(parseStoredJson(tasksStorageKey, defaultTasks));
+    return migrateStoredTasks(parseStoredJson(tasksStorageKey, defaultTasks));
   } catch {
     return defaultTasks;
   }
 };
 
 export const loadInitialLocalSettings = () =>
-  mergeSettings(parseStoredJson(settingsStorageKey, defaultSettings));
+  migrateStoredSettings(parseStoredJson(settingsStorageKey, defaultSettings));
 
-export function useLocalFallbackPersistence({
-  tasks,
-  setTasks,
-  settings,
-  setSettings,
-  isBackendAvailable,
-  isProfileReady
-}) {
+export function useLocalFallbackPersistence({ tasks, setTasks, settings, setSettings, isProfileReady }) {
   const [isStorageReady, setIsStorageReady] = useState(() => !hasIndexedDb());
 
   useEffect(() => {
@@ -43,8 +37,8 @@ export function useLocalFallbackPersistence({
         ]);
 
         if (cancelled) return;
-        if (storedTasks) setTasks(normalizeTasksPayload(storedTasks));
-        if (storedSettings) setSettings(mergeSettings(storedSettings));
+        if (storedTasks) setTasks(migrateStoredTasks(storedTasks));
+        if (storedSettings) setSettings(migrateStoredSettings(storedSettings));
       } catch {
         // Local state already starts from localStorage fallback data.
       } finally {
@@ -60,16 +54,18 @@ export function useLocalFallbackPersistence({
   }, [setSettings, setTasks]);
 
   useEffect(() => {
-    if (!isStorageReady || isBackendAvailable || !isProfileReady) return;
-    localStorage.setItem(tasksStorageKey, JSON.stringify(tasks));
-    setIndexedDbValue(tasksStorageKey, tasks).catch(() => {});
-  }, [tasks, isStorageReady, isBackendAvailable, isProfileReady]);
+    if (!isStorageReady || !isProfileReady) return;
+    const storedTasks = createStoredEnvelope(tasks);
+    localStorage.setItem(tasksStorageKey, JSON.stringify(storedTasks));
+    setIndexedDbValue(tasksStorageKey, storedTasks).catch(() => {});
+  }, [tasks, isStorageReady, isProfileReady]);
 
   useEffect(() => {
-    if (!isStorageReady || isBackendAvailable || !isProfileReady) return;
-    localStorage.setItem(settingsStorageKey, JSON.stringify(settings));
-    setIndexedDbValue(settingsStorageKey, settings).catch(() => {});
-  }, [settings, isStorageReady, isBackendAvailable, isProfileReady]);
+    if (!isStorageReady || !isProfileReady) return;
+    const storedSettings = createStoredEnvelope(settings);
+    localStorage.setItem(settingsStorageKey, JSON.stringify(storedSettings));
+    setIndexedDbValue(settingsStorageKey, storedSettings).catch(() => {});
+  }, [settings, isStorageReady, isProfileReady]);
 
   return { isStorageReady };
 }

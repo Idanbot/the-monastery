@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type { DataStore } from '../db.js';
 import { settingsPayloadSchema } from '../validation.js';
+import { rejectStaleRevision } from './revisions.js';
 
 export const registerSettingsRoutes = (app: FastifyInstance, store: DataStore) => {
   app.get('/api/profiles/:id/settings', async (request, reply) => {
@@ -10,7 +11,7 @@ export const registerSettingsRoutes = (app: FastifyInstance, store: DataStore) =
       return reply.code(404).send({ error: 'Profile not found.' });
     }
 
-    return { settings: store.getSettings(id) };
+    return { settings: store.getSettings(id), revision: store.getProfileRevision(id) };
   });
 
   app.put('/api/profiles/:id/settings', async (request, reply) => {
@@ -28,8 +29,9 @@ export const registerSettingsRoutes = (app: FastifyInstance, store: DataStore) =
       );
       return reply.code(400).send({ error: 'settings object is required.' });
     }
+    if (rejectStaleRevision(store, id, parsed.data.baseRevision, reply)) return;
 
     store.saveSettings(id, parsed.data.settings);
-    return { ok: true };
+    return { ok: true, revision: store.getProfileRevision(id) };
   });
 };

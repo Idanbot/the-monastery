@@ -164,6 +164,33 @@ h6,
   grid-template-rows: var(--kanban-stack-template, 1fr 1fr);
 }
 
+@media (max-width: 639px) {
+  .kanban-board-grid {
+    display: flex;
+    min-height: 100%;
+    gap: 0.5rem !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .kanban-board-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kanban-board-grid > [data-testid^='board-column-'],
+  .kanban-board-grid > .kanban-stack {
+    flex: 0 0 calc(100vw - 1rem);
+    min-height: 100%;
+    scroll-snap-align: start;
+  }
+
+  .kanban-stack {
+    min-height: 0 !important;
+  }
+}
+
 @media (min-width: 640px) {
   .kanban-board-grid {
     grid-template-columns: var(--kanban-grid-template, 1fr);
