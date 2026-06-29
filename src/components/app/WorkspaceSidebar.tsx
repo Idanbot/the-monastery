@@ -3,26 +3,32 @@ import { AgendaTimeline } from '../timeline/AgendaTimeline';
 import { CurrentTaskPin } from '../CurrentTaskPin';
 import { ClockWidget } from '../ClockWidget';
 
-export function WorkspaceSidebar({
-  settings,
-  tasks,
-  setTasks,
-  currentTask,
-  now,
-  sidebarOpen,
-  setSidebarOpen,
-  isSidebarVisible,
-  setSelectedTaskId,
-  addTask,
-  updateTaskTimer,
-  completeTask,
-  openSettings,
-  startResize,
-  agendaContainerRef,
-  agendaScrollTopRef,
-  timelineDragRef,
-  suppressTimelineClickRef
-}) {
+import { useSettingsContext } from '../../contexts/SettingsContext';
+import { useTaskContext } from '../../contexts/TaskContext';
+import { useUIContext } from '../../contexts/UIContext';
+
+export function WorkspaceSidebar() {
+  const {
+    settings,
+    startResize,
+    openSettings,
+    isSidebarVisible
+  } = useSettingsContext();
+
+  const {
+    currentTask,
+    setSelectedTaskId,
+    addTask,
+    updateTaskTimer,
+    completeTask
+  } = useTaskContext();
+
+  const {
+    now,
+    sidebarOpen,
+    setSidebarOpen
+  } = useUIContext();
+
   return (
     <>
       {settings.resizeHandleVisible !== false && (
@@ -77,17 +83,7 @@ export function WorkspaceSidebar({
             )}
           {settings.sidebarWidgets.includes('agenda') && (
             <div className="min-h-0 flex-1 overflow-hidden">
-              <AgendaTimeline
-                tasks={tasks}
-                settings={settings}
-                now={now}
-                setTasks={setTasks}
-                setSelectedTaskId={setSelectedTaskId}
-                agendaContainerRef={agendaContainerRef}
-                agendaScrollTopRef={agendaScrollTopRef}
-                timelineDragRef={timelineDragRef}
-                suppressTimelineClickRef={suppressTimelineClickRef}
-              />
+              <AgendaTimeline />
             </div>
           )}
         </div>

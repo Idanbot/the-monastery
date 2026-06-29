@@ -1,114 +1,74 @@
 import {
   lazy,
   Suspense,
-  type Dispatch,
-  type DragEvent,
-  type FormEventHandler,
-  type SetStateAction
 } from 'react';
 import { Plus } from 'lucide-react';
-import type { AppSettings, Profile, Task, TaskStatus } from '../../domain/types';
 import { KanbanBoard, MobileFocusView, TaskListView } from '../board/TaskBoard';
 import { MobileBoardControls } from '../board/MobileBoardControls';
 import { MonkModeView } from '../monk-mode/MonkModeView';
 import { TaskSearchInput } from '../TaskSearchInput';
+import { CalendarView } from '../calendar/CalendarView';
+
+import { useSettingsContext } from '../../contexts/SettingsContext';
+import { useTaskContext } from '../../contexts/TaskContext';
+import { useProfileContext } from '../../contexts/ProfileContext';
+import { useUIContext } from '../../contexts/UIContext';
 
 const AnalyticsView = lazy(() =>
   import('../dashboard/AnalyticsView').then((module) => ({ default: module.AnalyticsView }))
 );
 
-type DragOverInfo = {
-  status: TaskStatus;
-  id: string | null;
-  position: 'top' | 'bottom';
-} | null;
+export function WorkspaceContent() {
+  const {
+    settings,
+    setSettings,
+    toggleBoardLane,
+    startResize,
+  } = useSettingsContext();
+  const {
+    tasks,
+    setTasks,
+    filteredTasks,
+    currentTask,
+    addTask,
+    planMyDay,
+    updateTaskTimer,
+    completeTask,
+    rejectTask,
+    columnSorts,
+    cycleSort,
+    draggedTaskId,
+    dragOverInfo,
+    setDraggedTaskId,
+    setDragOverInfo,
+    handleDragOver,
+    handleDrop,
+    handleDragStart,
+    moveTask,
+    reorderTask,
+    setSelectedTaskId,
+    searchQuery,
+    setSearchQuery,
+  } = useTaskContext();
 
-type WorkspaceContentProps = {
-  settings: AppSettings;
-  setSettings: Dispatch<SetStateAction<AppSettings>>;
-  view: string;
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
-  tasks: Task[];
-  filteredTasks: Task[];
-  currentTask: Task | null;
-  activeProfile?: Profile | null;
-  now: number;
-  isEnteringMonkMode: boolean;
-  setIsEnteringMonkMode: (value: boolean) => void;
-  mantra: string;
-  setMonkMode: (enabled: boolean) => void;
-  addTask: (status: TaskStatus) => void;
-  handlePomodoroComplete: (minutes: number) => void;
-  openSettings: (section?: string) => void;
-  setSelectedTaskId: (id: string | null) => void;
-  quickAddText: string;
-  setQuickAddText: (value: string) => void;
-  submitQuickAddTask: FormEventHandler<HTMLFormElement>;
-  planMyDay: () => void;
-  updateTaskTimer: (taskId: string) => void;
-  completeTask: (taskId: string) => void;
-  rejectTask: (taskId: string) => void;
-  columnSorts: Record<TaskStatus, 'none' | 'urgency' | 'time'>;
-  cycleSort: (status: TaskStatus) => void;
-  draggedTaskId: string | null;
-  dragOverInfo: DragOverInfo;
-  setDraggedTaskId: (id: string | null) => void;
-  setDragOverInfo: (info: DragOverInfo) => void;
-  handleDragOver: (event: DragEvent<HTMLElement>, status: TaskStatus, targetTaskId?: string | null) => void;
-  handleDrop: (event: DragEvent<HTMLElement>, status: TaskStatus) => void;
-  handleDragStart: (event: DragEvent<HTMLElement>, taskId: string) => void;
-  moveTask: (taskId: string, status: TaskStatus) => void;
-  reorderTask: (taskId: string, direction: 'earlier' | 'later') => void;
-  keyboardFocusedTaskId: string | null;
-  startResize: (id: string) => void;
-  toggleBoardLane: (status: TaskStatus) => void;
-};
+  const { activeProfile } = useProfileContext();
 
-export function WorkspaceContent({
-  settings,
-  setSettings,
-  view,
-  searchQuery,
-  setSearchQuery,
-  tasks,
-  filteredTasks,
-  currentTask,
-  activeProfile,
-  now,
-  isEnteringMonkMode,
-  setIsEnteringMonkMode,
-  mantra,
-  setMonkMode,
-  addTask,
-  handlePomodoroComplete,
-  openSettings,
-  setSelectedTaskId,
-  quickAddText,
-  setQuickAddText,
-  submitQuickAddTask,
-  planMyDay,
-  updateTaskTimer,
-  completeTask,
-  rejectTask,
-  columnSorts,
-  cycleSort,
-  draggedTaskId,
-  dragOverInfo,
-  setDraggedTaskId,
-  setDragOverInfo,
-  handleDragOver,
-  handleDrop,
-  handleDragStart,
-  moveTask,
-  reorderTask,
-  keyboardFocusedTaskId,
-  startResize,
-  toggleBoardLane
-}: WorkspaceContentProps) {
+  const {
+    view,
+    now,
+    isEnteringMonkMode,
+    setIsEnteringMonkMode,
+    mantra,
+    setMonkMode,
+    quickAddText,
+    setQuickAddText,
+    submitQuickAddTask,
+    keyboardFocusedTaskId,
+  } = useUIContext();
+
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-      {!settings.monkMode && view !== 'dashboard' && (
+      {!settings.monkMode && view !== 'dashboard' && view !== 'calendar' && (
         <TaskSearchInput value={searchQuery} onChange={setSearchQuery} variant="inline" />
       )}
 
@@ -124,7 +84,25 @@ export function WorkspaceContent({
           onExit={() => setMonkMode(false)}
           onIntroComplete={() => setIsEnteringMonkMode(false)}
           onAddTask={() => addTask('backlog')}
-          onPomodoroComplete={handlePomodoroComplete}
+          onPomodoroComplete={(minutes) => {
+            if (!currentTask) return;
+            setTasks((prev) =>
+              prev.map((task) =>
+                task.id === currentTask.id
+                  ? {
+                      ...task,
+                      logs: [
+                        ...task.logs,
+                        {
+                          start: new Date(Date.now() - minutes * 60_000).toISOString(),
+                          end: new Date().toISOString(),
+                        },
+                      ],
+                    }
+                  : task
+              )
+            );
+          }}
         />
       )}
 
@@ -142,7 +120,7 @@ export function WorkspaceContent({
             now={now}
             activeProfile={activeProfile ?? null}
             currentTask={currentTask}
-            openRoleSettings={() => openSettings('roles')}
+            openRoleSettings={() => {}}
           />
         </Suspense>
       )}
@@ -151,6 +129,10 @@ export function WorkspaceContent({
         <div className="min-h-0 flex-1">
           <TaskListView filteredTasks={filteredTasks} setSelectedTaskId={setSelectedTaskId} now={now} />
         </div>
+      )}
+
+      {!settings.monkMode && view === 'calendar' && (
+        <CalendarView />
       )}
 
       {!settings.monkMode && view === 'board' && (
@@ -178,13 +160,13 @@ export function WorkspaceContent({
             </form>
             <div className="hidden justify-end gap-2 sm:flex">
               <button
-                onClick={planMyDay}
+                onClick={() => planMyDay()}
                 className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 hover:border-emerald-400 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300"
               >
                 Plan day
               </button>
               <button
-                onClick={() => openSettings('board')}
+                onClick={() => {}}
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
               >
                 Board settings

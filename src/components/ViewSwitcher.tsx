@@ -1,8 +1,9 @@
-import { BarChart2, LayoutDashboard, ListTodo } from 'lucide-react';
+import { BarChart2, Calendar, LayoutDashboard, ListTodo } from 'lucide-react';
 
 const VIEWS = [
   { id: 'board', label: 'Board', icon: LayoutDashboard },
   { id: 'mobile', label: 'List', icon: ListTodo },
+  { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'dashboard', label: 'Analytics', icon: BarChart2 }
 ] as const;
 
@@ -47,6 +48,7 @@ export function ViewSwitcher({
               key={option.id}
               onClick={() => onChange(option.id)}
               className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-all ${active ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
+              data-testid={`view-switch-${option.id}`}
             >
               <Icon size={14} /> <span className="hidden md:inline">{option.label}</span>
             </button>

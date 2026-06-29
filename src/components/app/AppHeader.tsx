@@ -20,43 +20,59 @@ import { TaskSearchInput } from '../TaskSearchInput';
 import { TagFilterMenu } from '../TagFilterMenu';
 import { PersistenceStatusChip } from '../PersistenceStatusChip';
 
+import { useSettingsContext } from '../../contexts/SettingsContext';
+import { useTaskContext } from '../../contexts/TaskContext';
+import { useProfileContext } from '../../contexts/ProfileContext';
+import { useUIContext } from '../../contexts/UIContext';
+
 const frontendVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
 const visibleVersion = (version: string) => {
   const match = version.match(/^(\d+)\.(\d+)/);
   return match ? `v${match[1]}.${match[2]}` : `v${version}`;
 };
 
-export function AppHeader({
-  settings,
-  view,
-  setView,
-  searchQuery,
-  setSearchQuery,
-  isBackendAvailable,
-  isProfileReady,
-  profiles,
-  activeProfileId,
-  activeProfile,
-  selectProfile,
-  isFilterOpen,
-  setIsFilterOpen,
-  tagPool,
-  activeFilters,
-  setActiveFilters,
-  isOnline,
-  persistenceState,
-  lastSavedAt,
-  profileError,
-  setMonkMode,
-  isSidebarVisible,
-  toggleSidebarVisible,
-  toggleSidebarWidget,
-  setIsShortcutHelpOpen,
-  openSettings,
-  addTask,
-  sidebarOpen,
-  setSidebarOpen
-}) {
+export function AppHeader() {
+  const {
+    settings,
+    isSidebarVisible,
+    toggleSidebarVisible,
+    toggleSidebarWidget,
+    openSettings
+  } = useSettingsContext();
+
+  const {
+    addTask,
+    tagPool,
+    activeFilters,
+    setActiveFilters,
+    isFilterOpen,
+    setIsFilterOpen,
+    searchQuery,
+    setSearchQuery
+  } = useTaskContext();
+
+  const {
+    isBackendAvailable,
+    isProfileReady,
+    profiles,
+    activeProfileId,
+    activeProfile,
+    selectProfile,
+    persistenceStatus,
+    lastSavedAt,
+    profileError
+  } = useProfileContext();
+
+  const {
+    view,
+    setView,
+    isOnline,
+    sidebarOpen,
+    setSidebarOpen,
+    setIsShortcutHelpOpen,
+    setMonkMode
+  } = useUIContext();
+
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { refs: filterRefs, floatingStyles: filterFloatingStyles } = useFloating({
     open: isFilterOpen,
@@ -93,8 +109,8 @@ export function AppHeader({
 
   useEffect(() => {
     if (!isProfileOpen) return undefined;
-    const close = (event) => {
-      const target = event.target;
+    const close = (event: PointerEvent) => {
+      const target = event.target as Node;
       if (profileReferenceNode?.contains(target) || profileFloatingNode?.contains(target)) return;
       setIsProfileOpen(false);
     };
@@ -166,7 +182,7 @@ export function AppHeader({
                 <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-slate-500">
                   Profiles
                 </div>
-                {profiles.map((profile) => (
+                {profiles.map((profile: any) => (
                   <button
                     key={profile.id}
                     type="button"
@@ -228,8 +244,8 @@ export function AppHeader({
           {isOnline ? 'Online' : 'Offline ready'}
         </div>
         <PersistenceStatusChip
-          status={persistenceState}
-          lastSavedAt={lastSavedAt}
+          status={persistenceStatus as any}
+          lastSavedAt={lastSavedAt ? new Date(lastSavedAt) : null}
           errorMessage={profileError}
         />
         <div className="mx-1 hidden h-6 w-px bg-slate-200 dark:bg-slate-700 md:block" />

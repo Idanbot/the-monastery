@@ -1,18 +1,21 @@
+import { useEffect, useRef } from 'react';
 import { Calendar, Target } from 'lucide-react';
 import { UrgencyBadge } from '../UrgencyBadge';
 import { formatDateInputValue, formatTime } from '../../domain/tasks';
+import { useSettingsContext } from '../../contexts/SettingsContext';
+import { useTaskContext } from '../../contexts/TaskContext';
+import { useUIContext } from '../../contexts/UIContext';
 
-export function AgendaTimeline({
-  tasks,
-  settings,
-  now,
-  setTasks,
-  setSelectedTaskId,
-  agendaContainerRef,
-  agendaScrollTopRef,
-  timelineDragRef,
-  suppressTimelineClickRef
-}) {
+export function AgendaTimeline() {
+  const { settings } = useSettingsContext();
+  const { tasks, setTasks, setSelectedTaskId } = useTaskContext();
+  const { now } = useUIContext();
+
+  const agendaContainerRef = useRef<HTMLDivElement>(null);
+  const agendaScrollTopRef = useRef(0);
+  const timelineDragRef = useRef<any>(null);
+  const suppressTimelineClickRef = useRef(new Set());
+
   const todayTasks = tasks.filter(
     (t) =>
       t.status !== 'done' &&
@@ -22,7 +25,8 @@ export function AgendaTimeline({
   );
   const nowObj = new Date(now);
   const currentMinutes = nowObj.getHours() * 60 + nowObj.getMinutes();
-  const minutesToClockTime = (minutes) => {
+
+  const minutesToClockTime = (minutes: number) => {
     const clamped = Math.max(0, Math.min(1439, minutes));
     const hours = Math.floor(clamped / 60)
       .toString()
@@ -39,6 +43,34 @@ export function AgendaTimeline({
       agendaContainerRef.current.scrollTo({ top: scrollTo, behavior: 'smooth' });
     }
   };
+
+  // Implement mouseup logic directly inside AgendaTimeline
+  useEffect(() => {
+    const handleTimelineMouseUp = (event: MouseEvent) => {
+      const drag = timelineDragRef.current;
+      if (!drag) return;
+      timelineDragRef.current = null;
+      const delta = event.clientY - drag.startY;
+      const snappedDelta = Math.round(delta / 15) * 15;
+      if (Math.abs(snappedDelta) < 15) return;
+      suppressTimelineClickRef.current.add(drag.taskId);
+      window.setTimeout(() => suppressTimelineClickRef.current.delete(drag.taskId), 0);
+      const nextStart = Math.max(0, Math.min(1439 - drag.duration, drag.startTop + snappedDelta));
+      setTasks((previous) =>
+        previous.map((item) =>
+          item.id === drag.taskId
+            ? {
+                ...item,
+                scheduledStart: minutesToClockTime(nextStart),
+                scheduledEnd: minutesToClockTime(nextStart + drag.duration)
+              }
+            : item
+        )
+      );
+    };
+    window.addEventListener('mouseup', handleTimelineMouseUp);
+    return () => window.removeEventListener('mouseup', handleTimelineMouseUp);
+  }, [setTasks]);
 
   return (
     <div className="timeline-panel h-full min-h-0 flex flex-col border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm">
@@ -173,7 +205,7 @@ export function AgendaTimeline({
                     }
                   }}
                   onPointerDown={(event) => {
-                    event.currentTarget.setPointerCapture(event.pointerId);
+                    event.currentTarget.setPointerCapture?.(event.pointerId);
                     event.currentTarget.dataset.dragStartY = String(event.clientY);
                     event.currentTarget.dataset.dragStartTop = String(top);
                     event.currentTarget.dataset.dragDuration = String(duration);

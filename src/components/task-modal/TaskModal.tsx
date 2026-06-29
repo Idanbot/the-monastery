@@ -1,85 +1,58 @@
-import { ListTodo, Trash2, X } from 'lucide-react';
-import { useMemo } from 'react';
-import { generateId } from '../../domain/tasks';
+import { useMemo, useState } from 'react';
 import { suggestTaskTags } from '../../domain/taskIntelligence';
-import type { RoleDefinition, Task } from '../../domain/types';
 import { ThemedSurface } from '../ui/ThemedSurface';
 import { TaskModalBody } from './TaskModalBody';
 
+import { useSettingsContext } from '../../contexts/SettingsContext';
+import { useTaskContext } from '../../contexts/TaskContext';
+import { useUIContext } from '../../contexts/UIContext';
+import { useTaskDraft } from '../../hooks/useTaskDraft';
+
 type ModalSections = { timer: boolean; notes: boolean; activity: boolean };
-type DraftSaveStatus = 'saved' | 'saving' | 'unsaved';
 
-type TaskModalProps = {
-  draftTask: Task | null;
-  draftNote: string;
-  setDraftNote: (note: string) => void;
-  draftIsDirty?: boolean;
-  draftSavedAt?: Date | null;
-  draftSaveStatus?: DraftSaveStatus;
-  modalSections: ModalSections;
-  setModalSections: (sections: ModalSections) => void;
-  now: number;
-  clockFormat: '12h' | '24h';
-  updateDraftTask: (updates: Partial<Task>) => void;
-  closeTaskModal: (options?: { promptToSave?: boolean }) => void;
-  saveDraftTask: () => void;
-  closeAfterSave: () => void;
-  showDeleteTaskPrompt: boolean;
-  setShowDeleteTaskPrompt: (show: boolean) => void;
-  deleteDraftTask: () => void;
-  showDirtyClosePrompt: boolean;
-  setShowDirtyClosePrompt: (show: boolean) => void;
-  discardDraftTask: () => void;
-  tagPool?: string[];
-  roles?: RoleDefinition[];
-  onRegisterTags?: (tags: string[]) => void;
-  resolveTags?: (tags: string[]) => string[];
-};
+export function TaskModal() {
+  const { settings } = useSettingsContext();
+  const {
+    tasks,
+    setTasks,
+    selectedTaskId,
+    setSelectedTaskId,
+    tagPool,
+    registerTags,
+    resolveTaskTags,
+  } = useTaskContext();
+  const { now } = useUIContext();
 
-export function TaskModal({
-  draftTask,
-  draftNote,
-  setDraftNote,
-  draftIsDirty = false,
-  draftSavedAt = null,
-  draftSaveStatus = 'saved',
-  modalSections,
-  setModalSections,
-  now,
-  clockFormat,
-  updateDraftTask,
-  closeTaskModal,
-  saveDraftTask,
-  closeAfterSave,
-  showDeleteTaskPrompt,
-  setShowDeleteTaskPrompt,
-  deleteDraftTask,
-  showDirtyClosePrompt,
-  setShowDirtyClosePrompt,
-  discardDraftTask,
-  tagPool = [],
-  roles = [],
-  onRegisterTags,
-  resolveTags
-}: TaskModalProps) {
-  const suggestedTags = useMemo(
-    () =>
-      draftTask
-        ? suggestTaskTags({
-            title: draftTask.title,
-            existingTags: draftTask.tags || [],
-            tagPool,
-            roles
-          })
-        : [],
-    [draftTask, tagPool, roles]
-  );
+  const {
+    draftTask,
+    draftNote,
+    setDraftNote,
+    draftIsDirty,
+    draftSavedAt,
+    draftSaveStatus,
+    showDirtyClosePrompt,
+    setShowDirtyClosePrompt,
+    showDeleteTaskPrompt,
+    setShowDeleteTaskPrompt,
+    updateDraftTask,
+    saveDraftTask,
+    closeTaskModal,
+    discardDraftTask,
+    deleteDraftTask,
+  } = useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskId });
 
-  if (!draftTask) return null;
+  const [modalSections, setModalSections] = useState<ModalSections>({
+    timer: false,
+    notes: false,
+    activity: false,
+  });
 
-  const setSubtask = (subtaskId, updates) => {
+  const clockFormat = settings.clockFormat;
+  const roles = useMemo(() => settings.roles || [], [settings.roles]);
+
+  const setSubtask = (subtaskId: string, updates: any) => {
     updateDraftTask({
-      subtasks: draftTask.subtasks.map((subtask) =>
+      subtasks: (draftTask.subtasks || []).map((subtask) =>
         subtask.id === subtaskId ? { ...subtask, ...updates } : subtask
       )
     });
@@ -89,7 +62,7 @@ export function TaskModal({
     if (draftTask.activeLogStart) {
       updateDraftTask({
         activeLogStart: null,
-        logs: [...draftTask.logs, { start: draftTask.activeLogStart, end: new Date().toISOString() }]
+        logs: [...(draftTask.logs || []), { start: draftTask.activeLogStart, end: new Date().toISOString() }]
       });
     } else {
       updateDraftTask({ activeLogStart: new Date().toISOString() });
@@ -99,15 +72,15 @@ export function TaskModal({
   const addSubtask = () => {
     updateDraftTask({
       subtasks: [
-        ...draftTask.subtasks,
+        ...(draftTask.subtasks || []),
         { id: generateId(), title: '', status: 'backlog', logs: [], activeLogStart: null, tags: [] }
       ]
     });
   };
 
-  const setTaskLog = (index, updates) => {
+  const setTaskLog = (index: number, updates: any) => {
     updateDraftTask({
-      logs: draftTask.logs.map((log, logIndex) => (logIndex === index ? { ...log, ...updates } : log))
+      logs: (draftTask.logs || []).map((log, logIndex) => (logIndex === index ? { ...log, ...updates } : log))
     });
   };
 
@@ -115,7 +88,7 @@ export function TaskModal({
     const end = new Date();
     const start = new Date(end.getTime() - 30 * 60000);
     updateDraftTask({
-      logs: [...draftTask.logs, { start: start.toISOString(), end: end.toISOString() }]
+      logs: [...(draftTask.logs || []), { start: start.toISOString(), end: end.toISOString() }]
     });
   };
 
@@ -124,190 +97,209 @@ export function TaskModal({
     if (!text) return;
     updateDraftTask({
       activity: [
-        ...draftTask.activity,
+        ...(draftTask.activity || []),
         { id: generateId(), type: 'note', text, timestamp: new Date().toISOString() }
       ]
     });
     setDraftNote('');
   };
 
-  const saveAndClose = () => {
+  const handleSaveDraftTask = () => {
     saveDraftTask();
-    closeAfterSave();
   };
 
-  const sectionButtonClass =
-    'w-full flex items-center justify-between text-left text-sm font-bold text-slate-700 dark:text-slate-200';
+  const handleDeleteDraftTask = () => {
+    deleteDraftTask();
+  };
+
+  const hasUnsavedChanges = draftIsDirty;
+  const timeSinceSave =
+    draftSavedAt && draftSaveStatus === 'saved'
+      ? Math.max(0, Math.floor((now - draftSavedAt.getTime()) / 1000))
+      : null;
+
+  const smartSuggestions = useMemo(() => {
+    if (!draftTask) return [];
+    return suggestTaskTags({
+      title: draftTask.title,
+      roles,
+      tagPool,
+      resolveTags: resolveTaskTags,
+    });
+  }, [draftTask, roles, tagPool, resolveTaskTags]);
+
+  if (!draftTask) return null;
 
   return (
     <ThemedSurface
       variant="overlay"
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) closeTaskModal({ promptToSave: true });
+      data-testid="task-modal-overlay"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) closeTaskModal();
       }}
     >
       <ThemedSurface
         variant="modal"
-        className="relative w-full max-w-3xl max-h-[92vh] overflow-hidden rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col"
+        data-testid="task-modal"
+        className="flex h-full max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-200 shadow-2xl dark:border-slate-800"
       >
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <ListTodo size={18} className="text-indigo-500 shrink-0" />
-            <h2 className="font-bold text-lg truncate">{draftTask.title || 'Untitled Task'}</h2>
-            <span
-              data-testid="task-save-state"
-              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                draftSaveStatus === 'saving'
-                  ? 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300'
-                  : draftIsDirty || draftSaveStatus === 'unsaved'
-                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
-                    : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
-              }`}
-            >
-              {draftSaveStatus === 'saving'
-                ? 'Saving...'
-                : draftIsDirty || draftSaveStatus === 'unsaved'
-                  ? 'Unsaved changes'
-                  : draftSavedAt
-                    ? 'Saved ' + draftSavedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                    : 'Saved'}
-            </span>
+        {/* Modal Header */}
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="rounded-lg bg-indigo-500/10 p-1.5 text-indigo-600 dark:text-indigo-400">
+              <ListTodo size={18} />
+            </div>
+            <h3 className="truncate text-base font-bold text-slate-900 dark:text-white">
+              Task Details
+            </h3>
+            {draftSaveStatus === 'saving' && (
+              <span className="text-[10px] text-slate-400">saving…</span>
+            )}
+            {draftSaveStatus === 'saved' && timeSinceSave !== null && (
+              <span className="hidden text-[10px] text-slate-400 sm:inline">
+                saved {timeSinceSave === 0 ? 'just now' : `${timeSinceSave}s ago`}
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={saveAndClose}
-              className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium"
-            >
-              Save
-            </button>
-            <button
-              onClick={() => closeTaskModal({ promptToSave: true })}
-              className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200 dark:hover:text-slate-100 dark:hover:bg-slate-800"
-              title="Close"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
 
-        <TaskModalBody
-          draftTask={draftTask}
-          draftNote={draftNote}
-          setDraftNote={setDraftNote}
-          modalSections={modalSections}
-          setModalSections={setModalSections}
-          now={now}
-          clockFormat={clockFormat}
-          updateDraftTask={updateDraftTask}
-          suggestedTags={suggestedTags}
-          sectionButtonClass={sectionButtonClass}
-          toggleMainTimer={toggleMainTimer}
-          addTaskLog={addTaskLog}
-          setTaskLog={setTaskLog}
-          addSubtask={addSubtask}
-          setSubtask={setSubtask}
-          addNote={addNote}
-          tagPool={tagPool}
-          onRegisterTags={onRegisterTags}
-          resolveTags={resolveTags}
-        />
-
-        <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex justify-between items-center shrink-0">
-          <button
-            onClick={() => closeTaskModal({ promptToSave: true })}
-            className="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-          >
-            Discard
-          </button>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowDeleteTaskPrompt(true)}
-              className="px-3 py-2 rounded-lg text-sm font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2"
+              aria-label="Delete task"
+              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-rose-600 dark:hover:bg-slate-800"
             >
-              <Trash2 size={15} /> Delete
+              <Trash2 size={16} />
             </button>
             <button
-              onClick={saveAndClose}
-              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium"
+              onClick={() => closeTaskModal()}
+              aria-label="Close task details"
+              className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
             >
-              Save task
+              <X size={16} />
             </button>
           </div>
         </div>
 
-        {showDeleteTaskPrompt && (
-          <ThemedSurface
-            variant="overlay"
-            className="absolute inset-0 z-10 flex items-center justify-center p-4"
-          >
-            <ThemedSurface
-              variant="modal"
-              className="w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl"
-            >
-              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete task?</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  This will permanently remove {draftTask.title || 'this task'} from the active profile.
-                </p>
-              </div>
-              <div className="p-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                <button
-                  onClick={() => setShowDeleteTaskPrompt(false)}
-                  className="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={deleteDraftTask}
-                  className="px-3 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white"
-                >
-                  Delete task
-                </button>
-              </div>
-            </ThemedSurface>
-          </ThemedSurface>
-        )}
+        {/* Modal Content */}
+        <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar px-4 py-4 sm:px-6">
+          <TaskModalBody
+            draftTask={draftTask}
+            draftNote={draftNote}
+            setDraftNote={setDraftNote}
+            updateDraftTask={updateDraftTask}
+            tagPool={tagPool}
+            onRegisterTags={registerTags}
+            resolveTags={resolveTaskTags}
+            now={now}
+            clockFormat={clockFormat}
+            modalSections={modalSections}
+            setModalSections={setModalSections}
+            suggestedTags={smartSuggestions}
+            toggleMainTimer={toggleMainTimer}
+            addTaskLog={addTaskLog}
+            setTaskLog={setTaskLog}
+            addSubtask={addSubtask}
+            setSubtask={setSubtask}
+            addNote={addNote}
+          />
+        </div>
 
-        {showDirtyClosePrompt && (
-          <ThemedSurface
-            variant="overlay"
-            className="absolute inset-0 z-10 flex items-center justify-center p-4"
+        {/* Modal Footer */}
+        <div className="flex shrink-0 flex-col-reverse justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/30 sm:flex-row sm:px-6">
+          {hasUnsavedChanges && (
+            <div className="flex flex-1 items-center text-xs text-amber-600 dark:text-amber-400">
+              Unsaved modifications
+            </div>
+          )}
+          <button
+            onClick={() => closeTaskModal()}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
           >
-            <ThemedSurface
-              variant="modal"
-              className="w-full max-w-sm rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl"
-            >
-              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Save changes?</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  This task has unsaved edits. Save them before closing?
-                </p>
-              </div>
-              <div className="p-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                <button
-                  onClick={() => setShowDirtyClosePrompt(false)}
-                  className="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={discardDraftTask}
-                  className="px-3 py-2 rounded-lg text-sm font-medium text-rose-700 dark:text-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20"
-                >
-                  Discard
-                </button>
-                <button
-                  onClick={saveAndClose}
-                  className="px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                  Save changes
-                </button>
-              </div>
-            </ThemedSurface>
-          </ThemedSurface>
-        )}
+            Cancel
+          </button>
+          <button
+            onClick={handleSaveDraftTask}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            Save
+          </button>
+        </div>
       </ThemedSurface>
+
+      {/* Delete Dialog Prompt */}
+      {showDeleteTaskPrompt && (
+        <ThemedSurface
+          variant="overlay"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/20 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowDeleteTaskPrompt(false);
+          }}
+        >
+          <ThemedSurface
+            variant="modal"
+            className="w-full max-w-sm rounded-2xl border border-slate-200 p-5 shadow-2xl dark:border-slate-800"
+          >
+            <h4 className="text-base font-bold text-slate-950 dark:text-white">
+              Delete task?
+            </h4>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              This action cannot be undone. Task duration history will be deleted.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteTaskPrompt(false)}
+                className="rounded-lg px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteDraftTask}
+                className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-rose-700"
+              >
+                Delete
+              </button>
+            </div>
+          </ThemedSurface>
+        </ThemedSurface>
+      )}
+
+      {/* Close Alert dirty dialog prompt */}
+      {showDirtyClosePrompt && (
+        <ThemedSurface
+          variant="overlay"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/20 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowDirtyClosePrompt(false);
+          }}
+        >
+          <ThemedSurface
+            variant="modal"
+            className="w-full max-w-sm rounded-2xl border border-slate-200 p-5 shadow-2xl dark:border-slate-800"
+          >
+            <h4 className="text-base font-bold text-slate-950 dark:text-white">
+              Discard modifications?
+            </h4>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              You have unsaved changes. Closing will discard them.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setShowDirtyClosePrompt(false)}
+                className="rounded-lg px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Keep editing
+              </button>
+              <button
+                onClick={discardDraftTask}
+                className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-rose-700"
+              >
+                Discard
+              </button>
+            </div>
+          </ThemedSurface>
+        </ThemedSurface>
+      )}
     </ThemedSurface>
   );
 }

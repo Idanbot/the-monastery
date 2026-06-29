@@ -35,45 +35,62 @@ import { generateId } from '../../domain/tasks';
 import { useThemeStyle } from '../../hooks/useThemeStyle';
 import { themeChoiceOptions } from '../../domain/themeGallery';
 
+import { useSettingsContext } from '../../contexts/SettingsContext';
+import { useTaskContext } from '../../contexts/TaskContext';
+import { useProfileContext } from '../../contexts/ProfileContext';
+
 const sectionIds = ['appearance', 'time', 'board', 'tags', 'roles', 'sidebar', 'profiles', 'data'];
+
 export function SettingsModal({
   initialSection = null,
-  settings,
-  setSettings,
-  addRole,
-  updateRole,
-  removeRole,
-  isBackendAvailable,
-  profiles,
-  activeProfileId,
-  selectProfile,
-  newProfileName,
-  setNewProfileName,
-  createProfile,
-  setProfileAction,
-  profileError,
-  exportTasks,
-  backupData,
-  exportThemeRecipe,
-  createRoleRoutineTasks,
-  exportActiveProfile,
-  importProfileInputRef,
-  importActiveProfile,
-  exportTaskSchema,
-  importInputRef,
-  importTasks,
-  importCalendarInputRef,
-  importCalendarTasks,
-  importPlanningInputRef,
-  importPlanningData,
-  localBackups = [],
-  restoreLocalBackup,
-  removeLocalBackup,
-  tagPool = [],
-  onTagCommand,
-  isDarkMode = false,
   onClose
+}: {
+  initialSection?: string | null;
+  onClose: () => void;
 }) {
+  const {
+    settings,
+    setSettings,
+    addRole,
+    updateRole,
+    removeRole,
+    isDarkMode
+  } = useSettingsContext();
+
+  const {
+    tagPool = [],
+    runTagTaxonomyCommand: onTagCommand,
+    createRoleRoutineTasks
+  } = useTaskContext();
+
+  const {
+    isBackendAvailable,
+    profiles,
+    activeProfileId,
+    selectProfile,
+    newProfileName,
+    setNewProfileName,
+    createProfile,
+    setProfileAction,
+    profileError,
+    exportTasks,
+    backupData,
+    exportThemeRecipe,
+    exportActiveProfile,
+    importProfileInputRef,
+    importActiveProfile,
+    exportTaskSchema,
+    importInputRef,
+    importTasks,
+    importCalendarInputRef,
+    importCalendarTasks,
+    importPlanningInputRef,
+    importPlanningData,
+    localBackups = [],
+    restoreLocalBackup,
+    removeLocalBackup
+  } = useProfileContext();
+
   const isScopedSettings = Boolean(initialSection);
   const visibleSectionIds = isScopedSettings ? [initialSection] : sectionIds;
   const defaultThemeChoice = `${settings.theme}:${settings.visualTheme}`;
@@ -434,8 +451,8 @@ export function SettingsModal({
                           type="button"
                           onClick={() =>
                             patchSettings({
-                              visualTheme,
-                              theme,
+                              visualTheme: visualTheme as any,
+                              theme: theme as any,
                               colorScheme: { main, secondary, text },
                               fontMain: '',
                               fontSecondary: '',

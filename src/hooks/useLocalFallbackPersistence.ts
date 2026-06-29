@@ -66,14 +66,18 @@ export function useLocalFallbackPersistence({ tasks, setTasks, settings, setSett
   useEffect(() => {
     if (!isStorageReady || !isProfileReady) return;
     const storedTasks = createStoredEnvelope(tasks);
-    localStorage.setItem(tasksStorageKey, JSON.stringify(storedTasks));
+    if (typeof localStorage !== 'undefined' && localStorage.setItem) {
+      localStorage.setItem(tasksStorageKey, JSON.stringify(storedTasks));
+    }
     setIndexedDbValue(tasksStorageKey, storedTasks).catch(() => {});
   }, [tasks, isStorageReady, isProfileReady]);
 
   useEffect(() => {
     if (!isStorageReady || !isProfileReady) return;
     const storedSettings = createStoredEnvelope(settings);
-    localStorage.setItem(settingsStorageKey, JSON.stringify(storedSettings));
+    if (typeof localStorage !== 'undefined' && localStorage.setItem) {
+      localStorage.setItem(settingsStorageKey, JSON.stringify(storedSettings));
+    }
     setIndexedDbValue(settingsStorageKey, storedSettings).catch(() => {});
   }, [settings, isStorageReady, isProfileReady]);
 
