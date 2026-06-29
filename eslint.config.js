@@ -50,7 +50,13 @@ export default tseslint.config(
       'prefer-const': 'warn',
       'react-hooks/purity': 'off',
       'react-hooks/set-state-in-effect': 'off',
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }]
+      'react-refresh/only-export-components': [
+        'warn',
+        {
+          allowConstantExport: true,
+          allowExportNames: ['useProfileContext', 'useSettingsContext', 'useTaskContext', 'useUIContext']
+        }
+      ]
     }
   },
   {

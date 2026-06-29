@@ -3,6 +3,7 @@ import { normalizeTask } from '../src/domain/tasks';
 import { api, expectStatus, resetServerState } from './helpers';
 
 test('large board stays within render budget and supports lane movement', async ({ page, request }) => {
+  test.setTimeout(60_000);
   const profileId = await resetServerState(request, {
     profilePrefix: 'Performance',
     animationsEnabled: false

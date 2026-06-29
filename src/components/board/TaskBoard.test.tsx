@@ -134,7 +134,7 @@ describe('KanbanBoard layout controls', () => {
         '--kanban-stack-template'
       )
     ).toBe('var(--collapsed-lane-size, 3.5rem) var(--resize-handle-thickness, 4px) 50fr');
-    screen.getByRole('button', { name: /expand done lane/i }).click();
+    fireEvent.click(screen.getByRole('button', { name: /expand done lane/i }));
     expect(onToggleLane).toHaveBeenCalledWith('done');
 
     rerender(<KanbanBoard {...baseProps({ ...defaultSettings, collapsedBoardLanes: [] })} />);
@@ -184,7 +184,7 @@ describe('KanbanBoard layout controls', () => {
     expect(onMoveTask).toHaveBeenCalledWith('backlog', 'in-progress');
     expect(screen.getByRole('status')).toHaveTextContent('Backlog item moved to In-Progress');
 
-    screen.getByRole('button', { name: /move backlog item later/i }).click();
+    fireEvent.click(screen.getByRole('button', { name: /move backlog item later/i }));
     expect(onReorderTask).toHaveBeenCalledWith('backlog', 'later');
 
     const laneSelect = screen.getByRole('combobox', { name: /move backlog item to lane/i });
@@ -223,10 +223,10 @@ describe('MobileFocusView actions', () => {
       />
     );
 
-    screen.getByRole('button', { name: /start current task/i }).click();
-    screen.getByRole('button', { name: /complete current task/i }).click();
-    screen.getByRole('button', { name: /reject current task/i }).click();
-    screen.getByRole('button', { name: /start next task/i }).click();
+    fireEvent.click(screen.getByRole('button', { name: /start current task/i }));
+    fireEvent.click(screen.getByRole('button', { name: /complete current task/i }));
+    fireEvent.click(screen.getByRole('button', { name: /reject current task/i }));
+    fireEvent.click(screen.getByRole('button', { name: /start next task/i }));
 
     expect(onStartTask).toHaveBeenCalledWith('current');
     expect(onCompleteTask).toHaveBeenCalledWith('current');

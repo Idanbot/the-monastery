@@ -21,7 +21,7 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "node -e \"const fs=require('fs');for(const f of ['/tmp/the-monastery-e2e.sqlite','/tmp/the-monastery-e2e.sqlite-shm','/tmp/the-monastery-e2e.sqlite-wal']){try{fs.rmSync(f,{force:true})}catch{}}\" && PORT=3100 HOST=127.0.0.1 THE_MONASTERY_DB_PATH=/tmp/the-monastery-e2e.sqlite npm run dev:api",
+        "node -e \"const fs=require('fs');for(const f of ['/tmp/the-monastery-e2e.sqlite','/tmp/the-monastery-e2e.sqlite-shm','/tmp/the-monastery-e2e.sqlite-wal']){try{fs.rmSync(f,{force:true})}catch{}}\" && PORT=3100 HOST=127.0.0.1 THE_MONASTERY_DB_PATH=/tmp/the-monastery-e2e.sqlite THE_MONASTERY_API_RATE_LIMIT_MAX=1000000 npm run dev:api",
       url: 'http://127.0.0.1:3100/api/health',
       reuseExistingServer: false,
       timeout: 120_000

@@ -22,6 +22,21 @@ if (typeof window !== 'undefined') {
     Element.prototype.scrollIntoView = vi.fn();
   }
 
+  Object.defineProperty(window, 'scrollTo', {
+    writable: true,
+    value: vi.fn()
+  });
+
+  Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
+    writable: true,
+    value: vi.fn()
+  });
+
+  Object.defineProperty(HTMLAnchorElement.prototype, 'click', {
+    writable: true,
+    value: vi.fn()
+  });
+
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query) => ({
