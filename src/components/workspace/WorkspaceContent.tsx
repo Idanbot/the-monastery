@@ -1,7 +1,4 @@
-import {
-  lazy,
-  Suspense,
-} from 'react';
+import { lazy, Suspense } from 'react';
 import { Plus } from 'lucide-react';
 import { KanbanBoard, MobileFocusView, TaskListView } from '../board/TaskBoard';
 import { MobileBoardControls } from '../board/MobileBoardControls';
@@ -19,12 +16,7 @@ const AnalyticsView = lazy(() =>
 );
 
 export function WorkspaceContent() {
-  const {
-    settings,
-    setSettings,
-    toggleBoardLane,
-    startResize,
-  } = useSettingsContext();
+  const { settings, setSettings, toggleBoardLane, startResize, openSettings } = useSettingsContext();
   const {
     tasks,
     setTasks,
@@ -48,7 +40,7 @@ export function WorkspaceContent() {
     reorderTask,
     setSelectedTaskId,
     searchQuery,
-    setSearchQuery,
+    setSearchQuery
   } = useTaskContext();
 
   const { activeProfile } = useProfileContext();
@@ -63,7 +55,7 @@ export function WorkspaceContent() {
     quickAddText,
     setQuickAddText,
     submitQuickAddTask,
-    keyboardFocusedTaskId,
+    keyboardFocusedTaskId
   } = useUIContext();
 
   return (
@@ -95,9 +87,9 @@ export function WorkspaceContent() {
                         ...task.logs,
                         {
                           start: new Date(Date.now() - minutes * 60_000).toISOString(),
-                          end: new Date().toISOString(),
-                        },
-                      ],
+                          end: new Date().toISOString()
+                        }
+                      ]
                     }
                   : task
               )
@@ -131,9 +123,7 @@ export function WorkspaceContent() {
         </div>
       )}
 
-      {!settings.monkMode && view === 'calendar' && (
-        <CalendarView />
-      )}
+      {!settings.monkMode && view === 'calendar' && <CalendarView />}
 
       {!settings.monkMode && view === 'board' && (
         <>
@@ -166,7 +156,7 @@ export function WorkspaceContent() {
                 Plan day
               </button>
               <button
-                onClick={() => {}}
+                onClick={() => openSettings('board')}
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
               >
                 Board settings

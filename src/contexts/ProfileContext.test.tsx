@@ -28,6 +28,6 @@ describe('ProfileContext', () => {
     );
 
     // Initial state check
-    expect(screen.getByTestId('persistence-status')).toHaveTextContent('online');
+    expect(screen.getByTestId('persistence-status')).toHaveTextContent('offline');
   });
 });

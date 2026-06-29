@@ -22,7 +22,11 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({ time, date, onDropTask }) =>
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragOver(false);
-    const taskId = event.dataTransfer.getData('text/plain');
+    const taskId =
+      event.dataTransfer.getData('text/plain') ||
+      window.sessionStorage.getItem('the-monastery-dragged-task-id') ||
+      '';
+    window.sessionStorage.removeItem('the-monastery-dragged-task-id');
     if (taskId) {
       onDropTask(taskId, date, time);
     }
@@ -40,8 +44,8 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({ time, date, onDropTask }) =>
         isDragOver
           ? 'bg-indigo-500/10 dark:bg-indigo-500/20'
           : isHour
-          ? 'border-t-slate-300 dark:border-t-slate-700'
-          : ''
+            ? 'border-t-slate-300 dark:border-t-slate-700'
+            : ''
       }`}
       data-testid={`time-slot-${date}-${time}`}
     />

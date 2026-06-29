@@ -12,7 +12,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   currentDate,
   setCurrentDate,
   viewMode,
-  setViewMode,
+  setViewMode
 }) => {
   const handlePrev = () => {
     setCurrentDate((prev) => {
@@ -40,7 +40,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         weekday: 'long',
         month: 'long',
         day: 'numeric',
-        year: 'numeric',
+        year: 'numeric'
       });
     }
 

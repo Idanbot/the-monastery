@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test';
-import {
-  browserToday,
-  createTask,
-  resetServerState,
-} from './helpers';
+import { browserToday, createTask, resetServerState } from './helpers';
 
 test.beforeEach(async ({ page, request }) => {
   const activeProfileId = await resetServerState(request);
@@ -26,7 +22,7 @@ test('navigates to calendar view and shows layout elements', async ({ page }) =>
   await expect(page.getByRole('button', { name: /^week$/i })).toBeVisible();
 
   // Side ruler and Unscheduled sidebar
-  await expect(page.getByText('12:00 AM')).toBeVisible();
+  await expect(page.getByTestId('calendar-view').getByText('00:00')).toBeVisible();
   await expect(page.getByTestId('unscheduled-sidebar')).toBeVisible();
 });
 
@@ -48,8 +44,14 @@ test('adds unscheduled task and schedules it by drag and drop', async ({ page })
   await expect(taskCard).toBeVisible();
 
   // Drag task to 9:30 AM slot on today
-  const targetSlot = page.getByTestId(`time-slot-${todayStr}-09:30`);
-  await taskCard.dragTo(targetSlot);
+  await taskCard.evaluate((source, targetSelector) => {
+    const target = document.querySelector(targetSelector);
+    if (!target) throw new Error(`Missing drop target ${targetSelector}`);
+    const dataTransfer = new DataTransfer();
+    source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer }));
+    target.dispatchEvent(new DragEvent('dragover', { bubbles: true, dataTransfer }));
+    target.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer }));
+  }, `[data-testid="time-slot-${todayStr}-09:30"]`);
 
   // Assert it is now rendered on the calendar grid and not in unscheduled sidebar
   await expect(page.getByTestId(`calendar-task-${taskTitle}`)).toBeVisible();

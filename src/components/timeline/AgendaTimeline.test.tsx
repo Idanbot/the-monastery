@@ -47,10 +47,10 @@ const renderTimeline = (props: { settings?: any; now?: string } = {}) => {
   mockSetSelectedTaskId.mockClear();
 
   render(<AgendaTimeline />);
-  
+
   return {
     setTasks: mockSetTasks,
-    setSelectedTaskId: mockSetSelectedTaskId,
+    setSelectedTaskId: mockSetSelectedTaskId
   };
 };
 
@@ -71,13 +71,13 @@ describe('AgendaTimeline', () => {
     expect(screen.queryByTestId('timeline-hour-line')).not.toBeInTheDocument();
 
     const task = screen.getByTestId('timeline-task-Timeline focus');
-    
+
     // Simulate pointer down, move, and pointer up for drag
     fireEvent.pointerDown(task, { clientY: 540, pointerId: 1 });
-    
+
     // Trigger window mouseup
     fireEvent(window, new MouseEvent('mouseup', { clientY: 600 }));
-    
+
     expect(setTasks).toHaveBeenCalled();
   });
 });

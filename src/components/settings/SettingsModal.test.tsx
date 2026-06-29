@@ -4,6 +4,61 @@ import { describe, expect, it, vi } from 'vitest';
 import { defaultSettings } from '../../domain/tasks';
 import { SettingsModal } from './SettingsModal';
 
+const contextMocks = vi.hoisted(() => ({
+  settingsContext: {
+    settings: {},
+    setSettings: vi.fn(),
+    addRole: vi.fn(),
+    updateRole: vi.fn(),
+    removeRole: vi.fn(),
+    isDarkMode: false
+  },
+  taskContext: {
+    tagPool: [],
+    runTagTaxonomyCommand: vi.fn(),
+    createRoleRoutineTasks: vi.fn()
+  },
+  profileContext: {
+    isBackendAvailable: true,
+    profiles: [],
+    activeProfileId: 'profile-1',
+    selectProfile: vi.fn(),
+    newProfileName: '',
+    setNewProfileName: vi.fn(),
+    createProfile: vi.fn(),
+    setProfileAction: vi.fn(),
+    profileError: '',
+    exportTasks: vi.fn(),
+    backupData: vi.fn(),
+    exportThemeRecipe: vi.fn(),
+    exportActiveProfile: vi.fn(),
+    importProfileInputRef: { current: null },
+    importActiveProfile: vi.fn(),
+    exportTaskSchema: vi.fn(),
+    importInputRef: { current: null },
+    importTasks: vi.fn(),
+    importCalendarInputRef: { current: null },
+    importCalendarTasks: vi.fn(),
+    importPlanningInputRef: { current: null },
+    importPlanningData: vi.fn(),
+    localBackups: [],
+    restoreLocalBackup: vi.fn(),
+    removeLocalBackup: vi.fn()
+  }
+}));
+
+vi.mock('../../contexts/SettingsContext', () => ({
+  useSettingsContext: () => contextMocks.settingsContext
+}));
+
+vi.mock('../../contexts/TaskContext', () => ({
+  useTaskContext: () => contextMocks.taskContext
+}));
+
+vi.mock('../../contexts/ProfileContext', () => ({
+  useProfileContext: () => contextMocks.profileContext
+}));
+
 const renderSettings = (overrides = {}) => {
   const props = {
     initialSection: 'appearance',
@@ -44,7 +99,41 @@ const renderSettings = (overrides = {}) => {
     onClose: vi.fn(),
     ...overrides
   };
-  render(<SettingsModal {...props} />);
+  contextMocks.settingsContext.settings = props.settings;
+  contextMocks.settingsContext.setSettings = props.setSettings;
+  contextMocks.settingsContext.addRole = props.addRole;
+  contextMocks.settingsContext.updateRole = props.updateRole;
+  contextMocks.settingsContext.removeRole = props.removeRole;
+  contextMocks.settingsContext.isDarkMode = props.isDarkMode;
+  contextMocks.taskContext.tagPool = props.tagPool;
+  contextMocks.taskContext.runTagTaxonomyCommand = props.onTagCommand;
+  contextMocks.taskContext.createRoleRoutineTasks = props.createRoleRoutineTasks;
+  contextMocks.profileContext.isBackendAvailable = props.isBackendAvailable;
+  contextMocks.profileContext.profiles = props.profiles;
+  contextMocks.profileContext.activeProfileId = props.activeProfileId;
+  contextMocks.profileContext.selectProfile = props.selectProfile;
+  contextMocks.profileContext.newProfileName = props.newProfileName;
+  contextMocks.profileContext.setNewProfileName = props.setNewProfileName;
+  contextMocks.profileContext.createProfile = props.createProfile;
+  contextMocks.profileContext.setProfileAction = props.setProfileAction;
+  contextMocks.profileContext.profileError = props.profileError;
+  contextMocks.profileContext.exportTasks = props.exportTasks;
+  contextMocks.profileContext.backupData = props.backupData;
+  contextMocks.profileContext.exportThemeRecipe = props.exportThemeRecipe;
+  contextMocks.profileContext.exportActiveProfile = props.exportActiveProfile;
+  contextMocks.profileContext.importProfileInputRef = props.importProfileInputRef;
+  contextMocks.profileContext.importActiveProfile = props.importActiveProfile;
+  contextMocks.profileContext.exportTaskSchema = props.exportTaskSchema;
+  contextMocks.profileContext.importInputRef = props.importInputRef;
+  contextMocks.profileContext.importTasks = props.importTasks;
+  contextMocks.profileContext.importCalendarInputRef = props.importCalendarInputRef;
+  contextMocks.profileContext.importCalendarTasks = props.importCalendarTasks;
+  contextMocks.profileContext.importPlanningInputRef = props.importPlanningInputRef;
+  contextMocks.profileContext.importPlanningData = props.importPlanningData;
+  contextMocks.profileContext.localBackups = props.localBackups;
+  contextMocks.profileContext.restoreLocalBackup = props.restoreLocalBackup;
+  contextMocks.profileContext.removeLocalBackup = props.removeLocalBackup;
+  render(<SettingsModal initialSection={props.initialSection} onClose={props.onClose} />);
   return props;
 };
 

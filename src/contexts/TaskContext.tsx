@@ -36,7 +36,11 @@ interface TaskContextType {
   setDraggedTaskId: (id: string | null) => void;
   setDragOverInfo: (info: any) => void;
   handleDragStart: (event: React.DragEvent<HTMLElement>, taskId: string) => void;
-  handleDragOver: (event: React.DragEvent<HTMLElement>, status: TaskStatus, targetTaskId?: string | null) => void;
+  handleDragOver: (
+    event: React.DragEvent<HTMLElement>,
+    status: TaskStatus,
+    targetTaskId?: string | null
+  ) => void;
   handleDrop: (event: React.DragEvent<HTMLElement>, status: TaskStatus) => void;
   moveTask: (taskId: string, status: TaskStatus) => void;
   reorderTask: (taskId: string, direction: 'earlier' | 'later') => void;
@@ -71,7 +75,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     searchQuery,
     setSearchQuery,
     allUniqueTags,
-    filteredTasks,
+    filteredTasks
   } = useTaskFilters(tasks);
 
   const {
@@ -85,7 +89,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleDragOver,
     handleDrop,
     moveTask,
-    reorderTask,
+    reorderTask
   } = useBoardController(setTasks);
 
   useRecurringTasks(tasks, setTasks);
@@ -98,7 +102,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...(settings.tagInventory || []),
           ...(settings.roles || []).flatMap((role) => role.tags || []),
           ...(settings.tagGoals || []).map((goal) => goal.tag),
-          ...rolePresets.flatMap((preset) => preset.tags),
+          ...rolePresets.flatMap((preset) => preset.tags)
         ])
       )
         .filter(Boolean)
@@ -167,15 +171,19 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTasks((previous) => executeTaskCommand(previous, { type: 'move', taskId, status: 'rejected' }).tasks);
   }, []);
 
-  const completeTask = useCallback((taskId: string) => {
-    setTasks((previous) =>
-      executeTaskCommand(previous, {
-        type: 'complete',
-        taskId,
-        promoteNext: settings.autoPromoteNextTask,
-      }).tasks
-    );
-  }, [settings.autoPromoteNextTask]);
+  const completeTask = useCallback(
+    (taskId: string) => {
+      setTasks(
+        (previous) =>
+          executeTaskCommand(previous, {
+            type: 'complete',
+            taskId,
+            promoteNext: settings.autoPromoteNextTask
+          }).tasks
+      );
+    },
+    [settings.autoPromoteNextTask]
+  );
 
   const addTask = useCallback(
     (status: TaskStatus = 'backlog', overrides: any = {}, onCreated?: (task: Task) => void) => {
@@ -185,7 +193,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const smartTags = inferTaskTags({ title, existingTags: baseTags, tagPool, roles: tagRoles });
       const activity = [
         { id: generateId(), type: 'system' as const, text: 'Task created', timestamp: createdAt },
-        ...(Array.isArray(overrides.activity) ? overrides.activity : []),
+        ...(Array.isArray(overrides.activity) ? overrides.activity : [])
       ];
       const newTask = normalizeTask({
         id: generateId(),
@@ -203,7 +211,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...overrides,
         title,
         createdAt,
-        tags: resolveTaskTags(smartTags),
+        tags: resolveTaskTags(smartTags)
       });
       setTasks((previous) => executeTaskCommand(previous, { type: 'create', task: newTask }).tasks);
       if (onCreated) {
@@ -235,22 +243,26 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
             id: generateId(),
             type: 'system',
             text: 'Created from role routine template',
-            timestamp: new Date().toISOString(),
-          },
-        ],
+            timestamp: new Date().toISOString()
+          }
+        ]
       })
     );
     if (routineTasks.length) setTasks((previous) => [...routineTasks, ...previous]);
   }, [settings.roles, setTasks]);
 
-  const planMyDay = useCallback((onComplete?: () => void) => {
-    const today = formatDateInputValue(new Date());
-    const startHour = Math.max(9, new Date().getHours() + 1);
-    setTasks((previous) =>
-      executeTaskCommand(previous, { type: 'plan-day', date: today, startMinutes: startHour * 60 }).tasks
-    );
-    if (onComplete) onComplete();
-  }, [setTasks]);
+  const planMyDay = useCallback(
+    (onComplete?: () => void) => {
+      const today = formatDateInputValue(new Date());
+      const startHour = Math.max(9, new Date().getHours() + 1);
+      setTasks(
+        (previous) =>
+          executeTaskCommand(previous, { type: 'plan-day', date: today, startMinutes: startHour * 60 }).tasks
+      );
+      if (onComplete) onComplete();
+    },
+    [setTasks]
+  );
 
   const value = useMemo(
     () => ({
@@ -287,7 +299,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       completeTask,
       rejectTask,
       createRoleRoutineTasks,
-      planMyDay,
+      planMyDay
     }),
     [
       tasks,
@@ -321,7 +333,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       completeTask,
       rejectTask,
       createRoleRoutineTasks,
-      planMyDay,
+      planMyDay
     ]
   );
 

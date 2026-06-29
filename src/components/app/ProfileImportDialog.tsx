@@ -28,8 +28,8 @@ export const ProfileImportDialog: React.FC = () => {
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Restore profile?</h3>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {profileImportPreview.name} has {profileImportPreview.tasks.length} tasks. Current profile
-            has {profileImportPreview.currentTaskCount} tasks.
+            {profileImportPreview.name} has {profileImportPreview.tasks.length} tasks. Current profile has{' '}
+            {profileImportPreview.currentTaskCount} tasks.
           </p>
         </div>
         <div className="p-4 grid grid-cols-2 gap-3 text-sm">

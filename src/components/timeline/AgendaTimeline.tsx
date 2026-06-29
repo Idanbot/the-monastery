@@ -210,6 +210,12 @@ export function AgendaTimeline() {
                     event.currentTarget.dataset.dragStartTop = String(top);
                     event.currentTarget.dataset.dragDuration = String(duration);
                     event.currentTarget.dataset.dragMoved = 'false';
+                    timelineDragRef.current = {
+                      taskId: task.id,
+                      startY: event.clientY,
+                      startTop: top,
+                      duration
+                    };
                   }}
                   onPointerUp={(event) => {
                     const startY = Number(event.currentTarget.dataset.dragStartY || event.clientY);

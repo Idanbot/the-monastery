@@ -50,7 +50,7 @@ test('persists task notes, goals, and deletions across reloads', async ({ page }
   await page.getByRole('button', { name: /^notes$/i }).click();
   await page.getByPlaceholder('Add a note...').fill('Persistence note survives reload');
   await page.getByRole('button', { name: /^add note$/i }).click();
-  await page.getByRole('button', { name: /^save$/i }).click();
+  await page.getByRole('button', { name: /save task/i }).click();
 
   await page.keyboard.press('m');
   await completeBreathingIntro(page);
@@ -77,26 +77,33 @@ test('persists task notes, goals, and deletions across reloads', async ({ page }
       return body.settings?.dailyGoal || '';
     })
     .toBe('Persist monk goal');
-  const goalInput = page.getByPlaceholder('One outcome for today');
-  if ((await goalInput.count()) === 0) {
-    await page.getByRole('button', { name: /monk mode/i }).click();
+  if ((await page.getByTestId('one-breath').count()) > 0) {
     await completeBreathingIntro(page);
   }
+  if ((await page.getByTestId('monk-mode-view').count()) === 0) {
+    await page.getByRole('button', { name: /enter monk mode/i }).click();
+    await completeBreathingIntro(page);
+  }
+  await expect(page.getByTestId('monk-mode-view')).toBeVisible();
+  const goalInput = page.getByPlaceholder('One outcome for today');
   await expect(goalInput).toHaveValue('Persist monk goal');
-  await page.getByRole('button', { name: /exit monk mode/i }).click();
+  await page
+    .getByTestId('monk-mode-view')
+    .getByRole('button', { name: /exit monk mode/i })
+    .click();
   await page.getByRole('button', { name: /list/i }).click();
   await searchTasks(page, title);
   await expectTaskVisible(page, title);
   await page.getByText(title).first().click();
   await page.getByRole('button', { name: /^activity$/i }).click();
   await expect(page.getByText('Persistence note survives reload')).toBeVisible();
-  await page.getByRole('button', { name: /^save$/i }).click();
+  await page.getByRole('button', { name: /save task/i }).click();
 
   await page.getByRole('button', { name: /list/i }).click();
   await searchTasks(page, title);
   await page.getByText(title).first().click();
+  await page.getByRole('button', { name: /delete task/i }).click();
   await page.getByRole('button', { name: /^delete$/i }).click();
-  await page.getByRole('button', { name: /^delete task$/i }).click();
   await expect
     .poll(async () => {
       const response = await page.request.get(`/api/profiles/${profileId}/tasks`);
@@ -635,7 +642,7 @@ test('prompts on dirty modal close and supports discard or save', async ({ page 
 
   await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Discarded dirty edit');
-  await page.mouse.click(8, 8);
+  await page.getByRole('button', { name: /close task details/i }).click();
   await expect(page.getByRole('heading', { name: /save changes/i })).toBeVisible();
   await page
     .getByRole('button', { name: /^discard$/i })
@@ -647,7 +654,7 @@ test('prompts on dirty modal close and supports discard or save', async ({ page 
 
   await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Saved dirty edit');
-  await page.mouse.click(8, 8);
+  await page.getByRole('button', { name: /close task details/i }).click();
   await page.getByRole('button', { name: /save changes/i }).click();
   await searchTasks(page, 'Saved dirty edit');
   await expectTaskVisible(page, 'Saved dirty edit');

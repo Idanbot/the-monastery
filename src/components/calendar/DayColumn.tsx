@@ -13,13 +13,7 @@ interface DayColumnProps {
   now: number;
 }
 
-export const DayColumn: React.FC<DayColumnProps> = ({
-  date,
-  tasks,
-  onDropTask,
-  onSelectTask,
-  now,
-}) => {
+export const DayColumn: React.FC<DayColumnProps> = ({ date, tasks, onDropTask, onSelectTask, now }) => {
   const dateStr = formatDateInputValue(date);
   const scheduledTasks = getTasksForDate(tasks, dateStr);
 
@@ -36,13 +30,22 @@ export const DayColumn: React.FC<DayColumnProps> = ({
   });
 
   return (
-    <div className="flex-1 min-w-[120px] flex flex-col border-r border-slate-200 dark:border-slate-800 last:border-r-0" data-testid={`day-column-${dateStr}`}>
+    <div
+      className="flex-1 min-w-[120px] flex flex-col border-r border-slate-200 dark:border-slate-800 last:border-r-0"
+      data-testid={`day-column-${dateStr}`}
+    >
       {/* Header */}
-      <div className={`p-2 border-b border-slate-200 dark:border-slate-800 text-center shrink-0 ${isToday ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''}`}>
-        <div className={`text-[10px] uppercase font-bold tracking-wider ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
+      <div
+        className={`p-2 border-b border-slate-200 dark:border-slate-800 text-center shrink-0 ${isToday ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''}`}
+      >
+        <div
+          className={`text-[10px] uppercase font-bold tracking-wider ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}
+        >
           {date.toLocaleDateString('en-US', { weekday: 'short' })}
         </div>
-        <div className={`text-base font-extrabold mt-0.5 inline-flex items-center justify-center w-7 h-7 rounded-full ${isToday ? 'bg-indigo-600 text-white' : 'text-slate-700 dark:text-slate-200'}`}>
+        <div
+          className={`text-base font-extrabold mt-0.5 inline-flex items-center justify-center w-7 h-7 rounded-full ${isToday ? 'bg-indigo-600 text-white' : 'text-slate-700 dark:text-slate-200'}`}
+        >
           {date.getDate()}
         </div>
       </div>
@@ -51,21 +54,12 @@ export const DayColumn: React.FC<DayColumnProps> = ({
       <div className="flex-1 relative h-[1440px] bg-white dark:bg-slate-900/40">
         {/* Time slots */}
         {slots.map((time) => (
-          <TimeSlot
-            key={time}
-            time={time}
-            date={dateStr}
-            onDropTask={onDropTask}
-          />
+          <TimeSlot key={time} time={time} date={dateStr} onDropTask={onDropTask} />
         ))}
 
         {/* Task Blocks */}
         {scheduledTasks.map((task) => (
-          <CalendarTaskBlock
-            key={task.id}
-            task={task}
-            onSelect={onSelectTask}
-          />
+          <CalendarTaskBlock key={task.id} task={task} onSelect={onSelectTask} />
         ))}
 
         {/* Red Current Time Line */}

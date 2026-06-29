@@ -53,15 +53,9 @@ import { useProfileContext } from './ProfileContext';
 
 export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { settings, setSettings, openSettings } = useSettingsContext();
-  const {
-    filteredTasks,
-    addTask,
-    planMyDay,
-    createRoleRoutineTasks,
-    selectedTaskId,
-    setSelectedTaskId,
-  } = useTaskContext();
-  
+  const { filteredTasks, addTask, planMyDay, createRoleRoutineTasks, selectedTaskId, setSelectedTaskId } =
+    useTaskContext();
+
   const { profiles, selectProfile } = useProfileContext();
 
   const [view, setView] = useState('board');
@@ -97,7 +91,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       setSettings((prev) => ({
         ...prev,
         monkMode: enabled,
-        monkModeOpenedAt: enabled ? new Date().toISOString() : undefined,
+        monkModeOpenedAt: enabled ? new Date().toISOString() : undefined
       }));
       if (enabled) {
         setView('board');
@@ -110,25 +104,32 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 
   const startFocusTask = useCallback(() => {
-    addTask('backlog', {
-      title: '',
-      urgency: 7,
-      tags: ['focus'],
-      scheduledDate: formatDateInputValue(new Date()),
-    }, (newTask) => {
-      setSelectedTaskId(newTask.id);
-    });
+    addTask(
+      'backlog',
+      {
+        title: '',
+        urgency: 7,
+        tags: ['focus'],
+        scheduledDate: formatDateInputValue(new Date())
+      },
+      (newTask) => {
+        setSelectedTaskId(newTask.id);
+      }
+    );
   }, [addTask, setSelectedTaskId]);
 
-  const submitQuickAddTask = useCallback((event: React.FormEvent) => {
-    event.preventDefault();
-    const parsed = parseQuickAddTask(quickAddText);
-    if (!parsed.title) return;
-    addTask('backlog', parsed.overrides, (newTask) => {
-      setSelectedTaskId(newTask.id);
-    });
-    setQuickAddText('');
-  }, [quickAddText, addTask, setSelectedTaskId]);
+  const submitQuickAddTask = useCallback(
+    (event: React.FormEvent) => {
+      event.preventDefault();
+      const parsed = parseQuickAddTask(quickAddText);
+      if (!parsed.title) return;
+      addTask('backlog', parsed.overrides, (newTask) => {
+        setSelectedTaskId(newTask.id);
+      });
+      setQuickAddText('');
+    },
+    [quickAddText, addTask, setSelectedTaskId]
+  );
 
   const handlePlanMyDay = useCallback(() => {
     planMyDay(() => {
@@ -155,18 +156,8 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     showAnalytics: () => setView('dashboard'),
     showBoard: () => setView('board'),
     showShortcuts: () => setIsShortcutHelpOpen(true),
-    toggleMonkMode: () => {
-      setSettings((previous) => {
-        const monkMode = !previous.monkMode;
-        if (monkMode) setIsEnteringMonkMode(true);
-        return {
-          ...previous,
-          monkMode,
-          monkModeOpenedAt: monkMode ? new Date().toISOString() : undefined,
-        };
-      });
-    },
-    showList: () => setView('mobile'),
+    toggleMonkMode: () => setMonkMode(!settings.monkMode),
+    showList: () => setView('mobile')
   });
 
   const commandPaletteGroups = useMemo(
@@ -182,36 +173,36 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
               addTask('backlog', {}, (newTask) => {
                 setSelectedTaskId(newTask.id);
               });
-            },
+            }
           },
           {
             value: 'monk mode',
             label: settings.monkMode ? 'Exit Monk Mode' : 'Enter Monk Mode',
-            onSelect: () => setMonkMode(!settings.monkMode),
+            onSelect: () => setMonkMode(!settings.monkMode)
           },
           { value: 'open settings', label: 'Open settings', onSelect: () => openSettings() },
           {
             value: 'go to analytics dashboard',
             label: 'Go to analytics',
-            onSelect: () => setView('dashboard'),
+            onSelect: () => setView('dashboard')
           },
           {
             value: 'theme studio appearance',
             label: 'Theme Studio',
-            onSelect: () => openSettings('appearance'),
+            onSelect: () => openSettings('appearance')
           },
           { value: 'plan my day', label: 'Plan my day', onSelect: () => handlePlanMyDay() },
           {
             value: 'keyboard shortcuts help',
             label: 'Keyboard shortcuts',
-            onSelect: () => setIsShortcutHelpOpen(true),
+            onSelect: () => setIsShortcutHelpOpen(true)
           },
           {
             value: 'create role routines',
             label: 'Create role routines',
-            onSelect: () => createRoleRoutineTasks(),
-          },
-        ],
+            onSelect: () => createRoleRoutineTasks()
+          }
+        ]
       },
       {
         heading: 'Themes',
@@ -224,7 +215,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
               style={{
                 backgroundColor: (
                   themeContracts[theme.id]?.tokens?.light || themeContracts[theme.id]?.tokens?.dark
-                )?.bg,
+                )?.bg
               }}
             />
           ),
@@ -237,9 +228,9 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
               fontMain: '',
               fontSecondary: '',
               clockTextColor: '',
-              clockBackgroundColor: '',
-            })),
-        })),
+              clockBackgroundColor: ''
+            }))
+        }))
       },
       {
         heading: 'Navigation',
@@ -247,22 +238,22 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           [
             ['Liquid Glass', 'liquid-glass', 'light'],
             ['Zen', 'zen', 'light'],
-            ['Terminal White', 'terminal-white', 'dark'],
+            ['Terminal White', 'terminal-white', 'dark']
           ] as const
         ).map(([label, visualTheme, theme]) => ({
           value: String(label),
           label,
-          onSelect: () => setSettings((previous) => ({ ...previous, visualTheme, theme })),
-        })),
+          onSelect: () => setSettings((previous) => ({ ...previous, visualTheme, theme }))
+        }))
       },
       {
         heading: 'Profiles',
         commands: profiles.slice(0, 4).map((profile) => ({
           value: profile.name,
           label: profile.name,
-          onSelect: () => selectProfile(profile.id),
-        })),
-      },
+          onSelect: () => selectProfile(profile.id)
+        }))
+      }
     ],
     [
       settings.monkMode,
@@ -276,7 +267,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       createRoleRoutineTasks,
       setSettings,
       selectProfile,
-      setSelectedTaskId,
+      setSelectedTaskId
     ]
   );
 
@@ -303,7 +294,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       submitQuickAddTask,
       startFocusTask,
       commandPaletteGroups,
-      startFocusTaskAction: startFocusTask,
+      startFocusTaskAction: startFocusTask
     }),
     [
       view,
@@ -319,7 +310,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       setMonkMode,
       submitQuickAddTask,
       startFocusTask,
-      commandPaletteGroups,
+      commandPaletteGroups
     ]
   );
 

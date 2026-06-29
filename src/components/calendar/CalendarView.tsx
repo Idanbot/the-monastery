@@ -41,7 +41,7 @@ export const CalendarView: React.FC = () => {
             ...task,
             scheduledDate: date,
             scheduledStart: time,
-            scheduledEnd: minutesToClockTime(endMinutes),
+            scheduledEnd: minutesToClockTime(endMinutes)
           };
         })
       );
@@ -62,12 +62,15 @@ export const CalendarView: React.FC = () => {
       urgency: 5,
       scheduledDate: '',
       scheduledStart: '',
-      scheduledEnd: '',
+      scheduledEnd: ''
     });
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col md:flex-row rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shadow-sm overflow-hidden" data-testid="calendar-view">
+    <div
+      className="flex-1 min-h-0 flex flex-col md:flex-row rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shadow-sm overflow-hidden"
+      data-testid="calendar-view"
+    >
       {/* Left Main View (Header + Calendar Grid) */}
       <div className="flex-1 flex flex-col p-4 min-w-0">
         <CalendarHeader
@@ -112,11 +115,7 @@ export const CalendarView: React.FC = () => {
       </div>
 
       {/* Right Unscheduled Tasks Sidebar */}
-      <UnscheduledSidebar
-        tasks={tasks}
-        onAddTask={handleAddUnscheduled}
-        onSelectTask={setSelectedTaskId}
-      />
+      <UnscheduledSidebar tasks={tasks} onAddTask={handleAddUnscheduled} onSelectTask={setSelectedTaskId} />
     </div>
   );
 };

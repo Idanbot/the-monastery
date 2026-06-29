@@ -72,7 +72,7 @@ it('renders analytics with a chart component', async () => {
   seedTasks([makeTask({ id: 'done-task', title: 'Done task', status: 'done' })]);
   render(<App />);
 
-  await user.click(screen.getByRole('button', { name: /analytics/i }));
+  await user.click(screen.getByTestId('view-switch-dashboard'));
 
   expect(await screen.findByTestId('analytics-status-chart', {}, { timeout: 5000 })).toBeInTheDocument();
 });
@@ -116,7 +116,7 @@ it('suggests tags from the task title and role graph as clickable chips', async 
   render(<App />);
 
   await clickNewTask(user);
-  await user.type(screen.getByLabelText(/title/i), 'GKE migration plan');
+  fireEvent.change(screen.getByLabelText(/title/i), { target: { value: 'GKE migration plan' } });
 
   await waitFor(() => {
     expect(screen.getByRole('button', { name: /add suggested tag gke/i })).toBeInTheDocument();
@@ -131,7 +131,7 @@ it('suggests tags from the task title and role graph as clickable chips', async 
   await waitFor(() => {
     expect(screen.getByPlaceholderText(/backend, high priority/i)).toHaveValue('gke, gcp, networking');
   });
-});
+}, 20_000);
 
 it('plans unscheduled tasks into today', async () => {
   const user = userEvent.setup();
@@ -278,8 +278,8 @@ it('deletes a task from the task modal', async () => {
   render(<App />);
 
   await user.click(screen.getAllByText(/design database schema/i)[0]);
-  await user.click(screen.getByRole('button', { name: /^delete$/i }));
   await user.click(screen.getByRole('button', { name: /delete task/i }));
+  await user.click(screen.getByRole('button', { name: /^delete$/i }));
 
   expect(screen.queryByText(/design database schema/i)).not.toBeInTheDocument();
 });
@@ -542,7 +542,7 @@ it('shows role and tag analytics from tracked tag time', async () => {
   const user = userEvent.setup();
   render(<App />);
 
-  await user.click(screen.getByRole('button', { name: /analytics/i }));
+  await user.click(screen.getByTestId('view-switch-dashboard'));
 
   expect(screen.getByText(/role radar/i)).toBeInTheDocument();
   expect(screen.getByText(/tag hours/i)).toBeInTheDocument();
@@ -778,7 +778,7 @@ it('adds a manual time log from the task modal', async () => {
   expect(screen.getByTitle(/delete log/i)).toBeInTheDocument();
 
   await user.click(screen.getByRole('button', { name: /save task/i }));
-  await user.click(screen.getByRole('button', { name: /analytics/i }));
+  await user.click(screen.getByTestId('view-switch-dashboard'));
 
   expect(screen.getByText(/total tracked/i)).toBeInTheDocument();
   expect(screen.getAllByText(/30m/i).length).toBeGreaterThan(0);

@@ -48,20 +48,9 @@ export function SettingsModal({
   initialSection?: string | null;
   onClose: () => void;
 }) {
-  const {
-    settings,
-    setSettings,
-    addRole,
-    updateRole,
-    removeRole,
-    isDarkMode
-  } = useSettingsContext();
+  const { settings, setSettings, addRole, updateRole, removeRole, isDarkMode } = useSettingsContext();
 
-  const {
-    tagPool = [],
-    runTagTaxonomyCommand: onTagCommand,
-    createRoleRoutineTasks
-  } = useTaskContext();
+  const { tagPool = [], runTagTaxonomyCommand: onTagCommand, createRoleRoutineTasks } = useTaskContext();
 
   const {
     isBackendAvailable,

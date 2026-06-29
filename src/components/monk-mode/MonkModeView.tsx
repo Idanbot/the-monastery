@@ -58,6 +58,7 @@ export function MonkModeView({
         </div>
         <button
           onClick={onExit}
+          aria-label="Exit monk mode"
           className="pointer-events-auto px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm"
         >
           Exit

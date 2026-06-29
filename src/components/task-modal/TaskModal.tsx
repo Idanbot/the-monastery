@@ -1,5 +1,7 @@
+import { ListTodo, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { suggestTaskTags } from '../../domain/taskIntelligence';
+import { generateId } from '../../domain/tasks';
 import { ThemedSurface } from '../ui/ThemedSurface';
 import { TaskModalBody } from './TaskModalBody';
 
@@ -12,15 +14,8 @@ type ModalSections = { timer: boolean; notes: boolean; activity: boolean };
 
 export function TaskModal() {
   const { settings } = useSettingsContext();
-  const {
-    tasks,
-    setTasks,
-    selectedTaskId,
-    setSelectedTaskId,
-    tagPool,
-    registerTags,
-    resolveTaskTags,
-  } = useTaskContext();
+  const { tasks, setTasks, selectedTaskId, setSelectedTaskId, tagPool, registerTags, resolveTaskTags } =
+    useTaskContext();
   const { now } = useUIContext();
 
   const {
@@ -38,13 +33,13 @@ export function TaskModal() {
     saveDraftTask,
     closeTaskModal,
     discardDraftTask,
-    deleteDraftTask,
+    deleteDraftTask
   } = useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskId });
 
   const [modalSections, setModalSections] = useState<ModalSections>({
     timer: false,
     notes: false,
-    activity: false,
+    activity: false
   });
 
   const clockFormat = settings.clockFormat;
@@ -106,6 +101,7 @@ export function TaskModal() {
 
   const handleSaveDraftTask = () => {
     saveDraftTask();
+    closeTaskModal();
   };
 
   const handleDeleteDraftTask = () => {
@@ -122,11 +118,11 @@ export function TaskModal() {
     if (!draftTask) return [];
     return suggestTaskTags({
       title: draftTask.title,
+      existingTags: draftTask.tags || [],
       roles,
-      tagPool,
-      resolveTags: resolveTaskTags,
+      tagPool
     });
-  }, [draftTask, roles, tagPool, resolveTaskTags]);
+  }, [draftTask, roles, tagPool]);
 
   if (!draftTask) return null;
 
@@ -136,7 +132,7 @@ export function TaskModal() {
       data-testid="task-modal-overlay"
       className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) closeTaskModal();
+        if (event.target === event.currentTarget) closeTaskModal({ promptToSave: true });
       }}
     >
       <ThemedSurface
@@ -150,12 +146,17 @@ export function TaskModal() {
             <div className="rounded-lg bg-indigo-500/10 p-1.5 text-indigo-600 dark:text-indigo-400">
               <ListTodo size={18} />
             </div>
-            <h3 className="truncate text-base font-bold text-slate-900 dark:text-white">
-              Task Details
-            </h3>
-            {draftSaveStatus === 'saving' && (
-              <span className="text-[10px] text-slate-400">saving…</span>
-            )}
+            <h3 className="truncate text-base font-bold text-slate-900 dark:text-white">Task Details</h3>
+            <span data-testid="task-save-state" className="text-[10px] text-slate-400">
+              {draftSaveStatus === 'saving'
+                ? 'Saving...'
+                : hasUnsavedChanges
+                  ? 'Unsaved changes'
+                  : draftSaveStatus === 'saved' && timeSinceSave !== null
+                    ? `Saved ${timeSinceSave === 0 ? 'just now' : `${timeSinceSave}s ago`}`
+                    : 'Saved'}
+            </span>
+            {draftSaveStatus === 'saving' && <span className="text-[10px] text-slate-400">saving…</span>}
             {draftSaveStatus === 'saved' && timeSinceSave !== null && (
               <span className="hidden text-[10px] text-slate-400 sm:inline">
                 saved {timeSinceSave === 0 ? 'just now' : `${timeSinceSave}s ago`}
@@ -172,8 +173,9 @@ export function TaskModal() {
               <Trash2 size={16} />
             </button>
             <button
-              onClick={() => closeTaskModal()}
+              onClick={() => closeTaskModal({ promptToSave: true })}
               aria-label="Close task details"
+              title="Close"
               className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
             >
               <X size={16} />
@@ -196,6 +198,7 @@ export function TaskModal() {
             modalSections={modalSections}
             setModalSections={setModalSections}
             suggestedTags={smartSuggestions}
+            sectionButtonClass="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900/70"
             toggleMainTimer={toggleMainTimer}
             addTaskLog={addTaskLog}
             setTaskLog={setTaskLog}
@@ -213,16 +216,16 @@ export function TaskModal() {
             </div>
           )}
           <button
-            onClick={() => closeTaskModal()}
+            onClick={() => closeTaskModal({ promptToSave: true })}
             className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
           >
-            Cancel
+            Discard
           </button>
           <button
             onClick={handleSaveDraftTask}
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
-            Save
+            Save task
           </button>
         </div>
       </ThemedSurface>
@@ -240,9 +243,7 @@ export function TaskModal() {
             variant="modal"
             className="w-full max-w-sm rounded-2xl border border-slate-200 p-5 shadow-2xl dark:border-slate-800"
           >
-            <h4 className="text-base font-bold text-slate-950 dark:text-white">
-              Delete task?
-            </h4>
+            <h4 className="text-base font-bold text-slate-950 dark:text-white">Delete task?</h4>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
               This action cannot be undone. Task duration history will be deleted.
             </p>
@@ -277,11 +278,9 @@ export function TaskModal() {
             variant="modal"
             className="w-full max-w-sm rounded-2xl border border-slate-200 p-5 shadow-2xl dark:border-slate-800"
           >
-            <h4 className="text-base font-bold text-slate-950 dark:text-white">
-              Discard modifications?
-            </h4>
+            <h4 className="text-base font-bold text-slate-950 dark:text-white">Save changes?</h4>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              You have unsaved changes. Closing will discard them.
+              You have unsaved changes. Save them before closing or discard the edit.
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
@@ -295,6 +294,15 @@ export function TaskModal() {
                 className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-rose-700"
               >
                 Discard
+              </button>
+              <button
+                onClick={() => {
+                  saveDraftTask();
+                  closeTaskModal();
+                }}
+                className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+              >
+                Save changes
               </button>
             </div>
           </ThemedSurface>

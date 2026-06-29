@@ -14,11 +14,12 @@ vi.mock('../../contexts/ProfileContext', async (importOriginal) => {
         imported: [{ id: '1', title: 'Task 1', status: 'backlog' }],
         newTasks: [{ id: '1', title: 'Task 1', status: 'backlog' }],
         updatedTasks: [],
-        unchangedTasks: [],
+        unchangedTasks: []
       },
       setImportPreview: vi.fn(),
       confirmImportTasks: vi.fn(),
-    }),
+      profiles: []
+    })
   };
 });
 
@@ -29,7 +30,7 @@ describe('ImportPreviewDialog', () => {
     expect(screen.getByText('Import preview')).toBeInTheDocument();
     expect(screen.getByText('Backlog')).toBeInTheDocument();
     expect(screen.getByText('1')).toBeInTheDocument(); // Count of new tasks
-    
+
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /merge import/i })).toBeInTheDocument();
   });

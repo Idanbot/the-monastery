@@ -6,7 +6,7 @@ export const getWeekDates = (date: Date): Date[] => {
   // Adjust so Monday is 0, Sunday is 6
   const diff = current.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(current.setDate(diff));
-  
+
   return Array.from({ length: 7 }).map((_, i) => {
     const next = new Date(monday);
     next.setDate(monday.getDate() + i);
@@ -27,9 +27,7 @@ export const getTasksForDate = (tasks: Task[], date: string): Task[] => {
 export const getUnscheduledTasks = (tasks: Task[]): Task[] => {
   return tasks.filter(
     (task) =>
-      task.status !== 'done' &&
-      task.status !== 'rejected' &&
-      (!task.scheduledDate || !task.scheduledStart)
+      task.status !== 'done' && task.status !== 'rejected' && (!task.scheduledDate || !task.scheduledStart)
   );
 };
 

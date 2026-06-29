@@ -32,16 +32,12 @@ const visibleVersion = (version: string) => {
 };
 
 export function AppHeader() {
-  const {
-    settings,
-    isSidebarVisible,
-    toggleSidebarVisible,
-    toggleSidebarWidget,
-    openSettings
-  } = useSettingsContext();
+  const { settings, isSidebarVisible, toggleSidebarVisible, toggleSidebarWidget, openSettings } =
+    useSettingsContext();
 
   const {
     addTask,
+    setSelectedTaskId,
     tagPool,
     activeFilters,
     setActiveFilters,
@@ -63,15 +59,8 @@ export function AppHeader() {
     profileError
   } = useProfileContext();
 
-  const {
-    view,
-    setView,
-    isOnline,
-    sidebarOpen,
-    setSidebarOpen,
-    setIsShortcutHelpOpen,
-    setMonkMode
-  } = useUIContext();
+  const { view, setView, isOnline, sidebarOpen, setSidebarOpen, setIsShortcutHelpOpen, setMonkMode } =
+    useUIContext();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { refs: filterRefs, floatingStyles: filterFloatingStyles } = useFloating({
@@ -288,7 +277,9 @@ export function AppHeader() {
         </button>
         <button
           aria-label="Backlog task"
-          onClick={() => addTask('backlog')}
+          onClick={() => {
+            addTask('backlog', {}, (newTask) => setSelectedTaskId(newTask.id));
+          }}
           className="flex shrink-0 items-center gap-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm md:px-4 md:py-2"
         >
           <Plus size={16} /> <span className="hidden sm:inline">Backlog Task</span>

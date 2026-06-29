@@ -10,20 +10,20 @@ interface UnscheduledSidebarProps {
   onSelectTask: (taskId: string) => void;
 }
 
-export const UnscheduledSidebar: React.FC<UnscheduledSidebarProps> = ({
-  tasks,
-  onAddTask,
-  onSelectTask,
-}) => {
+export const UnscheduledSidebar: React.FC<UnscheduledSidebarProps> = ({ tasks, onAddTask, onSelectTask }) => {
   const unscheduled = getUnscheduledTasks(tasks);
 
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>, taskId: string) => {
     event.dataTransfer.setData('text/plain', taskId);
     event.dataTransfer.effectAllowed = 'move';
+    window.sessionStorage.setItem('the-monastery-dragged-task-id', taskId);
   };
 
   return (
-    <aside className="w-80 shrink-0 border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col h-full overflow-hidden" data-testid="unscheduled-sidebar">
+    <aside
+      className="w-80 shrink-0 border-l border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col h-full overflow-hidden"
+      data-testid="unscheduled-sidebar"
+    >
       <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 shrink-0">
         <h3 className="font-bold text-sm text-slate-800 dark:text-white">Unscheduled</h3>
         <button

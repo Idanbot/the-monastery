@@ -8,26 +8,11 @@ import { useTaskContext } from '../../contexts/TaskContext';
 import { useUIContext } from '../../contexts/UIContext';
 
 export function WorkspaceSidebar() {
-  const {
-    settings,
-    startResize,
-    openSettings,
-    isSidebarVisible
-  } = useSettingsContext();
+  const { settings, startResize, openSettings, isSidebarVisible } = useSettingsContext();
 
-  const {
-    currentTask,
-    setSelectedTaskId,
-    addTask,
-    updateTaskTimer,
-    completeTask
-  } = useTaskContext();
+  const { currentTask, setSelectedTaskId, addTask, updateTaskTimer, completeTask } = useTaskContext();
 
-  const {
-    now,
-    sidebarOpen,
-    setSidebarOpen
-  } = useUIContext();
+  const { now, sidebarOpen, setSidebarOpen } = useUIContext();
 
   return (
     <>

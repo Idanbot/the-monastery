@@ -11,9 +11,7 @@ export function renderWithProviders(ui: React.ReactElement, { systemIsDark = fal
       <SettingsProvider systemIsDark={systemIsDark}>
         <TaskProvider>
           <ProfileProvider>
-            <UIProvider>
-              {children}
-            </UIProvider>
+            <UIProvider>{children}</UIProvider>
           </ProfileProvider>
         </TaskProvider>
       </SettingsProvider>

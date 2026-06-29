@@ -49,14 +49,14 @@ vi.mock('../../hooks/useTaskDraft', () => ({
     saveDraftTask: mockSaveDraftTask,
     closeTaskModal: mockCloseTaskModal,
     discardDraftTask: mockDiscardDraftTask,
-    deleteDraftTask: mockDeleteDraftTask,
+    deleteDraftTask: mockDeleteDraftTask
   })
 }));
 
 vi.mock('../../contexts/SettingsContext', () => ({
   useSettingsContext: () => ({
     settings: defaultSettings,
-    isDarkMode: false,
+    isDarkMode: false
   })
 }));
 
@@ -68,13 +68,13 @@ vi.mock('../../contexts/TaskContext', () => ({
     setSelectedTaskId: vi.fn(),
     tagPool: ['import', 'backend'],
     registerTags: vi.fn(),
-    resolveTaskTags: (t: any) => t,
+    resolveTaskTags: (t: any) => t
   })
 }));
 
 vi.mock('../../contexts/UIContext', () => ({
   useUIContext: () => ({
-    now: new Date('2026-06-23T09:30:00.000Z').getTime(),
+    now: new Date('2026-06-23T09:30:00.000Z').getTime()
   })
 }));
 
@@ -106,7 +106,7 @@ describe('TaskModal', () => {
 
     // In TaskModal.tsx, hasUnsavedChanges triggers "Unsaved modifications" text in the footer.
     expect(screen.getByText(/unsaved modifications/i)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^save$/i }));
+    await user.click(screen.getByRole('button', { name: /save task/i }));
 
     expect(mockSaveDraftTask).toHaveBeenCalledTimes(1);
   });
@@ -124,12 +124,12 @@ describe('TaskModal', () => {
   it('adds a note through the notes section without opening activity by default', async () => {
     const user = userEvent.setup();
     setupMockState({
-      draftNote: 'Remember the rollback plan',
+      draftNote: 'Remember the rollback plan'
     });
 
     render(<TaskModal />);
 
-    // Click on Note input to expand/add
+    await user.click(screen.getByRole('button', { name: /^notes$/i }));
     await user.click(screen.getByRole('button', { name: /add note/i }));
 
     expect(mockUpdateDraftTask).toHaveBeenCalledWith({

@@ -5,7 +5,7 @@ import {
   getUnscheduledTasks,
   snapToSlot,
   clockTimeToMinutes,
-  minutesToClockTime,
+  minutesToClockTime
 } from './calendarView';
 import type { Task } from './types';
 
@@ -38,7 +38,7 @@ describe('calendarView domain', () => {
         { id: '1', status: 'backlog', scheduledDate: '2026-06-29', scheduledStart: '09:00' },
         { id: '2', status: 'done', scheduledDate: '2026-06-29', scheduledStart: '10:00' },
         { id: '3', status: 'backlog', scheduledDate: '2026-06-30', scheduledStart: '09:00' },
-        { id: '4', status: 'backlog', scheduledDate: '2026-06-29', scheduledStart: '' },
+        { id: '4', status: 'backlog', scheduledDate: '2026-06-29', scheduledStart: '' }
       ];
       const result = getTasksForDate(tasks as Task[], '2026-06-29');
       expect(result).toHaveLength(1);
@@ -52,11 +52,11 @@ describe('calendarView domain', () => {
         { id: '1', status: 'backlog', scheduledDate: '', scheduledStart: '' },
         { id: '2', status: 'backlog', scheduledDate: '2026-06-29', scheduledStart: '' }, // Unscheduled since start is empty
         { id: '3', status: 'backlog', scheduledDate: '2026-06-29', scheduledStart: '09:00' }, // Scheduled
-        { id: '4', status: 'done', scheduledDate: '', scheduledStart: '' }, // Excluded status
+        { id: '4', status: 'done', scheduledDate: '', scheduledStart: '' } // Excluded status
       ];
       const result = getUnscheduledTasks(tasks as Task[]);
       expect(result).toHaveLength(2);
-      expect(result.map(t => t.id)).toEqual(['1', '2']);
+      expect(result.map((t) => t.id)).toEqual(['1', '2']);
     });
   });
 

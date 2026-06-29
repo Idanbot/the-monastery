@@ -38,7 +38,7 @@ function AppShell() {
     modalEffectStyle,
     isSettingsOpen,
     setIsSettingsOpen,
-    settingsInitialSection,
+    settingsInitialSection
   } = useSettingsContext();
 
   const {
@@ -53,16 +53,11 @@ function AppShell() {
     profileAction,
     setProfileAction,
     resetActiveProfile,
-    removeActiveProfile,
+    removeActiveProfile
   } = useProfileContext();
 
-  const {
-    isShortcutHelpOpen,
-    setIsShortcutHelpOpen,
-    isCommandOpen,
-    setIsCommandOpen,
-    commandPaletteGroups,
-  } = useUIContext();
+  const { isShortcutHelpOpen, setIsShortcutHelpOpen, isCommandOpen, setIsCommandOpen, commandPaletteGroups } =
+    useUIContext();
 
   return (
     <div
@@ -77,15 +72,18 @@ function AppShell() {
         ...modalEffectStyle,
         '--resize-handle-thickness': String(settings.resizeHandleThickness || 4) + 'px',
         '--resize-handle-length': String(settings.resizeHandleLength || 48) + 'px',
-        '--resize-handle-color': settings.resizeHandleColor || '#94a3b8',
+        '--resize-handle-color': settings.resizeHandleColor || '#94a3b8'
       })}
     >
       <div className="app-frame h-full w-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans overflow-hidden transition-colors duration-200">
         <Toaster richColors position="top-right" theme={isDarkMode ? 'dark' : 'light'} />
-        
+
         <AppHeader />
 
-        {(persistenceStatus === 'error' || persistenceStatus === 'offline' || profileError || syncConflict) && (
+        {(persistenceStatus === 'error' ||
+          persistenceStatus === 'offline' ||
+          profileError ||
+          syncConflict) && (
           <div
             data-testid="sync-recovery-notice"
             className={
@@ -143,14 +141,11 @@ function AppShell() {
         </main>
 
         <ShortcutHelpDialog open={isShortcutHelpOpen} onClose={() => setIsShortcutHelpOpen(false)} />
-        
+
         {isSettingsOpen && (
-          <SettingsModal
-            initialSection={settingsInitialSection}
-            onClose={() => setIsSettingsOpen(false)}
-          />
+          <SettingsModal initialSection={settingsInitialSection} onClose={() => setIsSettingsOpen(false)} />
         )}
-        
+
         <ProfileActionDialog
           action={profileAction}
           profileName={activeProfile?.name}
@@ -163,7 +158,7 @@ function AppShell() {
         <ImportPreviewDialog />
 
         <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} groups={commandPaletteGroups} />
-        
+
         <TaskModal />
       </div>
     </div>

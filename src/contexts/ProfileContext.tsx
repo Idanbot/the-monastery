@@ -28,13 +28,13 @@ interface ProfileContextType {
   createProfile: () => void;
   resetActiveProfile: () => void;
   removeActiveProfile: () => void;
-  
+
   profileImportPreview: any;
   setProfileImportPreview: (preview: any) => void;
   exportActiveProfile: () => void;
   importActiveProfile: (file: any) => void;
   confirmProfileImport: () => void;
-  
+
   importPreview: any;
   setImportPreview: (preview: any) => void;
   planningImportPreview: any;
@@ -44,7 +44,7 @@ interface ProfileContextType {
   importPlanningData: (file: any) => void;
   confirmImportTasks: () => void;
   confirmPlanningImport: () => void;
-  
+
   localBackups: any[];
   restoreLocalBackup: (id: string) => void;
   removeLocalBackup: (id: string) => void;
@@ -52,7 +52,7 @@ interface ProfileContextType {
   backupData: () => void;
   exportTaskSchema: () => void;
   exportThemeRecipe: () => void;
-  
+
   importProfileInputRef: React.RefObject<HTMLInputElement | null>;
   importInputRef: React.RefObject<HTMLInputElement | null>;
   importCalendarInputRef: React.RefObject<HTMLInputElement | null>;
@@ -95,7 +95,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     reloadActiveProfile,
     createProfile,
     resetActiveProfile,
-    removeActiveProfile,
+    removeActiveProfile
   } = useProfilesSync({ tasks, setTasks, settings, setSettings, setSelectedTaskId });
 
   const {
@@ -103,7 +103,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setProfileImportPreview,
     exportActiveProfile,
     importActiveProfile,
-    confirmProfileImport,
+    confirmProfileImport
   } = useProfileImportExport({
     tasks,
     setTasks,
@@ -112,7 +112,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     activeProfile,
     activeProfileId,
     setSelectedTaskId,
-    importProfileInputRef,
+    importProfileInputRef
   });
 
   const {
@@ -127,7 +127,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     importCalendarTasks,
     importPlanningData,
     confirmImportTasks,
-    confirmPlanningImport,
+    confirmPlanningImport
   } = useImportFlows({ tasks, setTasks, setSettings, setSelectedTaskId });
 
   const {
@@ -137,7 +137,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     exportTasks,
     backupData,
     exportTaskSchema,
-    exportThemeRecipe,
+    exportThemeRecipe
   } = useBackupActions({
     tasks,
     setTasks,
@@ -147,7 +147,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     activeProfileId,
     isBackendAvailable,
     setSelectedTaskId,
-    setIsSettingsOpen,
+    setIsSettingsOpen
   });
 
   useLocalFallbackPersistence({
@@ -155,7 +155,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setTasks,
     settings,
     setSettings,
-    isProfileReady,
+    isProfileReady
   });
 
   const value = useMemo(
@@ -204,7 +204,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       importProfileInputRef,
       importInputRef,
       importCalendarInputRef,
-      importPlanningInputRef,
+      importPlanningInputRef
     }),
     [
       isBackendAvailable,
@@ -250,7 +250,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       exportThemeRecipe,
       importInputRef,
       importCalendarInputRef,
-      importPlanningInputRef,
+      importPlanningInputRef
     ]
   );
 

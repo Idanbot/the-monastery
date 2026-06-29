@@ -20,6 +20,7 @@ export const CalendarTaskBlock: React.FC<CalendarTaskBlockProps> = ({ task, onSe
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>) => {
     event.dataTransfer.setData('text/plain', task.id);
     event.dataTransfer.effectAllowed = 'move';
+    window.sessionStorage.setItem('the-monastery-dragged-task-id', task.id);
   };
 
   return (
@@ -34,7 +35,7 @@ export const CalendarTaskBlock: React.FC<CalendarTaskBlockProps> = ({ task, onSe
       <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
         {task.title || 'Untitled'}
       </div>
-      
+
       {duration >= 45 && (
         <div className="flex items-center justify-between gap-2 mt-1">
           <UrgencyBadge urgency={task.urgency} />

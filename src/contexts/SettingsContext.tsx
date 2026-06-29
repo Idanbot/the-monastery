@@ -38,7 +38,7 @@ export const useSettingsContext = () => {
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode; systemIsDark?: boolean }> = ({
   children,
-  systemIsDark = false,
+  systemIsDark = false
 }) => {
   const [settings, setSettings] = useState<AppSettings>(loadInitialLocalSettings);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -61,40 +61,37 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode; systemIsDar
           tags: [],
           dailyTargetHours: 0,
           weeklyTargetHours: 0,
-          monthlyTargetHours: 0,
-        },
-      ],
+          monthlyTargetHours: 0
+        }
+      ]
     }));
   }, []);
 
   const updateRole = useCallback((roleId: string, updates: Partial<any>) => {
     setSettings((prev) => ({
       ...prev,
-      roles: (prev.roles || []).map((role) => (role.id === roleId ? { ...role, ...updates } : role)),
+      roles: (prev.roles || []).map((role) => (role.id === roleId ? { ...role, ...updates } : role))
     }));
   }, []);
 
   const removeRole = useCallback((roleId: string) => {
     setSettings((prev) => ({
       ...prev,
-      roles: (prev.roles || []).filter((role) => role.id !== roleId),
+      roles: (prev.roles || []).filter((role) => role.id !== roleId)
     }));
   }, []);
 
-  const toggleBoardLane = useCallback(
-    (status: TaskStatus) => {
-      setSettings((previous) => {
-        const collapsed = previous.collapsedBoardLanes || [];
-        return {
-          ...previous,
-          collapsedBoardLanes: collapsed.includes(status)
-            ? collapsed.filter((item) => item !== status)
-            : [...collapsed, status],
-        };
-      });
-    },
-    []
-  );
+  const toggleBoardLane = useCallback((status: TaskStatus) => {
+    setSettings((previous) => {
+      const collapsed = previous.collapsedBoardLanes || [];
+      return {
+        ...previous,
+        collapsedBoardLanes: collapsed.includes(status)
+          ? collapsed.filter((item) => item !== status)
+          : [...collapsed, status]
+      };
+    });
+  }, []);
 
   const toggleSidebarVisible = useCallback(() => {
     setSettings((prev) => ({ ...prev, sidebarVisible: prev.sidebarVisible === false }));
@@ -105,7 +102,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode; systemIsDar
       ...prev,
       sidebarWidgets: prev.sidebarWidgets.includes(widget)
         ? prev.sidebarWidgets.filter((item) => item !== widget)
-        : Array.from(new Set([...prev.sidebarWidgets, widget])),
+        : Array.from(new Set([...prev.sidebarWidgets, widget]))
     }));
   }, []);
 
@@ -133,7 +130,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode; systemIsDar
       setIsSettingsOpen,
       settingsInitialSection,
       setSettingsInitialSection,
-      openSettings,
+      openSettings
     }),
     [
       settings,
@@ -150,7 +147,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode; systemIsDar
       toggleSidebarWidget,
       isSettingsOpen,
       settingsInitialSection,
-      openSettings,
+      openSettings
     ]
   );
 
