@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { defaultSettings, normalizeTask } from '../../domain/tasks';
 import { KanbanBoard, MobileFocusView, TaskListView } from './TaskBoard';
@@ -30,6 +31,45 @@ const baseProps = (settings = defaultSettings) => ({
 });
 
 describe('KanbanBoard layout controls', () => {
+  it('hides and restores every lane body when its collapse button is toggled', () => {
+    const Harness = () => {
+      const [settings, setSettings] = useState({ ...defaultSettings, layoutPreset: 'full' as const });
+
+      return (
+        <KanbanBoard
+          {...baseProps(settings)}
+          onToggleLane={(status) =>
+            setSettings((previous) => ({
+              ...previous,
+              collapsedBoardLanes: previous.collapsedBoardLanes.includes(status)
+                ? previous.collapsedBoardLanes.filter((item) => item !== status)
+                : [...previous.collapsedBoardLanes, status]
+            }))
+          }
+        />
+      );
+    };
+
+    render(<Harness />);
+
+    for (const [status, label, taskTitle] of [
+      ['backlog', 'Backlog', 'Backlog item'],
+      ['in-progress', 'In-Progress', 'Progress item'],
+      ['done', 'Done', 'Done item'],
+      ['rejected', 'Rejected', 'Rejected item']
+    ]) {
+      const column = screen.getByTestId(`board-column-${status}`);
+
+      fireEvent.click(screen.getByRole('button', { name: `Collapse ${label} lane` }));
+      expect(column).toHaveAttribute('data-collapsed', 'true');
+      expect(within(column).queryByText(taskTitle)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: `Expand ${label} lane` }));
+      expect(column).toHaveAttribute('data-collapsed', 'false');
+      expect(within(column).getByText(taskTitle)).toBeInTheDocument();
+    }
+  });
+
   it('renders compact split order and resize handles from settings', () => {
     const props = baseProps({
       ...defaultSettings,
