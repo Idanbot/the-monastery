@@ -9,9 +9,9 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "moduleDetection": "force",
-    "rootDir": "server",
+    "rootDir": ".",
     "outDir": "server-dist",
     "types": ["node"]
   },
-  "include": ["server/index.ts"]
+  "include": ["server/index.ts", "shared/**/*.ts"]
 }

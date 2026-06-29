@@ -1,7 +1,7 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { defaultSettings, normalizeTask } from '../../domain/tasks';
-import { KanbanBoard, MobileFocusView } from './TaskBoard';
+import { KanbanBoard, MobileFocusView, TaskListView } from './TaskBoard';
 
 const baseProps = (settings = defaultSettings) => ({
   filteredTasks: [
@@ -24,7 +24,9 @@ const baseProps = (settings = defaultSettings) => ({
   keyboardFocusedTaskId: null,
   now: Date.now(),
   startResize: vi.fn(),
-  onToggleLane: vi.fn()
+  onToggleLane: vi.fn(),
+  onMoveTask: vi.fn(),
+  onReorderTask: vi.fn()
 });
 
 describe('KanbanBoard layout controls', () => {
@@ -78,7 +80,7 @@ describe('KanbanBoard layout controls', () => {
   });
   it('collapses a lane and delegates header toggles for persistence', () => {
     const onToggleLane = vi.fn();
-    render(
+    const { rerender } = render(
       <KanbanBoard
         {...baseProps({ ...defaultSettings, collapsedBoardLanes: ['done'] })}
         onToggleLane={onToggleLane}
@@ -87,8 +89,67 @@ describe('KanbanBoard layout controls', () => {
 
     expect(screen.getByTestId('board-column-done')).toHaveAttribute('data-collapsed', 'true');
     expect(within(screen.getByTestId('board-column-done')).queryByText('Done item')).not.toBeInTheDocument();
+    expect(
+      (document.querySelector('#compact-right-col') as HTMLElement).style.getPropertyValue(
+        '--kanban-stack-template'
+      )
+    ).toBe('var(--collapsed-lane-size, 3.5rem) var(--resize-handle-thickness, 4px) 50fr');
     screen.getByRole('button', { name: /expand done lane/i }).click();
     expect(onToggleLane).toHaveBeenCalledWith('done');
+
+    rerender(<KanbanBoard {...baseProps({ ...defaultSettings, collapsedBoardLanes: [] })} />);
+    expect(
+      (document.querySelector('#compact-right-col') as HTMLElement).style.getPropertyValue(
+        '--kanban-stack-template'
+      )
+    ).toBe('50fr var(--resize-handle-thickness, 4px) 50fr');
+  });
+
+  it('minimizes a full-layout column and restores its configured width when expanded', () => {
+    const configuredSettings = {
+      ...defaultSettings,
+      layoutPreset: 'full' as const,
+      columnWidths: { ...defaultSettings.columnWidths, backlog: 37 }
+    };
+    const { rerender } = render(
+      <KanbanBoard {...baseProps({ ...configuredSettings, collapsedBoardLanes: ['backlog'] })} />
+    );
+
+    expect(
+      (screen.getByTestId('kanban-board').firstElementChild as HTMLElement).style.getPropertyValue(
+        '--kanban-grid-template'
+      )
+    ).toBe(
+      'var(--collapsed-lane-size, 3.5rem) var(--resize-handle-thickness, 4px) 25fr var(--resize-handle-thickness, 4px) 25fr var(--resize-handle-thickness, 4px) 25fr'
+    );
+
+    rerender(<KanbanBoard {...baseProps({ ...configuredSettings, collapsedBoardLanes: [] })} />);
+    expect(
+      (screen.getByTestId('kanban-board').firstElementChild as HTMLElement).style.getPropertyValue(
+        '--kanban-grid-template'
+      )
+    ).toBe(
+      '37fr var(--resize-handle-thickness, 4px) 25fr var(--resize-handle-thickness, 4px) 25fr var(--resize-handle-thickness, 4px) 25fr'
+    );
+  });
+
+  it('offers keyboard and touch-friendly alternatives to dragging tasks', () => {
+    const onMoveTask = vi.fn();
+    const onReorderTask = vi.fn();
+    render(<KanbanBoard {...baseProps()} onMoveTask={onMoveTask} onReorderTask={onReorderTask} />);
+
+    const backlogCard = screen.getByLabelText(/backlog item, backlog/i);
+    backlogCard.focus();
+    fireEvent.keyDown(backlogCard, { key: 'ArrowRight', altKey: true });
+    expect(onMoveTask).toHaveBeenCalledWith('backlog', 'in-progress');
+    expect(screen.getByRole('status')).toHaveTextContent('Backlog item moved to In-Progress');
+
+    screen.getByRole('button', { name: /move backlog item later/i }).click();
+    expect(onReorderTask).toHaveBeenCalledWith('backlog', 'later');
+
+    const laneSelect = screen.getByRole('combobox', { name: /move backlog item to lane/i });
+    fireEvent.change(laneSelect, { target: { value: 'done' } });
+    expect(onMoveTask).toHaveBeenCalledWith('backlog', 'done');
   });
 });
 
@@ -131,5 +192,22 @@ describe('MobileFocusView actions', () => {
     expect(onCompleteTask).toHaveBeenCalledWith('current');
     expect(onRejectTask).toHaveBeenCalledWith('current');
     expect(onNextTask).toHaveBeenCalledWith('next');
+  });
+});
+
+describe('TaskListView virtualization', () => {
+  it('mounts only the visible window for a large task list', () => {
+    const tasks = Array.from({ length: 120 }, (_, index) =>
+      normalizeTask({ id: `task-${index}`, title: `Task ${index}`, status: 'backlog' })
+    );
+    render(<TaskListView filteredTasks={tasks} setSelectedTaskId={vi.fn()} now={Date.now()} />);
+
+    const list = screen.getByTestId('virtualized-task-list');
+    const totalItems = Number(list.getAttribute('data-total-items'));
+    const virtualItems = Number(list.getAttribute('data-virtual-items'));
+    expect(virtualItems).toBeGreaterThan(0);
+    expect(virtualItems).toBeLessThan(totalItems);
+    expect(within(list).getByText('Task 0')).toBeInTheDocument();
+    expect(within(list).queryByText('Task 119')).not.toBeInTheDocument();
   });
 });

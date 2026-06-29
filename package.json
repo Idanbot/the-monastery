@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "tsx watch server/index.ts",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.strict.json",
     "build": "tsc -p tsconfig.app.json --noEmit && vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "build:all": "npm run build && npm run build:server",
@@ -19,11 +19,12 @@
     "security:audit": "npm audit --audit-level=high",
     "dockerfile:lint": "node scripts/run-hadolint.mjs",
     "docker:smoke": "node scripts/docker-smoke.mjs",
-    "start": "node server-dist/index.js",
+    "start": "node server-dist/server/index.js",
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "env -u NO_COLOR playwright test",
+    "performance:budget": "npm run build && node scripts/check-performance-budgets.mjs",
     "test:watch": "vitest",
     "prepare": "node -e \"const fs=require('fs');const cp=require('child_process');const p='node_modules/simple-git-hooks/cli.js';if(fs.existsSync('.git')&&fs.existsSync(p)){const r=cp.spawnSync(process.execPath,[p],{stdio:'inherit'});process.exit(r.status??1)}\""
   },
@@ -69,6 +70,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.0",
     "@tailwindcss/postcss": "^4.3.1",

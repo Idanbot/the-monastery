@@ -15,7 +15,7 @@ describe('usePersistenceNotifier', () => {
     const { rerender } = renderHook(
       ({ status, savedAt }: { status: PersistenceStatus; savedAt: Date | null }) =>
         usePersistenceNotifier(status, savedAt),
-      { initialProps: { status: 'saving' as const, savedAt: null as Date | null } }
+      { initialProps: { status: 'saving' as PersistenceStatus, savedAt: null as Date | null } }
     );
     rerender({ status: 'saved', savedAt: new Date('2026-06-27T09:00:00.000Z') });
     expect(toast.success).not.toHaveBeenCalled();
@@ -24,7 +24,7 @@ describe('usePersistenceNotifier', () => {
   it('keeps failure and offline notifications', () => {
     const { rerender } = renderHook(
       ({ status }: { status: PersistenceStatus }) => usePersistenceNotifier(status, null),
-      { initialProps: { status: 'idle' as const } }
+      { initialProps: { status: 'idle' as PersistenceStatus } }
     );
     rerender({ status: 'offline' });
     rerender({ status: 'error' });

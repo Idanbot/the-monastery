@@ -74,7 +74,7 @@ it('renders analytics with a chart component', async () => {
 
   await user.click(screen.getByRole('button', { name: /analytics/i }));
 
-  expect(screen.getByTestId('analytics-status-chart')).toBeInTheDocument();
+  expect(await screen.findByTestId('analytics-status-chart', {}, { timeout: 5000 })).toBeInTheDocument();
 });
 
 it('shows virtualized mobile task list', async () => {
@@ -201,7 +201,7 @@ it('shows weekly role balance insight', async () => {
 
   await user.click(screen.getByRole('button', { name: /analytics/i }));
 
-  expect(screen.getByText(/weekly role balance/i)).toBeInTheDocument();
+  expect(await screen.findByText(/weekly role balance/i)).toBeInTheDocument();
   expect(screen.getByText(/4.0h left/i)).toBeInTheDocument();
 });
 

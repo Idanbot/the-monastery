@@ -88,7 +88,7 @@ describe('useBackupActions', () => {
       await backend.result.current.backupData();
     });
 
-    expect(apiRequest).toHaveBeenCalledWith('/api/backup');
+    expect(apiRequest).toHaveBeenCalledWith('/api/backup', {}, expect.anything());
     expect(downloadJson).toHaveBeenLastCalledWith(
       expect.stringMatching(/^the-monastery-backup-/),
       expect.objectContaining({ schemaVersion: 1 })

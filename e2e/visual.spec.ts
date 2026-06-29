@@ -70,3 +70,42 @@ test('mobile task board remains visually stable', async ({ page }) => {
     maxDiffPixels: 1000
   });
 });
+
+test('collapsed full-layout lanes remain visually stable', async ({ page }) => {
+  await page.goto('/');
+  await stabilizePage(page);
+  await createTask(page, 'Collapsed lane task');
+  await openSettingsSection(page, 'Board');
+  await page.getByLabel('Board layout', { exact: true }).selectOption('full');
+  await page.getByRole('checkbox', { name: 'Collapse Backlog lane' }).check();
+  await page.getByRole('checkbox', { name: 'Collapse Done lane' }).check();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('kanban-board')).toHaveScreenshot('collapsed-columns.png', {
+    ...screenshotOptions,
+    maxDiffPixels: 120
+  });
+});
+
+test('keyboard task movement remains visually stable', async ({ page }) => {
+  await page.goto('/');
+  await stabilizePage(page);
+  await createTask(page, 'Keyboard movement task');
+  const card = page.getByLabel(/Keyboard movement task, Backlog/i);
+  await card.focus();
+  await page.keyboard.press('Alt+ArrowRight');
+  await expect(page.getByTestId('board-column-in-progress')).toContainText('Keyboard movement task');
+  await expect(page.getByTestId('kanban-board')).toHaveScreenshot('keyboard-task-movement.png', {
+    ...screenshotOptions,
+    maxDiffPixels: 120
+  });
+});
+
+test('expanded mobile board controls remain visually stable', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await stabilizePage(page);
+  const controls = page.getByTestId('mobile-board-controls');
+  await controls.getByText('Board layout').click();
+  await controls.getByRole('button', { name: /customize lane order/i }).click();
+  await expect(controls).toHaveScreenshot('mobile-board-controls.png', screenshotOptions);
+});

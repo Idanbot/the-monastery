@@ -76,6 +76,31 @@ export function useBoardController(setTasks) {
     event.target.style.opacity = '1';
   };
 
+  const moveTask = (taskId: string, status: TaskStatus) => {
+    setTasks((previous) => executeTaskCommand(previous, { type: 'move', taskId, status }).tasks);
+  };
+
+  const reorderTask = (taskId: string, direction: 'earlier' | 'later') => {
+    setTasks((previous) => {
+      const task = previous.find((item) => item.id === taskId);
+      if (!task) return previous;
+      const laneIndexes = previous.reduce((indexes: number[], item, index) => {
+        if (item.status === task.status) indexes.push(index);
+        return indexes;
+      }, []);
+      const currentLaneIndex = laneIndexes.findIndex((index) => previous[index].id === taskId);
+      const targetLaneIndex = currentLaneIndex + (direction === 'earlier' ? -1 : 1);
+      if (currentLaneIndex < 0 || targetLaneIndex < 0 || targetLaneIndex >= laneIndexes.length) {
+        return previous;
+      }
+      const next = [...previous];
+      const currentIndex = laneIndexes[currentLaneIndex];
+      const targetIndex = laneIndexes[targetLaneIndex];
+      [next[currentIndex], next[targetIndex]] = [next[targetIndex], next[currentIndex]];
+      return next;
+    });
+  };
+
   const cycleSort = (status: TaskStatus) => {
     setColumnSorts((previous) => {
       const current = previous[status];
@@ -93,6 +118,8 @@ export function useBoardController(setTasks) {
     setDragOverInfo,
     handleDragStart,
     handleDragOver,
-    handleDrop
+    handleDrop,
+    moveTask,
+    reorderTask
   };
 }

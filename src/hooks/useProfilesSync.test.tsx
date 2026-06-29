@@ -5,6 +5,7 @@ import { apiRequest } from '../lib/api';
 import { defaultSettings, normalizeTask } from '../domain/tasks';
 import { useProfilesSync } from './useProfilesSync';
 import type { Task } from '../domain/types';
+import { getPendingProfileMutation, queueProfileMutation } from '../domain/profileMutationQueue';
 
 vi.mock('../lib/api', () => ({
   shouldUseBackend: () => true,
@@ -47,7 +48,8 @@ describe('useProfilesSync', () => {
     await waitFor(() =>
       expect(apiRequest).toHaveBeenCalledWith(
         '/api/profiles/default/tasks',
-        expect.objectContaining({ method: 'POST' })
+        expect.objectContaining({ method: 'POST' }),
+        expect.anything()
       )
     );
     const saveCall = vi.mocked(apiRequest).mock.calls.find(([, options]) => options?.method === 'POST');
@@ -82,11 +84,35 @@ describe('useProfilesSync', () => {
     await waitFor(() =>
       expect(apiRequest).toHaveBeenCalledWith(
         '/api/profiles/default/settings',
-        expect.objectContaining({ method: 'PUT' })
+        expect.objectContaining({ method: 'PUT' }),
+        expect.anything()
       )
     );
     const saveCall = vi.mocked(apiRequest).mock.calls.find(([, options]) => options?.method === 'PUT');
     expect(JSON.parse(String(saveCall?.[1]?.body))).toMatchObject({ baseRevision: 2 });
+  });
+
+  it('replays a persisted optimistic snapshot after reload', async () => {
+    queueProfileMutation('default', 'tasks', [
+      normalizeTask({ id: 'queued-task', title: 'Queued while offline' })
+    ]);
+    const { result } = renderHook(() => {
+      const [tasks, setTasks] = useState<Task[]>([]);
+      const [settings, setSettings] = useState(defaultSettings);
+      const [, setSelectedTaskId] = useState<string | null>(null);
+      const sync = useProfilesSync({ tasks, setTasks, settings, setSettings, setSelectedTaskId });
+      return { ...sync, tasks };
+    });
+
+    await waitFor(() => expect(result.current.tasks[0]?.title).toBe('Queued while offline'));
+    await waitFor(() =>
+      expect(apiRequest).toHaveBeenCalledWith(
+        '/api/profiles/default/tasks',
+        expect.objectContaining({ method: 'PUT' }),
+        expect.anything()
+      )
+    );
+    expect(getPendingProfileMutation('default', 'tasks')).toBeUndefined();
   });
 
   it('surfaces a 409 conflict as a persistence error', async () => {
@@ -120,5 +146,17 @@ describe('useProfilesSync', () => {
 
     await waitFor(() => expect(result.current.persistenceStatus).toBe('error'));
     expect(result.current.profileError).toBe('Profile changed elsewhere.');
+    expect(result.current.syncConflict?.resource).toBe('tasks');
+    expect(getPendingProfileMutation('default', 'tasks')).toBeDefined();
+
+    await act(async () => result.current.keepLocalChanges());
+    await waitFor(() => expect(result.current.persistenceStatus).toBe('saved'));
+    expect(result.current.syncConflict).toBeNull();
+    expect(getPendingProfileMutation('default', 'tasks')).toBeUndefined();
+    expect(apiRequest).toHaveBeenCalledWith(
+      '/api/profiles/default/tasks',
+      expect.objectContaining({ method: 'PUT' }),
+      expect.anything()
+    );
   });
 });

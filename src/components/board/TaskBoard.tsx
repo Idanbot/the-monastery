@@ -1,10 +1,12 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   ArrowDownUp,
   CheckSquare,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock,
   Flame,
   GripHorizontal,
@@ -34,6 +36,7 @@ const statusColorClass = (status) =>
 
 function TaskColumn({
   status,
+  collapseAxis,
   filteredTasks,
   settings,
   columnSorts,
@@ -48,7 +51,10 @@ function TaskColumn({
   setSelectedTaskId,
   keyboardFocusedTaskId,
   now,
-  onToggleLane
+  onToggleLane,
+  onMoveTask,
+  onReorderTask,
+  announceMove
 }) {
   const filtered = filteredTasks.filter((task) => task.status === status);
   const sortType = columnSorts[status] || 'none';
@@ -72,15 +78,19 @@ function TaskColumn({
       onDragOver={(e) => handleDragOver(e, status)}
       onDrop={(e) => handleDrop(e, status)}
     >
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/50 px-3 py-2 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/80">
+      <div
+        className={`flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/50 py-2 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/80 ${collapsed && collapseAxis === 'horizontal' ? 'px-3 sm:px-1' : 'px-3'}`}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
             <div className={`h-2 w-2 shrink-0 rounded-full ${statusColorClass(status)}`}></div>
-            <span className="truncate">{statusLabels[status]}</span>
+            <span className={`truncate ${collapsed && collapseAxis === 'horizontal' ? 'sm:hidden' : ''}`}>
+              {statusLabels[status]}
+            </span>
           </h2>
           <button
             onClick={() => cycleSort(status)}
-            className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+            className={`rounded p-1 text-slate-400 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 ${collapsed && collapseAxis === 'horizontal' ? 'sm:hidden' : ''}`}
             title={`Sort: ${sortType}`}
           >
             {sortType === 'urgency' && <Flame size={12} className="text-orange-500" />}
@@ -89,17 +99,30 @@ function TaskColumn({
           </button>
         </div>
         <div className="flex items-center gap-1">
-          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+          <span
+            className={`rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300 ${collapsed && collapseAxis === 'horizontal' ? 'sm:hidden' : ''}`}
+          >
             {filtered.length}
           </span>
           <button
             type="button"
             aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${statusLabels[status]} lane`}
             aria-expanded={!collapsed}
+            title={`${collapsed ? 'Expand' : 'Collapse'} ${statusLabels[status]} lane`}
             onClick={() => onToggleLane(status)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700"
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-slate-700 ${collapsed ? 'bg-slate-200/70 dark:bg-slate-700/70' : ''}`}
           >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+            {collapseAxis === 'horizontal' ? (
+              collapsed ? (
+                <ChevronRight size={16} />
+              ) : (
+                <ChevronLeft size={16} />
+              )
+            ) : collapsed ? (
+              <ChevronDown size={16} />
+            ) : (
+              <ChevronUp size={16} />
+            )}
           </button>
         </div>
       </div>
@@ -113,6 +136,25 @@ function TaskColumn({
             const isDragging = draggedTaskId === task.id;
             const isKeyboardFocused = keyboardFocusedTaskId === task.id;
             const taskTags = getEffectiveTags(task);
+            const statusIndex = taskStatuses.indexOf(task.status);
+            const moveWithKeyboard = (event) => {
+              if (!event.altKey) return;
+              const horizontalOffset = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0;
+              if (horizontalOffset) {
+                const nextStatus = taskStatuses[statusIndex + horizontalOffset];
+                if (!nextStatus) return;
+                event.preventDefault();
+                announceMove(task, nextStatus);
+                onMoveTask(task.id, nextStatus);
+                return;
+              }
+              if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                event.preventDefault();
+                const direction = event.key === 'ArrowUp' ? 'earlier' : 'later';
+                onReorderTask(task.id, direction);
+                announceMove(task, task.status, direction);
+              }
+            };
 
             return (
               <div key={task.id} onDragOver={(e) => handleDragOver(e, status, task.id)} className="relative">
@@ -122,12 +164,22 @@ function TaskColumn({
 
                 <div
                   draggable
+                  role="group"
+                  tabIndex={0}
+                  aria-label={`${task.title || 'Task'}, ${statusLabels[task.status]}. Use Alt plus arrow keys to move.`}
+                  aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown Enter"
                   onDragStart={(e) => handleDragStart(e, task.id)}
                   onDragEnd={() => {
                     setDraggedTaskId(null);
                     setDragOverInfo(null);
                   }}
                   onClick={() => setSelectedTaskId(task.id)}
+                  onKeyDown={(event) => {
+                    moveWithKeyboard(event);
+                    if (event.key === 'Enter' && event.target === event.currentTarget) {
+                      setSelectedTaskId(task.id);
+                    }
+                  }}
                   className={`group cursor-pointer overflow-hidden rounded-lg border bg-white shadow-sm transition-all dark:bg-slate-900 ${settings.collapseTasks ? 'p-2' : 'p-3'} ${isDragging ? 'opacity-50 grayscale' : ''} ${isKeyboardFocused ? 'border-amber-300 ring-2 ring-amber-400' : ''}
                   ${isActive ? 'border-indigo-400 ring-1 ring-indigo-400/30' : 'border-slate-200 hover:border-indigo-300 dark:border-slate-700/80 dark:hover:border-indigo-600'}
                 `}
@@ -149,6 +201,53 @@ function TaskColumn({
                       >
                         {task.title || 'Untitled Task'}
                       </h3>
+                    </div>
+                    <div
+                      className="flex shrink-0 items-center gap-0.5"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        aria-label={`Move ${task.title || 'task'} earlier`}
+                        title="Move earlier (Alt+Up)"
+                        onClick={() => {
+                          onReorderTask(task.id, 'earlier');
+                          announceMove(task, task.status, 'earlier');
+                        }}
+                        className="flex h-10 w-10 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-slate-800 sm:h-7 sm:w-7"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Move ${task.title || 'task'} later`}
+                        title="Move later (Alt+Down)"
+                        onClick={() => {
+                          onReorderTask(task.id, 'later');
+                          announceMove(task, task.status, 'later');
+                        }}
+                        className="flex h-10 w-10 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-slate-800 sm:h-7 sm:w-7"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                      <select
+                        aria-label={`Move ${task.title || 'task'} to lane`}
+                        title="Move to lane (Alt+Left/Right)"
+                        value={task.status}
+                        onKeyDown={(event) => event.stopPropagation()}
+                        onChange={(event) => {
+                          const nextStatus = event.target.value;
+                          announceMove(task, nextStatus);
+                          onMoveTask(task.id, nextStatus);
+                        }}
+                        className="h-10 max-w-10 cursor-pointer rounded border-0 bg-transparent text-xs text-slate-400 focus:max-w-28 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-900 sm:h-7 sm:max-w-7"
+                      >
+                        {taskStatuses.map((laneStatus) => (
+                          <option key={laneStatus} value={laneStatus}>
+                            {statusLabels[laneStatus]}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
@@ -235,6 +334,12 @@ const boardOrder = (settings) => ({
 
 const columnWidth = (settings, status) => Number(settings.columnWidths?.[widthKey(status)]) || 25;
 const stackHeight = (settings, status) => Number(settings.compactHeights?.[widthKey(status)]) || 50;
+const collapsedLane = (settings, status) => settings.collapsedBoardLanes?.includes(status) || false;
+const collapsedTrack = 'var(--collapsed-lane-size, 3.5rem)';
+const columnTrack = (settings, status) =>
+  collapsedLane(settings, status) ? collapsedTrack : String(columnWidth(settings, status)) + 'fr';
+const stackTrack = (settings, status) =>
+  collapsedLane(settings, status) ? collapsedTrack : String(stackHeight(settings, status)) + 'fr';
 const gridTemplate = (tracks, resizeVisible) =>
   tracks
     .flatMap((track, index) =>
@@ -243,11 +348,8 @@ const gridTemplate = (tracks, resizeVisible) =>
     .join(' ');
 const stackTemplate = (settings, pair, resizeVisible) =>
   resizeVisible
-    ? String(stackHeight(settings, pair[0])) +
-      'fr var(--resize-handle-thickness, 4px) ' +
-      String(stackHeight(settings, pair[1])) +
-      'fr'
-    : String(stackHeight(settings, pair[0])) + 'fr ' + String(stackHeight(settings, pair[1])) + 'fr';
+    ? stackTrack(settings, pair[0]) + ' var(--resize-handle-thickness, 4px) ' + stackTrack(settings, pair[1])
+    : stackTrack(settings, pair[0]) + ' ' + stackTrack(settings, pair[1]);
 
 function ResizeHandle({ id, orientation = 'vertical', startResize, title }) {
   return (
@@ -277,20 +379,50 @@ function ResizeHandle({ id, orientation = 'vertical', startResize, title }) {
   );
 }
 
+const observeListRect = (instance, callback) => {
+  const element = instance.scrollElement;
+  if (!element) return undefined;
+  const update = () =>
+    callback({
+      width: element.clientWidth || 1024,
+      height: element.clientHeight || 640
+    });
+  update();
+  const observer = new ResizeObserver(update);
+  observer.observe(element);
+  window.addEventListener('resize', update);
+  return () => {
+    observer.disconnect();
+    window.removeEventListener('resize', update);
+  };
+};
+
 export function TaskListView({ filteredTasks, setSelectedTaskId, now }) {
-  const orderedStatuses = taskStatuses;
   const parentRef = useRef(null);
-  const rowCount = useMemo(
-    () => orderedStatuses.length + filteredTasks.length,
-    [filteredTasks, orderedStatuses.length]
+  const rows = useMemo(
+    () =>
+      taskStatuses.flatMap((status) => {
+        const statusTasks = filteredTasks.filter((task) => task.status === status);
+        return [
+          { type: 'header', key: `header-${status}`, status, count: statusTasks.length },
+          ...(statusTasks.length
+            ? statusTasks.map((task) => ({ type: 'task', key: `task-${task.id}`, status, task }))
+            : [{ type: 'empty', key: `empty-${status}`, status }])
+        ];
+      }),
+    [filteredTasks]
   );
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual manages its own measurement callbacks.
   const virtualizer = useVirtualizer({
-    count: rowCount,
+    count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 92,
-    overscan: 8
+    getItemKey: (index) => rows[index].key,
+    estimateSize: (index) => (rows[index].type === 'header' ? 44 : rows[index].type === 'empty' ? 64 : 92),
+    observeElementRect: observeListRect,
+    overscan: 6,
+    initialRect: { width: 1024, height: 640 }
   });
+  const virtualRows = virtualizer.getVirtualItems();
 
   return (
     <div
@@ -298,81 +430,91 @@ export function TaskListView({ filteredTasks, setSelectedTaskId, now }) {
       role="list"
       aria-label="Task list"
       data-testid="virtualized-task-list"
-      data-virtual-items={virtualizer.getVirtualItems().length}
-      className="custom-scrollbar h-full space-y-4 overflow-y-auto pb-3"
+      data-total-items={rows.length}
+      data-virtual-items={virtualRows.length}
+      className="custom-scrollbar h-full overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
     >
-      {orderedStatuses.map((status) => {
-        const statusTasks = filteredTasks.filter((task) => task.status === status);
-        return (
-          <section
-            key={status}
-            className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-          >
-            <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2 dark:border-slate-800">
-              <h2 className="flex items-center gap-2 text-sm font-bold">
-                <span className={`h-2 w-2 rounded-full ${statusColorClass(status)}`}></span>
-                {statusLabels[status]}
-              </h2>
-              <span className="text-xs font-medium text-slate-500">{statusTasks.length}</span>
-            </div>
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {statusTasks.map((task) => {
-                const taskTags = getEffectiveTags(task);
-                const totalMs =
-                  calculateTotalDuration(task.logs || []) +
-                  (task.activeLogStart ? Math.max(0, now - new Date(task.activeLogStart).getTime()) : 0);
-                return (
-                  <button
-                    key={task.id}
-                    onClick={() => setSelectedTaskId(task.id)}
-                    className="w-full px-3 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div
-                          className={`truncate text-sm font-semibold ${task.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-slate-100'}`}
-                        >
-                          {task.title || 'Untitled Task'}
-                        </div>
-                        <div className="mt-1 flex flex-wrap gap-1.5">
-                          {taskTags.slice(0, 4).map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 dark:bg-slate-800"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="shrink-0 space-y-1 text-right">
-                        <UrgencyBadge urgency={task.urgency} />
-                        {totalMs > 0 && (
-                          <div className="font-mono text-[10px] text-slate-500">
-                            {formatDurationString(totalMs)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
-                      {task.scheduledDate && <span>{formatDate(task.scheduledDate)}</span>}
-                      {task.scheduledStart && <span>{task.scheduledStart}</span>}
-                      {task.recurrence && task.recurrence !== 'none' && (
-                        <span className="flex items-center gap-1">
-                          <Repeat size={12} /> {task.recurrence}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-              {statusTasks.length === 0 && (
-                <div className="px-3 py-6 text-center text-xs text-slate-400">No tasks found</div>
+      <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+        {virtualRows.map((virtualRow) => {
+          const row = rows[virtualRow.index];
+          return (
+            <div
+              key={row.key}
+              data-index={virtualRow.index}
+              className="absolute left-0 top-0 w-full"
+              style={{ height: `${virtualRow.size}px`, transform: `translateY(${virtualRow.start}px)` }}
+            >
+              {row.type === 'header' && (
+                <div className="flex h-full items-center justify-between border-b border-slate-200 bg-slate-50 px-3 dark:border-slate-800 dark:bg-slate-900">
+                  <h2 className="flex items-center gap-2 text-sm font-bold">
+                    <span className={`h-2 w-2 rounded-full ${statusColorClass(row.status)}`}></span>
+                    {statusLabels[row.status]}
+                  </h2>
+                  <span className="text-xs font-medium text-slate-500">{row.count}</span>
+                </div>
               )}
+              {row.type === 'empty' && (
+                <div className="flex h-full items-center justify-center border-b border-slate-100 text-xs text-slate-400 dark:border-slate-800">
+                  No tasks found
+                </div>
+              )}
+              {row.type === 'task' &&
+                (() => {
+                  const task = row.task;
+                  const taskTags = getEffectiveTags(task);
+                  const totalMs =
+                    calculateTotalDuration(task.logs || []) +
+                    (task.activeLogStart ? Math.max(0, now - new Date(task.activeLogStart).getTime()) : 0);
+                  return (
+                    <div role="listitem" className="h-full border-b border-slate-100 dark:border-slate-800">
+                      <button
+                        onClick={() => setSelectedTaskId(task.id)}
+                        className="h-full w-full px-3 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div
+                              className={`truncate text-sm font-semibold ${task.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-slate-100'}`}
+                            >
+                              {task.title || 'Untitled Task'}
+                            </div>
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {taskTags.slice(0, 4).map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 dark:bg-slate-800"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="shrink-0 space-y-1 text-right">
+                            <UrgencyBadge urgency={task.urgency} />
+                            {totalMs > 0 && (
+                              <div className="font-mono text-[10px] text-slate-500">
+                                {formatDurationString(totalMs)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+                          {task.scheduledDate && <span>{formatDate(task.scheduledDate)}</span>}
+                          {task.scheduledStart && <span>{task.scheduledStart}</span>}
+                          {task.recurrence && task.recurrence !== 'none' && (
+                            <span className="flex items-center gap-1">
+                              <Repeat size={12} /> {task.recurrence}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })()}
             </div>
-          </section>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -494,8 +636,11 @@ export function KanbanBoard({
   keyboardFocusedTaskId,
   now,
   startResize,
-  onToggleLane
+  onToggleLane,
+  onMoveTask,
+  onReorderTask
 }) {
+  const [moveAnnouncement, setMoveAnnouncement] = useState('');
   const layoutPreset =
     settings.layoutPreset === 'standard' ? 'three-column' : settings.layoutPreset || 'compact';
   const resizeVisible = settings.resizeHandleVisible !== false;
@@ -515,9 +660,20 @@ export function KanbanBoard({
     setSelectedTaskId,
     keyboardFocusedTaskId,
     now,
-    onToggleLane
+    onToggleLane,
+    onMoveTask,
+    onReorderTask,
+    announceMove: (task, status, direction) => {
+      setMoveAnnouncement(
+        direction
+          ? `${task.title || 'Task'} moved ${direction}.`
+          : `${task.title || 'Task'} moved to ${statusLabels[status]}.`
+      );
+    }
   };
-  const column = (status) => <TaskColumn key={status} status={status} {...columnProps} />;
+  const column = (status, collapseAxis = 'vertical') => (
+    <TaskColumn key={status} status={status} collapseAxis={collapseAxis} {...columnProps} />
+  );
   const verticalHandle = (left, right) =>
     resizeVisible ? (
       <ResizeHandle
@@ -550,13 +706,13 @@ export function KanbanBoard({
           className="kanban-board-grid min-h-full gap-3 pb-3 sm:h-full sm:pb-0"
           style={cssVars({
             '--kanban-grid-template': gridTemplate(
-              order.full.map((status) => String(columnWidth(settings, status)) + 'fr'),
+              order.full.map((status) => columnTrack(settings, status)),
               resizeVisible
             )
           })}
         >
           {order.full.flatMap((status, index) => [
-            column(status),
+            column(status, 'horizontal'),
             index < order.full.length - 1 ? verticalHandle(status, order.full[index + 1]) : null
           ])}
         </div>
@@ -568,8 +724,8 @@ export function KanbanBoard({
           style={cssVars({
             '--kanban-grid-template': gridTemplate(
               [
-                String(columnWidth(settings, order.threeColumn[0])) + 'fr',
-                String(columnWidth(settings, order.threeColumn[1])) + 'fr',
+                columnTrack(settings, order.threeColumn[0]),
+                columnTrack(settings, order.threeColumn[1]),
                 String(
                   columnWidth(settings, order.threeColumn[2]) + columnWidth(settings, order.threeColumn[3])
                 ) + 'fr'
@@ -578,9 +734,9 @@ export function KanbanBoard({
             )
           })}
         >
-          {column(order.threeColumn[0])}
+          {column(order.threeColumn[0], 'horizontal')}
           {verticalHandle(order.threeColumn[0], order.threeColumn[1])}
-          {column(order.threeColumn[1])}
+          {column(order.threeColumn[1], 'horizontal')}
           {resizeVisible && (
             <ResizeHandle
               id={
@@ -657,6 +813,9 @@ export function KanbanBoard({
           </div>
         </div>
       )}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {moveAnnouncement}
+      </div>
     </div>
   );
 }

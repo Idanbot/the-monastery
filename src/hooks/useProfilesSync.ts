@@ -4,8 +4,34 @@ import { mergeSettings, normalizeTasksPayload } from '../domain/tasks';
 import { apiRequest, shouldUseBackend } from '../lib/api';
 import { activeProfileStorageKey } from '../lib/storage';
 import { createProfileSyncQueue, type ProfileSyncQueue } from '../domain/profileSyncQueue';
+import {
+  getPendingProfileMutation,
+  queueProfileMutation,
+  removeProfileMutation,
+  removeProfileMutationFor,
+  type PendingProfileMutation,
+  type ProfileMutationResource
+} from '../domain/profileMutationQueue';
+import {
+  apiPaths,
+  mutationResponseSchema,
+  okResponseSchema,
+  profileResponseSchema,
+  profilesResponseSchema,
+  settingsResponseSchema,
+  tasksResponseSchema
+} from '../../shared/apiContracts';
 
 const getErrorMessage = (error, fallback) => (error instanceof Error ? error.message : fallback);
+const isConflictError = (error) =>
+  (typeof error === 'object' && error !== null && 'status' in error && error.status === 409) ||
+  /conflict|changed elsewhere/i.test(getErrorMessage(error, ''));
+
+type SyncConflict = {
+  resource: ProfileMutationResource;
+  entry: PendingProfileMutation;
+  message: string;
+};
 
 function useProfileBootstrap({
   setProfiles,
@@ -20,7 +46,7 @@ function useProfileBootstrap({
 
     const loadProfiles = async () => {
       try {
-        const data = await apiRequest('/api/profiles');
+        const data = await apiRequest(apiPaths.profiles, {}, profilesResponseSchema);
         if (cancelled) return;
 
         const nextProfiles = data.profiles || [];
@@ -58,6 +84,7 @@ function useActiveProfileLoader({
   setIsProfileReady,
   setIsProfileSettingsReady,
   setProfileError,
+  setSyncConflict,
   syncQueue,
   reloadVersion
 }) {
@@ -71,11 +98,36 @@ function useActiveProfileLoader({
       localStorage.setItem(activeProfileStorageKey, activeProfileId);
 
       try {
-        const data = await apiRequest(`/api/profiles/${activeProfileId}/tasks`);
+        const data = await apiRequest(apiPaths.tasks(activeProfileId), {}, tasksResponseSchema);
         if (!cancelled) {
+          let replayFailed = false;
           syncQueue.setTasksRevision(data.revision);
-          setTasks(normalizeTasksPayload(data.tasks || []));
-          setProfileError('');
+          const pending = getPendingProfileMutation(activeProfileId, 'tasks');
+          const nextTasks = pending
+            ? normalizeTasksPayload(pending.payload || [])
+            : normalizeTasksPayload(data.tasks || []);
+          setTasks(nextTasks);
+          if (pending) {
+            try {
+              await syncQueue.enqueueTask((baseRevision) =>
+                apiRequest(
+                  apiPaths.tasks(activeProfileId),
+                  {
+                    method: 'PUT',
+                    body: JSON.stringify({ tasks: nextTasks, baseRevision })
+                  },
+                  mutationResponseSchema
+                )
+              );
+              removeProfileMutation(pending);
+            } catch (error) {
+              replayFailed = true;
+              const message = getErrorMessage(error, 'Could not replay queued task changes.');
+              if (isConflictError(error)) setSyncConflict({ resource: 'tasks', entry: pending, message });
+              setProfileError(message);
+            }
+          }
+          if (!replayFailed) setProfileError('');
         }
       } catch (error) {
         if (!cancelled) setProfileError(getErrorMessage(error, 'Could not load profile tasks.'));
@@ -95,6 +147,7 @@ function useActiveProfileLoader({
     reloadVersion,
     setIsProfileReady,
     setProfileError,
+    setSyncConflict,
     setSelectedTaskId,
     setTasks,
     syncQueue
@@ -108,12 +161,35 @@ function useActiveProfileLoader({
       setIsProfileSettingsReady(false);
 
       try {
-        const data = await apiRequest(`/api/profiles/${activeProfileId}/settings`);
+        const data = await apiRequest(apiPaths.settings(activeProfileId), {}, settingsResponseSchema);
         if (!cancelled) {
+          let replayFailed = false;
           syncQueue.setSettingsRevision(data.revision);
-          setSettings(mergeSettings(data.settings));
+          const pending = getPendingProfileMutation(activeProfileId, 'settings');
+          const nextSettings = pending ? mergeSettings(pending.payload) : mergeSettings(data.settings);
+          setSettings(nextSettings);
+          if (pending) {
+            try {
+              await syncQueue.enqueueSettings((baseRevision) =>
+                apiRequest(
+                  apiPaths.settings(activeProfileId),
+                  {
+                    method: 'PUT',
+                    body: JSON.stringify({ settings: nextSettings, baseRevision })
+                  },
+                  mutationResponseSchema
+                )
+              );
+              removeProfileMutation(pending);
+            } catch (error) {
+              replayFailed = true;
+              const message = getErrorMessage(error, 'Could not replay queued settings changes.');
+              if (isConflictError(error)) setSyncConflict({ resource: 'settings', entry: pending, message });
+              setProfileError(message);
+            }
+          }
+          if (!replayFailed) setProfileError('');
         }
-        if (!cancelled) setProfileError('');
       } catch (error) {
         if (!cancelled) setProfileError(getErrorMessage(error, 'Could not load profile settings.'));
       } finally {
@@ -132,6 +208,7 @@ function useActiveProfileLoader({
     reloadVersion,
     setIsProfileSettingsReady,
     setProfileError,
+    setSyncConflict,
     setSettings,
     syncQueue
   ]);
@@ -151,39 +228,55 @@ const saveTasksDelta = async (activeProfileId, previousTasks, nextTasks, baseRev
 
   if (added.length === 1 && deleted.length === 0 && updated.length === 0) {
     const task = added[0];
-    return apiRequest(`/api/profiles/${activeProfileId}/tasks`, {
-      method: 'POST',
-      body: JSON.stringify({
-        task,
-        position: nextTasks.findIndex((item) => item.id === task.id),
-        baseRevision
-      })
-    });
+    return apiRequest(
+      apiPaths.tasks(activeProfileId),
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          task,
+          position: nextTasks.findIndex((item) => item.id === task.id),
+          baseRevision
+        })
+      },
+      mutationResponseSchema
+    );
   }
 
   if (added.length === 0 && deleted.length === 1 && updated.length === 0) {
-    return apiRequest(`/api/profiles/${activeProfileId}/tasks/${deleted[0].id}`, {
-      method: 'DELETE',
-      body: JSON.stringify({ baseRevision })
-    });
+    return apiRequest(
+      apiPaths.task(activeProfileId, deleted[0].id),
+      {
+        method: 'DELETE',
+        body: JSON.stringify({ baseRevision })
+      },
+      mutationResponseSchema
+    );
   }
 
   if (added.length === 0 && deleted.length === 0 && updated.length === 1) {
     const task = updated[0];
-    return apiRequest(`/api/profiles/${activeProfileId}/tasks/${task.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        task,
-        position: nextTasks.findIndex((item) => item.id === task.id),
-        baseRevision
-      })
-    });
+    return apiRequest(
+      apiPaths.task(activeProfileId, task.id),
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          task,
+          position: nextTasks.findIndex((item) => item.id === task.id),
+          baseRevision
+        })
+      },
+      mutationResponseSchema
+    );
   }
 
-  return apiRequest(`/api/profiles/${activeProfileId}/tasks`, {
-    method: 'PUT',
-    body: JSON.stringify({ tasks: nextTasks, baseRevision })
-  });
+  return apiRequest(
+    apiPaths.tasks(activeProfileId),
+    {
+      method: 'PUT',
+      body: JSON.stringify({ tasks: nextTasks, baseRevision })
+    },
+    mutationResponseSchema
+  );
 };
 
 function useDebouncedProfileSave({
@@ -194,6 +287,8 @@ function useDebouncedProfileSave({
   tasks,
   settings,
   setProfileError,
+  syncConflict,
+  setSyncConflict,
   syncQueue,
   reloadVersion
 }) {
@@ -232,6 +327,7 @@ function useDebouncedProfileSave({
     const saveTimer = window.setTimeout(() => {
       const previousTasks = tasksBaselineRef.current || [];
       const generation = saveGenerationRef.current;
+      const queuedMutation = queueProfileMutation(activeProfileId, 'tasks', tasks);
       pendingWritesRef.current += 1;
       syncQueue
         .enqueueTask((baseRevision) => saveTasksDelta(activeProfileId, previousTasks, tasks, baseRevision))
@@ -239,6 +335,7 @@ function useDebouncedProfileSave({
           if (generation !== saveGenerationRef.current) return;
           pendingWritesRef.current -= 1;
           tasksBaselineRef.current = tasks;
+          removeProfileMutation(queuedMutation);
           setLastSavedAt(new Date());
           setPersistenceStatus(pendingWritesRef.current > 0 ? 'saving' : 'saved');
           setProfileError('');
@@ -247,6 +344,9 @@ function useDebouncedProfileSave({
           if (generation !== saveGenerationRef.current) return;
           pendingWritesRef.current -= 1;
           const message = getErrorMessage(error, 'Could not save tasks.');
+          if (isConflictError(error)) {
+            setSyncConflict({ resource: 'tasks', entry: queuedMutation, message });
+          }
           setPersistenceStatus('error');
           setProfileError(message);
           toast.error(message);
@@ -254,7 +354,15 @@ function useDebouncedProfileSave({
     }, 350);
 
     return () => window.clearTimeout(saveTimer);
-  }, [tasks, activeProfileId, isBackendAvailable, isProfileReady, setProfileError, syncQueue]);
+  }, [
+    tasks,
+    activeProfileId,
+    isBackendAvailable,
+    isProfileReady,
+    setProfileError,
+    setSyncConflict,
+    syncQueue
+  ]);
 
   useEffect(() => {
     if (!isBackendAvailable || !activeProfileId || !isProfileSettingsReady) return;
@@ -271,18 +379,24 @@ function useDebouncedProfileSave({
     setPersistenceStatus('saving');
     const saveTimer = window.setTimeout(() => {
       const generation = saveGenerationRef.current;
+      const queuedMutation = queueProfileMutation(activeProfileId, 'settings', settings);
       pendingWritesRef.current += 1;
       syncQueue
         .enqueueSettings((baseRevision) =>
-          apiRequest(`/api/profiles/${activeProfileId}/settings`, {
-            method: 'PUT',
-            body: JSON.stringify({ settings, baseRevision })
-          })
+          apiRequest(
+            apiPaths.settings(activeProfileId),
+            {
+              method: 'PUT',
+              body: JSON.stringify({ settings, baseRevision })
+            },
+            mutationResponseSchema
+          )
         )
         .then(() => {
           if (generation !== saveGenerationRef.current) return;
           pendingWritesRef.current -= 1;
           settingsBaselineRef.current = settings;
+          removeProfileMutation(queuedMutation);
           setLastSavedAt(new Date());
           setPersistenceStatus(pendingWritesRef.current > 0 ? 'saving' : 'saved');
           setProfileError('');
@@ -291,6 +405,9 @@ function useDebouncedProfileSave({
           if (generation !== saveGenerationRef.current) return;
           pendingWritesRef.current -= 1;
           const message = getErrorMessage(error, 'Could not save settings.');
+          if (isConflictError(error)) {
+            setSyncConflict({ resource: 'settings', entry: queuedMutation, message });
+          }
           setPersistenceStatus('error');
           setProfileError(message);
           toast.error(message);
@@ -298,9 +415,74 @@ function useDebouncedProfileSave({
     }, 450);
 
     return () => window.clearTimeout(saveTimer);
-  }, [settings, activeProfileId, isBackendAvailable, isProfileSettingsReady, setProfileError, syncQueue]);
+  }, [
+    settings,
+    activeProfileId,
+    isBackendAvailable,
+    isProfileSettingsReady,
+    setProfileError,
+    setSyncConflict,
+    syncQueue
+  ]);
 
-  return { persistenceStatus, lastSavedAt };
+  const keepLocalChanges = useCallback(async () => {
+    if (!syncConflict || !activeProfileId) return;
+    const { resource, entry } = syncConflict;
+    setPersistenceStatus('saving');
+    try {
+      const latest =
+        resource === 'tasks'
+          ? await apiRequest(apiPaths.tasks(activeProfileId), {}, tasksResponseSchema)
+          : await apiRequest(apiPaths.settings(activeProfileId), {}, settingsResponseSchema);
+      if (resource === 'tasks') {
+        syncQueue.setTasksRevision(latest.revision);
+        const localTasks = normalizeTasksPayload(entry.payload || []);
+        await syncQueue.enqueueTask((baseRevision) =>
+          apiRequest(
+            apiPaths.tasks(activeProfileId),
+            {
+              method: 'PUT',
+              body: JSON.stringify({ tasks: localTasks, baseRevision })
+            },
+            mutationResponseSchema
+          )
+        );
+        tasksBaselineRef.current = localTasks;
+      } else {
+        syncQueue.setSettingsRevision(latest.revision);
+        const localSettings = mergeSettings(entry.payload);
+        await syncQueue.enqueueSettings((baseRevision) =>
+          apiRequest(
+            apiPaths.settings(activeProfileId),
+            {
+              method: 'PUT',
+              body: JSON.stringify({ settings: localSettings, baseRevision })
+            },
+            mutationResponseSchema
+          )
+        );
+        settingsBaselineRef.current = localSettings;
+      }
+      removeProfileMutation(entry);
+      setSyncConflict(null);
+      setProfileError('');
+      setLastSavedAt(new Date());
+      setPersistenceStatus('saved');
+    } catch (error) {
+      const message = getErrorMessage(error, 'Could not resolve the sync conflict.');
+      setProfileError(message);
+      setPersistenceStatus('error');
+    }
+  }, [activeProfileId, setProfileError, setSyncConflict, syncConflict, syncQueue]);
+
+  const discardLocalConflict = useCallback(() => {
+    if (!syncConflict || !activeProfileId) return;
+    removeProfileMutationFor(activeProfileId, syncConflict.resource);
+    setSyncConflict(null);
+    setProfileError('');
+  }, [activeProfileId, setProfileError, setSyncConflict, syncConflict]);
+
+  return { persistenceStatus, lastSavedAt, keepLocalChanges, discardLocalConflict };
 }
 
 export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSelectedTaskId }) {
@@ -313,6 +495,7 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
   const [newProfileName, setNewProfileName] = useState('');
   const [profileAction, setProfileAction] = useState(null);
   const [profileError, setProfileError] = useState('');
+  const [syncConflict, setSyncConflict] = useState<SyncConflict | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);
 
   useEffect(() => {
@@ -336,11 +519,12 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     setIsProfileReady,
     setIsProfileSettingsReady,
     setProfileError,
+    setSyncConflict,
     syncQueue,
     reloadVersion
   });
 
-  const { persistenceStatus, lastSavedAt } = useDebouncedProfileSave({
+  const { persistenceStatus, lastSavedAt, keepLocalChanges, discardLocalConflict } = useDebouncedProfileSave({
     activeProfileId,
     isBackendAvailable,
     isProfileReady,
@@ -348,13 +532,15 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     tasks,
     settings,
     setProfileError,
+    syncConflict,
+    setSyncConflict,
     syncQueue,
     reloadVersion
   });
 
   const refreshProfiles = useCallback(async () => {
     if (!isBackendAvailable) return [];
-    const data = await apiRequest('/api/profiles');
+    const data = await apiRequest(apiPaths.profiles, {}, profilesResponseSchema);
     const nextProfiles = data.profiles || [];
     setProfiles(nextProfiles);
     return nextProfiles;
@@ -368,6 +554,19 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     setReloadVersion((version) => version + 1);
   }, [syncQueue]);
 
+  useEffect(() => {
+    const replayWhenOnline = () => {
+      if (activeProfileId) reloadActiveProfile();
+    };
+    window.addEventListener('online', replayWhenOnline);
+    return () => window.removeEventListener('online', replayWhenOnline);
+  }, [activeProfileId, reloadActiveProfile]);
+
+  const useServerChanges = useCallback(() => {
+    discardLocalConflict();
+    reloadActiveProfile();
+  }, [discardLocalConflict, reloadActiveProfile]);
+
   const selectProfile = useCallback((profileId) => {
     setIsProfileReady(false);
     setIsProfileSettingsReady(false);
@@ -379,10 +578,14 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     if (!name) return;
 
     try {
-      const data = await apiRequest('/api/profiles', {
-        method: 'POST',
-        body: JSON.stringify({ name })
-      });
+      const data = await apiRequest(
+        apiPaths.profiles,
+        {
+          method: 'POST',
+          body: JSON.stringify({ name })
+        },
+        profileResponseSchema
+      );
       setProfiles((prev) => [...prev, data.profile]);
       setIsProfileReady(false);
       setIsProfileSettingsReady(false);
@@ -398,7 +601,7 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     if (!activeProfileId) return;
 
     try {
-      await apiRequest(`/api/profiles/${activeProfileId}/reset`, { method: 'POST' });
+      await apiRequest(apiPaths.resetProfile(activeProfileId), { method: 'POST' }, okResponseSchema);
       setSelectedTaskId(null);
       setProfileAction(null);
       reloadActiveProfile();
@@ -413,7 +616,7 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     if (!activeProfileId) return;
 
     try {
-      await apiRequest(`/api/profiles/${activeProfileId}`, { method: 'DELETE' });
+      await apiRequest(apiPaths.profile(activeProfileId), { method: 'DELETE' }, okResponseSchema);
       const nextProfiles = await refreshProfiles();
       setIsProfileReady(false);
       setIsProfileSettingsReady(false);
@@ -444,6 +647,9 @@ export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSel
     profileAction,
     setProfileAction,
     profileError,
+    syncConflict,
+    keepLocalChanges,
+    useServerChanges,
     activeProfile,
     reloadActiveProfile,
     createProfile,

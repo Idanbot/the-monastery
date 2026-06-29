@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { createThemeCss, createThemeRecipe } from '../domain/themeStudio';
 import { generateId } from '../domain/tasks';
 import { apiRequest } from '../lib/api';
+import { apiPaths, backupResponseSchema } from '../../shared/apiContracts';
 import { downloadJson } from '../lib/download';
 import { backupHistoryStorageKey, parseStoredJson } from '../lib/storage';
 import taskSchema from '../task.schema.json';
@@ -74,7 +75,7 @@ export function useBackupActions({
     try {
       saveLocalBackupSnapshot();
       if (isBackendAvailable) {
-        const backup = await apiRequest('/api/backup');
+        const backup = await apiRequest(apiPaths.backup, {}, backupResponseSchema);
         downloadJson(`the-monastery-backup-${new Date().toISOString().slice(0, 10)}.json`, backup);
         toast.success('Backup created.');
         return;

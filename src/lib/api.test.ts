@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { apiRequest, shouldUseBackend } from './api';
+import { profilesResponseSchema } from '../../shared/apiContracts';
 
 describe('api helpers', () => {
   afterEach(() => {
@@ -52,5 +53,14 @@ describe('api helpers', () => {
       })
     );
     await expect(apiRequest('/api/fail')).rejects.toThrow('Request failed.');
+  });
+
+  it('rejects successful responses that violate the shared API contract', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({ profiles: 'invalid' }) })
+    );
+
+    await expect(apiRequest('/api/profiles', {}, profilesResponseSchema)).rejects.toThrow();
   });
 });

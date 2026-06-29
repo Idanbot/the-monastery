@@ -14,6 +14,7 @@ services:
       - '127.0.0.1:8181:3000'
     labels:
       com.centurylinklabs.watchtower.enable: 'true'
+      com.centurylinklabs.watchtower.scope: 'the-monastery'
     volumes:
       - the-monastery-data:/data
     logging:
@@ -38,7 +39,9 @@ services:
     image: containrrr/watchtower:latest
     container_name: the-monastery-watchtower
     restart: unless-stopped
-    command: --label-enable --cleanup --interval 300
+    command: --label-enable --scope the-monastery --cleanup --interval 300
+    labels:
+      com.centurylinklabs.watchtower.scope: 'the-monastery'
     environment:
       DOCKER_API_VERSION: '1.40'
     volumes:

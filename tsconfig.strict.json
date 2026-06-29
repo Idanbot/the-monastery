@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noEmit": true
+  },
+  "include": ["shared/**/*.ts", "src/lib/api.ts", "src/domain/profileMutationQueue.ts"]
+}

@@ -72,4 +72,19 @@ describe('useBoardController', () => {
     ]);
     expect(tasks.map((task) => task.id)).toEqual(['dragged', 'target']);
   });
+
+  it('moves and reorders tasks without a pointer drag', () => {
+    const setTasks = vi.fn();
+    const { result } = renderHook(() => useBoardController(setTasks));
+    const initial = [
+      normalizeTask({ id: 'first', title: 'First', status: 'backlog' }),
+      normalizeTask({ id: 'second', title: 'Second', status: 'backlog' })
+    ];
+
+    act(() => result.current.moveTask('first', 'done'));
+    expect(setTasks.mock.lastCall?.[0](initial)[0].status).toBe('done');
+
+    act(() => result.current.reorderTask('second', 'earlier'));
+    expect(setTasks.mock.lastCall?.[0](initial).map((task) => task.id)).toEqual(['second', 'first']);
+  });
 });

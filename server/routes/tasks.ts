@@ -4,6 +4,7 @@ import type { Task } from '../types.js';
 import type { ZodType } from 'zod';
 import { taskMutationPayloadSchema, tasksPayloadSchema, validationErrorResponse } from '../validation.js';
 import { rejectStaleTasksRevision } from './revisions.js';
+import { contractResponse, tasksResponseSchema } from '../../shared/apiContracts.js';
 
 const validateBody = <T>(schema: ZodType<T>, body: unknown) => {
   const result = schema.safeParse(body);
@@ -21,7 +22,10 @@ export const registerTaskRoutes = (app: FastifyInstance, store: DataStore) => {
       return reply.code(404).send({ error: 'Profile not found.' });
     }
 
-    return { tasks: store.listTasks(id), revision: store.getTasksRevision(id) };
+    return contractResponse(tasksResponseSchema, {
+      tasks: store.listTasks(id),
+      revision: store.getTasksRevision(id)
+    });
   });
 
   app.put('/api/profiles/:id/tasks', async (request, reply) => {

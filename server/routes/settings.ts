@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { DataStore } from '../db.js';
 import { settingsPayloadSchema, validationErrorResponse } from '../validation.js';
 import { rejectStaleSettingsRevision } from './revisions.js';
+import { contractResponse, settingsResponseSchema } from '../../shared/apiContracts.js';
 
 export const registerSettingsRoutes = (app: FastifyInstance, store: DataStore) => {
   app.get('/api/profiles/:id/settings', async (request, reply) => {
@@ -11,7 +12,10 @@ export const registerSettingsRoutes = (app: FastifyInstance, store: DataStore) =
       return reply.code(404).send({ error: 'Profile not found.' });
     }
 
-    return { settings: store.getSettings(id), revision: store.getSettingsRevision(id) };
+    return contractResponse(settingsResponseSchema, {
+      settings: store.getSettings(id),
+      revision: store.getSettingsRevision(id)
+    });
   });
 
   app.put('/api/profiles/:id/settings', async (request, reply) => {

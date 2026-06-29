@@ -58,6 +58,8 @@ export function AgendaTimeline({
       <div
         className="flex-1 overflow-y-auto relative bg-slate-50 dark:bg-slate-900 custom-scrollbar"
         ref={agendaContainerRef}
+        tabIndex={0}
+        aria-label="Scrollable daily schedule"
         onScroll={(e) => {
           agendaScrollTopRef.current = e.currentTarget.scrollTop;
         }}

@@ -1,8 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import type { DataStore } from '../db.js';
+import { contractResponse, profilesResponseSchema } from '../../shared/apiContracts.js';
 
 export const registerProfileRoutes = (app: FastifyInstance, store: DataStore) => {
-  app.get('/api/profiles', async () => ({ profiles: store.listProfiles() }));
+  app.get('/api/profiles', async () =>
+    contractResponse(profilesResponseSchema, { profiles: store.listProfiles() })
+  );
 
   app.post('/api/profiles', async (request, reply) => {
     const body = request.body as { name?: unknown } | undefined;

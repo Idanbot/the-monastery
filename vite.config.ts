@@ -14,7 +14,20 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Analytics is loaded on demand. Keep its chart-heavy chunks out of the
+        // install precache, then cache them after the first analytics visit.
+        globIgnores: ['**/charts-*.js', '**/AnalyticsView-*.js'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.destination === 'script',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'on-demand-scripts',
+              expiration: { maxEntries: 20, maxAgeSeconds: 30 * 24 * 60 * 60 }
+            }
+          }
+        ]
       },
       manifest: {
         name: 'The Monastery',

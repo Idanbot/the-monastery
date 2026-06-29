@@ -175,6 +175,9 @@ jobs:
       - name: Build
         run: npm run build:all
 
+      - name: Enforce bundle performance budgets
+        run: node scripts/check-performance-budgets.mjs
+
   dependency-review:
     name: Dependency Review
     if: github.event_name == 'pull_request'
