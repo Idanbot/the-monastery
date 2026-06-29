@@ -173,6 +173,10 @@ export const defaultSettings: AppSettings = {
   clockBackgroundColor: '',
   roles: [],
   tagGoals: [],
+  tagInventory: [],
+  tagAliases: {},
+  mobileFocusMode: false,
+  collapsedBoardLanes: [],
   resizeHandleColor: '#94a3b8',
   columnWidths: { backlog: 25, inProgress: 25, done: 25, rejected: 25 },
   compactColumnWidths: { left: 50, right: 50 },
@@ -184,6 +188,29 @@ export const cloneTask = (task) => JSON.parse(JSON.stringify(task));
 
 export const normalizeStringArray = (value) =>
   Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
+
+const normalizeTagInventory = (value) => {
+  const tags = normalizeStringArray(value);
+  const seen = new Set<string>();
+  return tags
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .filter((tag) => {
+      const key = tag.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+};
+
+const normalizeTagAliases = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([alias, target]) => [alias.trim(), typeof target === 'string' ? target.trim() : ''])
+      .filter(([alias, target]) => alias && target && alias.toLowerCase() !== target.toLowerCase())
+  );
+};
 
 const normalizeThemeColor = (value) => {
   const color = typeof value === 'string' ? value.trim() : '';
@@ -280,6 +307,16 @@ export const mergeSettings = (saved) => ({
   modalBlur: Math.min(64, Math.max(0, Number(saved?.modalBlur ?? defaultSettings.modalBlur))),
   roles: normalizeRoles(saved?.roles),
   tagGoals: normalizeTagGoals(saved?.tagGoals),
+  tagInventory: normalizeTagInventory(saved?.tagInventory),
+  tagAliases: normalizeTagAliases(saved?.tagAliases),
+  mobileFocusMode: Boolean(saved?.mobileFocusMode),
+  collapsedBoardLanes: Array.from(
+    new Set(
+      normalizeStringArray(saved?.collapsedBoardLanes).filter((status) =>
+        validStatuses.includes(status as TaskStatus)
+      )
+    )
+  ) as TaskStatus[],
   autoPromoteNextTask:
     saved?.autoPromoteNextTask === undefined
       ? defaultSettings.autoPromoteNextTask

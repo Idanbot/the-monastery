@@ -107,6 +107,10 @@ export type AppSettings = {
   textSize: 'small' | 'medium' | 'large';
   roles: RoleDefinition[];
   tagGoals: TagGoal[];
+  tagInventory: string[];
+  tagAliases: Record<string, string>;
+  mobileFocusMode: boolean;
+  collapsedBoardLanes: TaskStatus[];
   collapseTasks: boolean;
   autoPromoteNextTask: boolean;
   resizeHandleVisible: boolean;

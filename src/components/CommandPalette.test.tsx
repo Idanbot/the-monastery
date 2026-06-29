@@ -10,6 +10,12 @@ const renderPalette = (groups: CommandPaletteGroup[]) => {
 };
 
 describe('CommandPalette', () => {
+  it('uses a fully transparent overlay so workspace context stays visible', () => {
+    renderPalette([]);
+
+    expect(screen.getByTestId('command-palette-overlay')).toHaveClass('command-palette-overlay');
+  });
+
   it('renders the supplied command groups and runs actions on click', async () => {
     const user = userEvent.setup();
     const createTask = vi.fn();

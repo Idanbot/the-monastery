@@ -26,6 +26,7 @@ import { ThemeGallery } from './ThemeGallery';
 import { TagPicker } from '../tag-picker/TagPicker';
 import { SettingSection } from './SettingSection';
 import { BoardSettingsSection } from './BoardSettingsSection';
+import { TagManagementSection } from './TagManagementSection';
 import { themedSurfaceClassName } from '../ui/themedSurfaceStyles';
 import { createRoleFromPreset, rolePresets } from '../../domain/rolePresets';
 import { parseTagString } from '../../domain/tags';
@@ -34,7 +35,7 @@ import { generateId } from '../../domain/tasks';
 import { useThemeStyle } from '../../hooks/useThemeStyle';
 import { themeChoiceOptions } from '../../domain/themeGallery';
 
-const sectionIds = ['appearance', 'time', 'board', 'roles', 'sidebar', 'profiles', 'data'];
+const sectionIds = ['appearance', 'time', 'board', 'tags', 'roles', 'sidebar', 'profiles', 'data'];
 export function SettingsModal({
   initialSection = null,
   settings,
@@ -69,6 +70,7 @@ export function SettingsModal({
   restoreLocalBackup,
   removeLocalBackup,
   tagPool = [],
+  onTagCommand,
   isDarkMode = false,
   onClose
 }) {
@@ -675,6 +677,18 @@ export function SettingsModal({
                 />
               )}
 
+              {visibleSectionIds.includes('tags') && (
+                <TagManagementSection
+                  settings={settings}
+                  knownTags={tagPool}
+                  onCommand={onTagCommand}
+                  openSections={openSections}
+                  toggleSection={toggleSection}
+                  motionDuration={motionDuration}
+                  motionEase={motionEase}
+                />
+              )}
+
               {visibleSectionIds.includes('roles') && (
                 <SettingSection
                   id="roles"
@@ -748,6 +762,7 @@ export function SettingsModal({
                       >
                         <div className="flex gap-2">
                           <input
+                            aria-label={`Role name ${role.name}`}
                             value={role.name}
                             onChange={(e) => updateRole(role.id, { name: e.target.value })}
                             className="min-w-0 flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"

@@ -1,6 +1,16 @@
 import { useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ArrowDownUp, CheckSquare, Clock, Flame, GripHorizontal, Play, Repeat } from 'lucide-react';
+import {
+  ArrowDownUp,
+  CheckSquare,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Flame,
+  GripHorizontal,
+  Play,
+  Repeat
+} from 'lucide-react';
 import { UrgencyBadge } from '../UrgencyBadge';
 import { cssVars } from '../../lib/cssVars';
 import {
@@ -37,10 +47,12 @@ function TaskColumn({
   handleDragStart,
   setSelectedTaskId,
   keyboardFocusedTaskId,
-  now
+  now,
+  onToggleLane
 }) {
   const filtered = filteredTasks.filter((task) => task.status === status);
   const sortType = columnSorts[status] || 'none';
+  const collapsed = settings.collapsedBoardLanes?.includes(status) || false;
 
   if (sortType === 'urgency') {
     filtered.sort((a, b) => b.urgency - a.urgency);
@@ -55,7 +67,8 @@ function TaskColumn({
   return (
     <div
       data-testid={`board-column-${status}`}
-      className="flex h-full min-h-[14rem] flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-200/50 dark:border-slate-800/60 dark:bg-slate-800/40 sm:min-h-0"
+      data-collapsed={collapsed ? 'true' : 'false'}
+      className={`flex h-full ${collapsed ? 'min-h-0' : 'min-h-[14rem]'} flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-200/50 dark:border-slate-800/60 dark:bg-slate-800/40 sm:min-h-0`}
       onDragOver={(e) => handleDragOver(e, status)}
       onDrop={(e) => handleDrop(e, status)}
     >
@@ -75,116 +88,129 @@ function TaskColumn({
             {sortType === 'none' && <ArrowDownUp size={12} />}
           </button>
         </div>
-        <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-          {filtered.length}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+            {filtered.length}
+          </span>
+          <button
+            type="button"
+            aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${statusLabels[status]} lane`}
+            aria-expanded={!collapsed}
+            onClick={() => onToggleLane(status)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700"
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
       </div>
 
-      <div className="custom-scrollbar relative flex-1 space-y-2 overflow-y-auto p-2">
-        {filtered.map((task) => {
-          const isActive = task.activeLogStart || task.subtasks.some((subtask) => subtask.activeLogStart);
-          const isDragOverTop = dragOverInfo?.id === task.id && dragOverInfo?.position === 'top';
-          const isDragOverBottom = dragOverInfo?.id === task.id && dragOverInfo?.position === 'bottom';
-          const isDragging = draggedTaskId === task.id;
-          const isKeyboardFocused = keyboardFocusedTaskId === task.id;
-          const taskTags = getEffectiveTags(task);
+      {!collapsed && (
+        <div className="custom-scrollbar relative flex-1 space-y-2 overflow-y-auto p-2">
+          {filtered.map((task) => {
+            const isActive = task.activeLogStart || task.subtasks.some((subtask) => subtask.activeLogStart);
+            const isDragOverTop = dragOverInfo?.id === task.id && dragOverInfo?.position === 'top';
+            const isDragOverBottom = dragOverInfo?.id === task.id && dragOverInfo?.position === 'bottom';
+            const isDragging = draggedTaskId === task.id;
+            const isKeyboardFocused = keyboardFocusedTaskId === task.id;
+            const taskTags = getEffectiveTags(task);
 
-          return (
-            <div key={task.id} onDragOver={(e) => handleDragOver(e, status, task.id)} className="relative">
-              {isDragOverTop && (
-                <div className="relative z-10 mx-1 mb-2 h-1 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
-              )}
-
-              <div
-                draggable
-                onDragStart={(e) => handleDragStart(e, task.id)}
-                onDragEnd={() => {
-                  setDraggedTaskId(null);
-                  setDragOverInfo(null);
-                }}
-                onClick={() => setSelectedTaskId(task.id)}
-                className={`group cursor-pointer overflow-hidden rounded-lg border bg-white shadow-sm transition-all dark:bg-slate-900 ${settings.collapseTasks ? 'p-2' : 'p-3'} ${isDragging ? 'opacity-50 grayscale' : ''} ${isKeyboardFocused ? 'border-amber-300 ring-2 ring-amber-400' : ''}
-                  ${isActive ? 'border-indigo-400 ring-1 ring-indigo-400/30' : 'border-slate-200 hover:border-indigo-300 dark:border-slate-700/80 dark:hover:border-indigo-600'}
-                `}
-              >
-                {isActive && (
-                  <div className="absolute left-0 top-0 h-0.5 w-full animate-pulse bg-indigo-500"></div>
+            return (
+              <div key={task.id} onDragOver={(e) => handleDragOver(e, status, task.id)} className="relative">
+                {isDragOverTop && (
+                  <div className="relative z-10 mx-1 mb-2 h-1 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
                 )}
 
                 <div
-                  className={`flex items-start justify-between ${settings.collapseTasks ? 'mb-0' : 'mb-1.5'}`}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, task.id)}
+                  onDragEnd={() => {
+                    setDraggedTaskId(null);
+                    setDragOverInfo(null);
+                  }}
+                  onClick={() => setSelectedTaskId(task.id)}
+                  className={`group cursor-pointer overflow-hidden rounded-lg border bg-white shadow-sm transition-all dark:bg-slate-900 ${settings.collapseTasks ? 'p-2' : 'p-3'} ${isDragging ? 'opacity-50 grayscale' : ''} ${isKeyboardFocused ? 'border-amber-300 ring-2 ring-amber-400' : ''}
+                  ${isActive ? 'border-indigo-400 ring-1 ring-indigo-400/30' : 'border-slate-200 hover:border-indigo-300 dark:border-slate-700/80 dark:hover:border-indigo-600'}
+                `}
                 >
-                  <div className="flex min-w-0 items-center gap-1.5 pr-2">
-                    <GripHorizontal
-                      size={14}
-                      className="shrink-0 cursor-grab text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-slate-600"
-                    />
-                    <h3
-                      className={`truncate text-sm font-semibold leading-tight ${task.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-slate-200'}`}
-                    >
-                      {task.title || 'Untitled Task'}
-                    </h3>
+                  {isActive && (
+                    <div className="absolute left-0 top-0 h-0.5 w-full animate-pulse bg-indigo-500"></div>
+                  )}
+
+                  <div
+                    className={`flex items-start justify-between ${settings.collapseTasks ? 'mb-0' : 'mb-1.5'}`}
+                  >
+                    <div className="flex min-w-0 items-center gap-1.5 pr-2">
+                      <GripHorizontal
+                        size={14}
+                        className="shrink-0 cursor-grab text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-slate-600"
+                      />
+                      <h3
+                        className={`truncate text-sm font-semibold leading-tight ${task.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-slate-200'}`}
+                      >
+                        {task.title || 'Untitled Task'}
+                      </h3>
+                    </div>
                   </div>
+
+                  {!settings.collapseTasks && isActive && (
+                    <div className="mb-2 mt-2 flex items-center justify-between rounded border border-indigo-100 bg-indigo-50 p-1.5 text-indigo-700 shadow-inner dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400">
+                      <div className="flex items-center gap-1 text-xs font-medium">
+                        <Play size={10} className="animate-pulse" fill="currentColor" /> Active
+                      </div>
+                      <div className="font-mono text-sm font-bold tracking-tight drop-shadow-sm">
+                        {task.activeLogStart ? formatLiveTimer(task.activeLogStart, now) : 'Live Subtask'}
+                      </div>
+                    </div>
+                  )}
+
+                  {!settings.collapseTasks && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <UrgencyBadge urgency={task.urgency} />
+                      {task.scheduledStart && (
+                        <div className="rounded bg-slate-100 px-1.5 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                          {task.scheduledStart}
+                        </div>
+                      )}
+                      {task.subtasks?.length > 0 && (
+                        <div className="flex items-center gap-0.5 rounded bg-slate-100 px-1.5 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                          <CheckSquare size={10} />{' '}
+                          {task.subtasks.filter((subtask) => subtask.status === 'done').length}/
+                          {task.subtasks.length}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!settings.collapseTasks && taskTags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {taskTags.slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="max-w-[60px] truncate rounded bg-slate-100 px-1 text-[9px] text-slate-500 dark:bg-slate-800"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {taskTags.length > 3 && (
+                        <span className="text-[9px] text-slate-400">+{taskTags.length - 3}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {!settings.collapseTasks && isActive && (
-                  <div className="mb-2 mt-2 flex items-center justify-between rounded border border-indigo-100 bg-indigo-50 p-1.5 text-indigo-700 shadow-inner dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400">
-                    <div className="flex items-center gap-1 text-xs font-medium">
-                      <Play size={10} className="animate-pulse" fill="currentColor" /> Active
-                    </div>
-                    <div className="font-mono text-sm font-bold tracking-tight drop-shadow-sm">
-                      {task.activeLogStart ? formatLiveTimer(task.activeLogStart, now) : 'Live Subtask'}
-                    </div>
-                  </div>
-                )}
-
-                {!settings.collapseTasks && (
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <UrgencyBadge urgency={task.urgency} />
-                    {task.scheduledStart && (
-                      <div className="rounded bg-slate-100 px-1.5 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                        {task.scheduledStart}
-                      </div>
-                    )}
-                    {task.subtasks?.length > 0 && (
-                      <div className="flex items-center gap-0.5 rounded bg-slate-100 px-1.5 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                        <CheckSquare size={10} />{' '}
-                        {task.subtasks.filter((subtask) => subtask.status === 'done').length}/
-                        {task.subtasks.length}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {!settings.collapseTasks && taskTags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {taskTags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="max-w-[60px] truncate rounded bg-slate-100 px-1 text-[9px] text-slate-500 dark:bg-slate-800"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {taskTags.length > 3 && (
-                      <span className="text-[9px] text-slate-400">+{taskTags.length - 3}</span>
-                    )}
-                  </div>
+                {isDragOverBottom && (
+                  <div className="relative z-10 mx-1 mt-2 h-1 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
                 )}
               </div>
-
-              {isDragOverBottom && (
-                <div className="relative z-10 mx-1 mt-2 h-1 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
-              )}
+            );
+          })}
+          {filtered.length === 0 && !dragOverInfo && (
+            <div className="mx-2 flex h-20 flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 text-xs italic text-slate-400 opacity-50 dark:border-slate-700">
+              No tasks found
             </div>
-          );
-        })}
-        {filtered.length === 0 && !dragOverInfo && (
-          <div className="mx-2 flex h-20 flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 text-xs italic text-slate-400 opacity-50 dark:border-slate-700">
-            No tasks found
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -351,6 +377,107 @@ export function TaskListView({ filteredTasks, setSelectedTaskId, now }) {
   );
 }
 
+export function MobileFocusView({
+  filteredTasks,
+  currentTask,
+  setSelectedTaskId,
+  now,
+  onStartTask,
+  onCompleteTask,
+  onRejectTask,
+  onNextTask
+}) {
+  const inProgress = filteredTasks.filter((task) => task.status === 'in-progress');
+  const queued = inProgress.filter((task) => task.id !== currentTask?.id);
+  const nextTask = queued[0];
+
+  return (
+    <div data-testid="mobile-focus-view" className="custom-scrollbar h-full overflow-y-auto pb-4 sm:hidden">
+      <section className="mb-3 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm dark:border-indigo-800 dark:bg-slate-900">
+        <div className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-500">Current</div>
+        {currentTask ? (
+          <>
+            <button
+              type="button"
+              aria-label={`Open current task ${currentTask.title}`}
+              onClick={() => setSelectedTaskId(currentTask.id)}
+              className="min-h-16 w-full rounded-xl bg-indigo-600 px-4 py-3 text-left text-lg font-semibold text-white"
+            >
+              <span className="block">{currentTask.title || 'Untitled Task'}</span>
+              {currentTask.activeLogStart && (
+                <span className="mt-1 block font-mono text-sm text-indigo-100">
+                  {formatLiveTimer(currentTask.activeLogStart, now)}
+                </span>
+              )}
+            </button>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                aria-label={currentTask.activeLogStart ? 'Stop current task' : 'Start current task'}
+                onClick={() => onStartTask(currentTask.id)}
+                className="min-h-12 rounded-xl bg-emerald-600 px-3 py-2 text-base font-semibold text-white"
+              >
+                {currentTask.activeLogStart ? 'Stop' : 'Start'}
+              </button>
+              <button
+                type="button"
+                aria-label="Complete current task"
+                onClick={() => onCompleteTask(currentTask.id)}
+                className="min-h-12 rounded-xl bg-indigo-600 px-3 py-2 text-base font-semibold text-white"
+              >
+                Done
+              </button>
+              <button
+                type="button"
+                aria-label="Reject current task"
+                onClick={() => onRejectTask(currentTask.id)}
+                className="min-h-12 rounded-xl border border-rose-300 px-3 py-2 text-base font-semibold text-rose-700 dark:border-rose-700 dark:text-rose-300"
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                aria-label="Start next task"
+                disabled={!nextTask}
+                onClick={() => nextTask && onNextTask(nextTask.id)}
+                className="min-h-12 rounded-xl border border-slate-300 px-3 py-2 text-base font-semibold text-slate-700 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200"
+              >
+                Next
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="py-3 text-base text-slate-500">No current task</div>
+        )}
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">In-Progress</h2>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            {queued.length}
+          </span>
+        </div>
+        <div className="space-y-2">
+          {queued.map((task) => (
+            <button
+              key={task.id}
+              type="button"
+              onClick={() => setSelectedTaskId(task.id)}
+              className="min-h-14 w-full rounded-xl border border-slate-200 px-4 py-3 text-left text-base font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-100"
+            >
+              {task.title || 'Untitled Task'}
+            </button>
+          ))}
+          {queued.length === 0 && (
+            <div className="py-4 text-center text-base text-slate-400">No tasks up next</div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function KanbanBoard({
   filteredTasks,
   settings,
@@ -366,7 +493,8 @@ export function KanbanBoard({
   setSelectedTaskId,
   keyboardFocusedTaskId,
   now,
-  startResize
+  startResize,
+  onToggleLane
 }) {
   const layoutPreset =
     settings.layoutPreset === 'standard' ? 'three-column' : settings.layoutPreset || 'compact';
@@ -386,7 +514,8 @@ export function KanbanBoard({
     handleDragStart,
     setSelectedTaskId,
     keyboardFocusedTaskId,
-    now
+    now,
+    onToggleLane
   };
   const column = (status) => <TaskColumn key={status} status={status} {...columnProps} />;
   const verticalHandle = (left, right) =>

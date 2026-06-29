@@ -35,6 +35,16 @@ export function BoardSettingsSection({
     next.splice(offset, 2, first, pair.find((status) => status !== first)!);
     updateOrder('threeColumn', next);
   };
+  const toggleCollapsedLane = (status: TaskStatus) =>
+    setSettings((previous) => {
+      const collapsed = previous.collapsedBoardLanes || [];
+      return {
+        ...previous,
+        collapsedBoardLanes: collapsed.includes(status)
+          ? collapsed.filter((item) => item !== status)
+          : [...collapsed, status]
+      };
+    });
   const moveFullLane = (status: TaskStatus, direction: number) => {
     const index = order.full.indexOf(status);
     const nextIndex = index + direction;
@@ -154,6 +164,27 @@ export function BoardSettingsSection({
           />
         </label>
       </div>
+      <fieldset className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+        <legend className="px-1 text-xs font-bold uppercase tracking-wider text-slate-500">
+          Collapsed lanes
+        </legend>
+        <div className="grid grid-cols-2 gap-2">
+          {(['backlog', 'in-progress', 'done', 'rejected'] as TaskStatus[]).map((status) => (
+            <label
+              key={status}
+              className="flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+            >
+              <input
+                type="checkbox"
+                aria-label={`Collapse ${statusLabels[status]} lane`}
+                checked={(settings.collapsedBoardLanes || []).includes(status)}
+                onChange={() => toggleCollapsedLane(status)}
+              />
+              <span>{statusLabels[status]}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
       <SchemaSettingField settingKey="collapseTasks" settings={settings} updateSetting={updateSetting} />
       <SchemaSettingField
         settingKey="autoPromoteNextTask"

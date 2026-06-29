@@ -127,6 +127,65 @@ test('adds a task tag from the fuzzy tag pool', async ({ page }) => {
   await page.getByRole('button', { name: /filters/i }).click();
   await page.getByRole('button', { name: /^python$/i }).click();
   await expectTaskVisible(page, 'Pool tag smoke');
+
+  await page.getByRole('button', { name: /filters/i }).click();
+  await page.getByLabel('Backlog task').click();
+  await page.getByLabel('Title').fill('Custom inventory smoke');
+  await page.getByPlaceholder(/backend, high priority/i).fill('architecture-review');
+  await page.getByRole('button', { name: /save task/i }).click();
+  await page.getByRole('button', { name: /filters/i }).click();
+  await page.getByRole('combobox', { name: /search known tags/i }).fill('architecture');
+  await expect(page.getByRole('button', { name: 'architecture-review' })).toBeVisible();
+});
+
+test('manages tag aliases, role links, and goals through settings', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByLabel('Backlog task').click();
+  await page.getByLabel('Title').fill('Taxonomy source task');
+  await page.getByPlaceholder(/backend, high priority/i).fill('otel');
+  await page.getByRole('button', { name: /save task/i }).click();
+
+  await page.getByRole('button', { name: /open settings/i }).click();
+  await page.getByRole('button', { name: /^roles$/i }).click();
+  await page.getByRole('button', { name: /^add$/i }).click();
+  await page.getByLabel('Role name New Role').fill('Platform');
+  await page.getByRole('button', { name: /^tags$/i }).click();
+
+  await page.getByLabel('Manage tag').selectOption('otel');
+  await page.getByLabel('Rename selected tag').fill('observability');
+  await page.getByRole('button', { name: /^rename tag$/i }).click();
+  await expect(page.getByLabel('Manage tag')).toHaveValue('observability');
+
+  await page.getByLabel('New alias').fill('otel');
+  await page.getByRole('button', { name: /^add alias$/i }).click();
+  await page.getByLabel('Connect Platform').check();
+  await page.getByLabel('Weekly goal for observability').fill('4');
+  await page.getByRole('button', { name: /close settings/i }).click();
+
+  await page.getByText('Taxonomy source task').first().click();
+  await expect(page.getByPlaceholder(/backend, high priority/i)).toHaveValue('observability');
+  await page.getByRole('button', { name: /save task/i }).click();
+
+  await page.getByLabel('Backlog task').click();
+  await page.getByLabel('Title').fill('Alias task');
+  await page.getByPlaceholder(/backend, high priority/i).fill('otel');
+  await expect(page.getByPlaceholder(/backend, high priority/i)).toHaveValue('observability');
+  await page.getByRole('button', { name: /save task/i }).click();
+
+  const profileId = await page.getByTestId('active-profile-control').getAttribute('data-active-profile-id');
+  if (!profileId) throw new Error('Missing active profile id');
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/profiles/${profileId}/settings`);
+      const body = await response.json();
+      return {
+        alias: body.settings?.tagAliases?.otel,
+        roleTags: body.settings?.roles?.find((role) => role.name === 'Platform')?.tags || [],
+        weekly: body.settings?.tagGoals?.find((goal) => goal.tag === 'observability')?.weeklyTargetHours
+      };
+    })
+    .toEqual({ alias: 'observability', roleTags: ['observability'], weekly: 4 });
 });
 
 test('plans day, suggests title tags, opens shortcuts, and records local backup history', async ({
@@ -148,7 +207,10 @@ test('plans day, suggests title tags, opens shortcuts, and records local backup 
   await expect(page.getByTestId('timeline-task-Unscheduled day plan smoke')).toBeVisible();
 
   await page.keyboard.press('?');
-  await expect(page.getByRole('dialog', { name: /keyboard shortcuts/i })).toBeVisible();
+  const shortcutsDialog = page.getByRole('dialog', { name: /keyboard shortcuts/i });
+  await expect(shortcutsDialog).toBeVisible();
+  await expect(shortcutsDialog).toContainText('Ctrl+K');
+  await expect(shortcutsDialog).toContainText('Command palette');
   await page.getByRole('button', { name: /close keyboard shortcuts/i }).click();
 
   await page.getByRole('button', { name: /open settings/i }).click();
@@ -363,6 +425,12 @@ test('uses command palette, shortcuts, and task templates', async ({ page }) => 
 
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K');
   await expect(page.getByRole('dialog', { name: /command palette/i })).toBeVisible();
+  const paletteEffects = await page.getByTestId('command-palette-overlay').evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundColor: style.backgroundColor, backdropFilter: style.backdropFilter };
+  });
+  expect(paletteEffects.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  expect(paletteEffects.backdropFilter).toBe('none');
   await page.getByRole('option', { name: /backlog focus task/i }).click();
   await page.getByLabel('Title').fill('Palette focus task');
   await page.getByRole('button', { name: /save task/i }).click();
@@ -843,6 +911,12 @@ test('supports mobile board layouts with backlog and in-progress lanes', async (
   await page.getByLabel('Status').selectOption('in-progress');
   await page.getByRole('button', { name: /save task/i }).click();
 
+  const nextTitle = `Mobile Next ${Date.now()}`;
+  await createTask(page, nextTitle);
+  await page.getByText(nextTitle).first().click();
+  await page.getByLabel('Status').selectOption('in-progress');
+  await page.getByRole('button', { name: /save task/i }).click();
+
   await expect(page.getByTestId('board-column-backlog')).toBeVisible();
   await expect(page.getByTestId('board-column-in-progress')).toBeVisible();
   await expect(page.getByTestId('board-column-done')).toBeVisible();
@@ -858,9 +932,39 @@ test('supports mobile board layouts with backlog and in-progress lanes', async (
   await mobileControls.getByRole('button', { name: /customize lane order/i }).click();
   await mobileControls.getByLabel('Compact active top lane').selectOption('in-progress');
   await expect(page.getByTestId('board-column-in-progress')).toBeVisible();
+  await mobileControls.getByRole('button', { name: /use focused mobile view/i }).click();
+  const focusView = page.getByTestId('mobile-focus-view');
+  await expect(focusView).toBeVisible();
+  await expect(focusView).toContainText(mobileTitle);
+  await expect(focusView).toContainText(nextTitle);
+  await expect(page.getByTestId('board-column-backlog')).toBeHidden();
+  await focusView.getByRole('button', { name: /start current task/i }).click();
+  await expect(focusView.getByRole('button', { name: /stop current task/i })).toBeVisible();
+  await focusView.getByRole('button', { name: /start next task/i }).click();
+  await expect(
+    focusView.getByRole('button', { name: new RegExp(`open current task ${mobileTitle}`, 'i') })
+  ).toBeVisible();
+  await focusView.getByRole('button', { name: /reject current task/i }).click();
+  await focusView.getByRole('button', { name: /complete current task/i }).click();
+  await mobileControls.getByRole('button', { name: /show full mobile board/i }).click();
+  await expect(page.getByTestId('board-column-rejected')).toContainText(mobileTitle);
+  await expect(page.getByTestId('board-column-done')).toContainText(nextTitle);
+
+  await page.getByRole('button', { name: /collapse done lane/i }).click();
+  await expect(page.getByTestId('board-column-done')).toHaveAttribute('data-collapsed', 'true');
+  const profileId = await page.getByTestId('active-profile-control').getAttribute('data-active-profile-id');
+  if (!profileId) throw new Error('Missing active profile id');
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/profiles/${profileId}/settings`);
+      const body = await response.json();
+      return body.settings?.collapsedBoardLanes || [];
+    })
+    .toContain('done');
   await page.reload();
   await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'compact');
   await expect(page.getByTestId('board-column-in-progress')).toBeVisible();
+  await expect(page.getByTestId('board-column-done')).toHaveAttribute('data-collapsed', 'true');
 
   await openSettingsSection(page, 'Board');
   await page.getByLabel('Board layout', { exact: true }).selectOption('full');

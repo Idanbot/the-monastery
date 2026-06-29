@@ -17,9 +17,9 @@ export type CommandPaletteGroup = {
 
 /**
  * Controlled command palette. The parent owns `open`/`onOpenChange` and the
- * command list; this component owns only the dialog chrome and the Cmd+K
- * shortcut. This is the single palette for the whole app — there is no
- * duplicate inline palette anymore.
+ * command list; this component owns only the dialog chrome and Escape handling.
+ * This is the single palette for the whole app; there is no duplicate inline
+ * palette.
  */
 export function CommandPalette({
   open,
@@ -47,8 +47,9 @@ export function CommandPalette({
 
   return (
     <ThemedSurface
+      data-testid="command-palette-overlay"
       variant="overlay"
-      className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-24"
+      className="command-palette-overlay fixed inset-0 z-[100] flex items-start justify-center p-4 pt-24"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}

@@ -20,80 +20,92 @@ export function MobileBoardControls({ settings, setSettings }: Props) {
     }));
 
   return (
-    <details
-      data-testid="mobile-board-controls"
-      className="mb-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:hidden"
-    >
-      <summary className="cursor-pointer select-none text-xs font-semibold text-slate-600 dark:text-slate-300">
-        Board layout
-      </summary>
-      <div className="mt-2 flex items-center gap-2">
-        <select
-          aria-label="Mobile board layout"
-          value={settings.layoutPreset}
-          onChange={(event) =>
-            setSettings((previous) => ({
-              ...previous,
-              layoutPreset: event.target.value as AppSettings['layoutPreset']
-            }))
-          }
-          className="min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-        >
-          <option value="compact">Compact</option>
-          <option value="three-column">3 columns</option>
-          <option value="full">4 columns</option>
-        </select>
-        <button
-          type="button"
-          aria-label="Customize lane order"
-          aria-expanded={customizing}
-          onClick={() => setCustomizing((value) => !value)}
-          className="rounded-md border border-slate-200 p-1.5 text-slate-500 dark:border-slate-700"
-        >
-          <SlidersHorizontal size={14} />
-        </button>
-      </div>
-      {customizing && (
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <label className="text-[10px] font-medium text-slate-500">
-            Active top
-            <select
-              aria-label="Compact active top lane"
-              value={order.compactActive[0]}
-              onChange={(event) =>
-                updateOrder(
-                  'compactActive',
-                  pairOrder(event.target.value as TaskStatus, ['backlog', 'in-progress'])
-                )
-              }
-              className="mt-1 w-full rounded border border-slate-200 bg-transparent px-1.5 py-1 text-xs dark:border-slate-700"
-            >
-              {(['backlog', 'in-progress'] as TaskStatus[]).map((status) => (
-                <option key={status} value={status}>
-                  {statusLabels[status]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-[10px] font-medium text-slate-500">
-            Outcome top
-            <select
-              aria-label="Compact outcome top lane"
-              value={order.compactDone[0]}
-              onChange={(event) =>
-                updateOrder('compactDone', pairOrder(event.target.value as TaskStatus, ['done', 'rejected']))
-              }
-              className="mt-1 w-full rounded border border-slate-200 bg-transparent px-1.5 py-1 text-xs dark:border-slate-700"
-            >
-              {(['done', 'rejected'] as TaskStatus[]).map((status) => (
-                <option key={status} value={status}>
-                  {statusLabels[status]}
-                </option>
-              ))}
-            </select>
-          </label>
+    <div data-testid="mobile-board-controls" className="mb-2 space-y-2 lg:hidden">
+      <button
+        type="button"
+        aria-label={settings.mobileFocusMode ? 'Show full mobile board' : 'Use focused mobile view'}
+        onClick={() =>
+          setSettings((previous) => ({ ...previous, mobileFocusMode: !previous.mobileFocusMode }))
+        }
+        className="flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-base font-semibold text-white shadow-sm"
+      >
+        {settings.mobileFocusMode ? 'Full board' : 'Focus view'}
+      </button>
+      <details className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <summary className="cursor-pointer select-none text-xs font-semibold text-slate-600 dark:text-slate-300">
+          Board layout
+        </summary>
+        <div className="mt-2 flex items-center gap-2">
+          <select
+            aria-label="Mobile board layout"
+            value={settings.layoutPreset}
+            onChange={(event) =>
+              setSettings((previous) => ({
+                ...previous,
+                layoutPreset: event.target.value as AppSettings['layoutPreset']
+              }))
+            }
+            className="min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          >
+            <option value="compact">Compact</option>
+            <option value="three-column">3 columns</option>
+            <option value="full">4 columns</option>
+          </select>
+          <button
+            type="button"
+            aria-label="Customize lane order"
+            aria-expanded={customizing}
+            onClick={() => setCustomizing((value) => !value)}
+            className="rounded-md border border-slate-200 p-1.5 text-slate-500 dark:border-slate-700"
+          >
+            <SlidersHorizontal size={14} />
+          </button>
         </div>
-      )}
-    </details>
+        {customizing && (
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <label className="text-[10px] font-medium text-slate-500">
+              Active top
+              <select
+                aria-label="Compact active top lane"
+                value={order.compactActive[0]}
+                onChange={(event) =>
+                  updateOrder(
+                    'compactActive',
+                    pairOrder(event.target.value as TaskStatus, ['backlog', 'in-progress'])
+                  )
+                }
+                className="mt-1 w-full rounded border border-slate-200 bg-transparent px-1.5 py-1 text-xs dark:border-slate-700"
+              >
+                {(['backlog', 'in-progress'] as TaskStatus[]).map((status) => (
+                  <option key={status} value={status}>
+                    {statusLabels[status]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-[10px] font-medium text-slate-500">
+              Outcome top
+              <select
+                aria-label="Compact outcome top lane"
+                value={order.compactDone[0]}
+                onChange={(event) =>
+                  updateOrder(
+                    'compactDone',
+                    pairOrder(event.target.value as TaskStatus, ['done', 'rejected'])
+                  )
+                }
+                className="mt-1 w-full rounded border border-slate-200 bg-transparent px-1.5 py-1 text-xs dark:border-slate-700"
+              >
+                {(['done', 'rejected'] as TaskStatus[]).map((status) => (
+                  <option key={status} value={status}>
+                    {statusLabels[status]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+      </details>
+    </div>
   );
 }

@@ -162,6 +162,17 @@ it('opens keyboard shortcut help with question mark', async () => {
   const dialog = screen.getByRole('dialog', { name: /keyboard shortcuts/i });
   expect(dialog).toBeInTheDocument();
   expect(within(dialog).getByText(/plan day/i)).toBeInTheDocument();
+  expect(within(dialog).getByText(/command palette/i)).toBeInTheDocument();
+  expect(within(dialog).getByText(/ctrl\+k/i)).toBeInTheDocument();
+});
+
+it('keeps the command palette backdrop fully transparent', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await user.keyboard('{Control>}k{/Control}');
+
+  expect(screen.getByTestId('command-palette-overlay')).toHaveClass('command-palette-overlay');
 });
 
 it('shows weekly role balance insight', async () => {
@@ -392,6 +403,93 @@ it('adds task tags from the fuzzy tag pool', async () => {
   await user.click(screen.getByRole('button', { name: /^python$/i }));
 
   expect(screen.getAllByText(/python study/i).length).toBeGreaterThan(0);
+});
+
+it('persists a custom task tag in the known tag inventory', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await clickNewTask(user);
+  const tagsInput = screen.getByPlaceholderText(/backend, high priority/i);
+  await user.clear(tagsInput);
+  await user.type(tagsInput, 'architecture-review');
+  fireEvent.blur(tagsInput);
+  await user.click(screen.getByRole('button', { name: /save task/i }));
+
+  await user.click(screen.getByRole('button', { name: /filters/i }));
+  await user.type(screen.getByRole('combobox', { name: /search known tags/i }), 'architecture');
+  expect(screen.getByRole('button', { name: 'architecture-review' })).toBeInTheDocument();
+});
+
+it('shows only current and in-progress work in mobile focus mode', async () => {
+  const user = userEvent.setup();
+  seedSettings({ mobileFocusMode: true });
+  seedTasks([
+    makeTask({
+      id: 'current',
+      title: 'Current migration',
+      status: 'in-progress',
+      activeLogStart: '2026-06-28T08:00:00.000Z'
+    }),
+    makeTask({ id: 'next', title: 'Next migration', status: 'in-progress' }),
+    makeTask({ id: 'backlog', title: 'Later migration', status: 'backlog' })
+  ]);
+  render(<App />);
+
+  const focusView = screen.getByTestId('mobile-focus-view');
+  expect(within(focusView).getByText('Current migration')).toBeInTheDocument();
+  expect(within(focusView).getByText('Next migration')).toBeInTheDocument();
+  expect(within(focusView).queryByText('Later migration')).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: /show full mobile board/i }));
+  expect(screen.getByTestId('mobile-board-controls')).toBeInTheDocument();
+});
+
+it('controls current work from the mobile focus surface', async () => {
+  const user = userEvent.setup();
+  seedSettings({ mobileFocusMode: true });
+  seedTasks([
+    makeTask({ id: 'current', title: 'Current focus', status: 'in-progress' }),
+    makeTask({ id: 'next', title: 'Next focus', status: 'in-progress' })
+  ]);
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: /start current task/i }));
+  expect(screen.getByRole('button', { name: /stop current task/i })).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: /start next task/i }));
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: /open current task next focus/i })).toBeInTheDocument();
+  });
+
+  await user.click(screen.getByRole('button', { name: /reject current task/i }));
+  await waitFor(() => {
+    expect(screen.getByTestId('board-column-rejected')).toHaveTextContent('Next focus');
+  });
+
+  await user.click(screen.getByRole('button', { name: /complete current task/i }));
+  await waitFor(() => {
+    expect(screen.getByTestId('board-column-done')).toHaveTextContent('Current focus');
+  });
+});
+
+it('canonicalizes task tag aliases when saving', async () => {
+  const user = userEvent.setup();
+  seedSettings({
+    tagInventory: ['observability'],
+    tagAliases: { otel: 'observability' }
+  });
+  render(<App />);
+
+  await clickNewTask(user);
+  await user.type(screen.getByLabelText(/title/i), 'Trace API');
+  const tagsInput = screen.getByPlaceholderText(/backend, high priority/i);
+  await user.clear(tagsInput);
+  await user.type(tagsInput, 'otel');
+  await user.click(screen.getByRole('button', { name: /save task/i }));
+
+  await user.click(screen.getAllByText('Trace API')[0]);
+  expect(screen.getByPlaceholderText(/backend, high priority/i)).toHaveValue('observability');
 });
 
 it('opens the keyboard-focused board task with j and Enter', async () => {

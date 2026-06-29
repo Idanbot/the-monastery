@@ -17,7 +17,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { AgendaTimeline } from './components/timeline/AgendaTimeline';
-import { KanbanBoard, TaskListView } from './components/board/TaskBoard';
+import { KanbanBoard, MobileFocusView, TaskListView } from './components/board/TaskBoard';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { TaskModal } from './components/task-modal/TaskModal';
 
@@ -30,8 +30,10 @@ import { CurrentTaskPin } from './components/CurrentTaskPin';
 import { MobileBoardControls } from './components/board/MobileBoardControls';
 import { ViewSwitcher } from './components/ViewSwitcher';
 import { TaskSearchInput } from './components/TaskSearchInput';
+import { TagFilterMenu } from './components/TagFilterMenu';
 import { ClockWidget } from './components/ClockWidget';
 import type { PersistenceStatus } from './domain/persistenceStatus';
+import type { TaskStatus } from './domain/types';
 import { usePersistenceNotifier } from './hooks/usePersistenceNotifier';
 import { executeTaskCommand } from './domain/taskCommands';
 
@@ -46,9 +48,12 @@ const MANTRAS = [
 import { rolePresets } from './domain/rolePresets';
 import { parseQuickAddTask } from './domain/quickAdd';
 import { inferTaskTags } from './domain/taskIntelligence';
+import { applyTagTaxonomyCommand, canonicalizeTags, type TagTaxonomyCommand } from './domain/tagTaxonomy';
 import { visualThemeOptions, themeContracts } from './domain/themes';
 import { formatDateInputValue, generateId, normalizeTask, activeTaskStatuses } from './domain/tasks';
 import { useBackupActions } from './hooks/useBackupActions';
+import { useBoardController } from './hooks/useBoardController';
+import { useAppShortcuts } from './hooks/useAppShortcuts';
 import { useImportFlows } from './hooks/useImportFlows';
 import {
   loadInitialLocalSettings,
@@ -77,8 +82,6 @@ export default function App() {
   /* View & UI State */
   const [view, setView] = useState('board');
   const [selectedTaskId, setSelectedTaskId] = useState(null);
-  const [draggedTaskId, setDraggedTaskId] = useState(null);
-  const [dragOverInfo, setDragOverInfo] = useState(null);
   const [systemIsDark, setSystemIsDark] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false
   );
@@ -99,14 +102,18 @@ export default function App() {
   // Random daily mantra
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)]);
 
-  const [columnSorts, setColumnSorts] = useState({
-    backlog: 'none',
-    'in-progress': 'none',
-    done: 'none',
-    rejected: 'none'
-  });
-
   const { startResize } = useResizableLayout(setSettings);
+  const {
+    columnSorts,
+    cycleSort,
+    draggedTaskId,
+    dragOverInfo,
+    setDraggedTaskId,
+    setDragOverInfo,
+    handleDragStart,
+    handleDragOver,
+    handleDrop
+  } = useBoardController(setTasks);
 
   /* Modal Collapsible State */
   const [modalSections, setModalSections] = useState({ timer: false, notes: false, activity: false });
@@ -205,13 +212,50 @@ export default function App() {
       Array.from(
         new Set([
           ...allUniqueTags,
+          ...(settings.tagInventory || []),
           ...(settings.roles || []).flatMap((role) => role.tags || []),
+          ...(settings.tagGoals || []).map((goal) => goal.tag),
           ...rolePresets.flatMap((preset) => preset.tags)
         ])
       )
         .filter(Boolean)
+        .filter(
+          (tag, index, tags) =>
+            tags.findIndex((candidate) => candidate.toLowerCase() === tag.toLowerCase()) === index
+        )
         .sort((a, b) => a.localeCompare(b)),
-    [allUniqueTags, settings.roles]
+    [allUniqueTags, settings.roles, settings.tagGoals, settings.tagInventory]
+  );
+  const resolveTaskTags = useCallback(
+    (tags: string[]) => canonicalizeTags(tags, settings.tagAliases),
+    [settings.tagAliases]
+  );
+  const registerTags = useCallback(
+    (tags: string[]) => {
+      setSettings((previous) => {
+        const inventory = [...(previous.tagInventory || [])];
+        const keys = new Set(inventory.map((tag) => tag.toLowerCase()));
+        canonicalizeTags(tags, previous.tagAliases).forEach((tag) => {
+          const trimmed = tag.trim();
+          const key = trimmed.toLowerCase();
+          if (!trimmed || keys.has(key)) return;
+          keys.add(key);
+          inventory.push(trimmed);
+        });
+        return inventory.length === (previous.tagInventory || []).length
+          ? previous
+          : { ...previous, tagInventory: inventory };
+      });
+    },
+    [setSettings]
+  );
+  const runTagTaxonomyCommand = useCallback(
+    (command: TagTaxonomyCommand) => {
+      const result = applyTagTaxonomyCommand(tasks, settings, command);
+      setTasks(result.tasks);
+      setSettings(result.settings);
+    },
+    [settings, tasks]
   );
   const tagRoles = useMemo(() => settings.roles || [], [settings.roles]);
   const { refs: filterRefs, floatingStyles: filterFloatingStyles } = useFloating({
@@ -439,6 +483,21 @@ export default function App() {
   const isSidebarVisible = settings.sidebarVisible !== false;
   const { themeStyle, modalEffectStyle } = useThemeStyle(settings, systemIsDark);
 
+  const toggleBoardLane = useCallback(
+    (status: TaskStatus) => {
+      setSettings((previous) => {
+        const collapsed = previous.collapsedBoardLanes || [];
+        return {
+          ...previous,
+          collapsedBoardLanes: collapsed.includes(status)
+            ? collapsed.filter((item) => item !== status)
+            : [...collapsed, status]
+        };
+      });
+    },
+    [setSettings]
+  );
+
   const toggleSidebarVisible = () => {
     setSettings((prev) => ({ ...prev, sidebarVisible: prev.sidebarVisible === false }));
   };
@@ -482,6 +541,10 @@ export default function App() {
     toast.success('Profile restored.');
   };
 
+  const rejectTask = (taskId) => {
+    setTasks((previous) => executeTaskCommand(previous, { type: 'move', taskId, status: 'rejected' }).tasks);
+  };
+
   const completeTask = (taskId) => {
     setTasks(
       (previous) =>
@@ -519,12 +582,12 @@ export default function App() {
         ...overrides,
         title,
         createdAt,
-        tags: smartTags
+        tags: resolveTaskTags(smartTags)
       });
       setTasks((previous) => executeTaskCommand(previous, { type: 'create', task: newTask }).tasks);
       setSelectedTaskId(newTask.id);
     },
-    [tagPool, tagRoles, setTasks, setSelectedTaskId]
+    [tagPool, tagRoles, resolveTaskTags, setTasks, setSelectedTaskId]
   );
 
   const submitQuickAddTask = (event) => {
@@ -554,155 +617,33 @@ export default function App() {
     setView('board');
   }, [setTasks]);
 
-  useEffect(() => {
-    const handleShortcut = (event) => {
-      const target = event.target;
-      const isTyping =
-        target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setIsCommandOpen((open) => !open);
-        return;
-      }
-      if (isCommandOpen || selectedTaskId) {
-        if (event.key === 'Escape') {
-          setIsCommandOpen(false);
-        }
-      }
-      if (isTyping || isCommandOpen || selectedTaskId) return;
-      const navigationKeys = ['j', 'k', 'Enter'];
-      if (navigationKeys.includes(event.key)) {
-        if (filteredTasks.length === 0) return;
-        event.preventDefault();
-        const currentIndex = Math.max(
-          0,
-          filteredTasks.findIndex((task) => task.id === keyboardFocusedTaskId)
-        );
-        if (event.key === 'Enter') {
-          setSelectedTaskId(filteredTasks[currentIndex]?.id || filteredTasks[0].id);
-          return;
-        }
-        const direction = event.key === 'j' ? 1 : -1;
-        const nextIndex = (currentIndex + direction + filteredTasks.length) % filteredTasks.length;
-        setKeyboardFocusedTaskId(filteredTasks[nextIndex].id);
-        return;
-      }
-      if (event.key.toLowerCase() === 'n') {
-        event.preventDefault();
-        addTask('backlog');
-      }
-      if (event.key.toLowerCase() === 'f') {
-        event.preventDefault();
-        startFocusTask();
-      }
-      if (event.key.toLowerCase() === 'p') {
-        event.preventDefault();
-        planMyDay();
-      }
-      if (event.key.toLowerCase() === 'd') {
-        event.preventDefault();
-        setView('dashboard');
-      }
-      if (event.key.toLowerCase() === 'b') {
-        event.preventDefault();
-        setView('board');
-      }
-      if (event.key === '?') {
-        event.preventDefault();
-        setIsShortcutHelpOpen(true);
-      }
-      if (event.key.toLowerCase() === 'm') {
-        event.preventDefault();
-        setSettings((previous) => {
-          const newMode = !previous.monkMode;
-          if (newMode) setIsEnteringMonkMode(true);
-          return {
-            ...previous,
-            monkMode: newMode,
-            monkModeOpenedAt: newMode ? new Date().toISOString() : undefined
-          };
-        });
-      }
-      if (event.key === '/') {
-        event.preventDefault();
-        setView('mobile');
-      }
-    };
-    window.addEventListener('keydown', handleShortcut);
-    return () => window.removeEventListener('keydown', handleShortcut);
-    // The shortcut handler intentionally rebinds only when visible keyboard scope changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredTasks, isCommandOpen, keyboardFocusedTaskId, selectedTaskId]);
-
-  const handleDragStart = (e, id) => {
-    setDraggedTaskId(id);
-    e.dataTransfer.effectAllowed = 'move';
-    const crt = e.currentTarget.cloneNode(true);
-    crt.style.opacity = '0';
-    crt.style.position = 'absolute';
-    crt.style.top = '-1000px';
-    document.body.appendChild(crt);
-    e.dataTransfer.setDragImage(crt, 0, 0);
-    setTimeout(() => {
-      document.body.removeChild(crt);
-      e.target.style.opacity = '0.5';
-    }, 10);
-  };
-
-  const handleDragOver = (e, status, targetTaskId = null) => {
-    e.preventDefault();
-    if (!draggedTaskId) return;
-
-    if (!targetTaskId) {
-      setDragOverInfo({ status, id: null, position: 'bottom' });
-      return;
-    }
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const position = y < rect.height / 2 ? 'top' : 'bottom';
-
-    if (dragOverInfo?.id !== targetTaskId || dragOverInfo?.position !== position) {
-      setDragOverInfo({ status, id: targetTaskId, position });
-    }
-  };
-
-  const handleDrop = (e, status) => {
-    e.preventDefault();
-    if (!draggedTaskId) return;
-
-    setTasks((prev) => {
-      const movedTasks = executeTaskCommand(prev, { type: 'move', taskId: draggedTaskId, status }).tasks;
-      const draggedTask = movedTasks.find((task) => task.id === draggedTaskId);
-      if (!draggedTask) return prev;
-      const newTasks = movedTasks.filter((task) => task.id !== draggedTaskId);
-
-      if (!dragOverInfo || !dragOverInfo.id) {
-        newTasks.push(draggedTask);
-      } else {
-        const targetIndex = newTasks.findIndex((t) => t.id === dragOverInfo.id);
-        if (targetIndex !== -1) {
-          const insertIndex = dragOverInfo.position === 'top' ? targetIndex : targetIndex + 1;
-          newTasks.splice(insertIndex, 0, draggedTask);
-        } else {
-          newTasks.push(draggedTask);
-        }
-      }
-      return newTasks;
-    });
-
-    setDraggedTaskId(null);
-    setDragOverInfo(null);
-    e.target.style.opacity = '1';
-  };
-
-  const cycleSort = (status) => {
-    setColumnSorts((prev) => {
-      const current = prev[status];
-      const next = current === 'none' ? 'urgency' : current === 'urgency' ? 'time' : 'none';
-      return { ...prev, [status]: next };
-    });
-  };
+  useAppShortcuts({
+    filteredTasks,
+    isCommandOpen,
+    selectedTaskId,
+    keyboardFocusedTaskId,
+    setKeyboardFocusedTaskId,
+    setSelectedTaskId,
+    toggleCommandPalette: () => setIsCommandOpen((open) => !open),
+    closeCommandPalette: () => setIsCommandOpen(false),
+    addBacklogTask: () => addTask('backlog'),
+    startFocusTask,
+    planDay: planMyDay,
+    showAnalytics: () => setView('dashboard'),
+    showBoard: () => setView('board'),
+    showShortcuts: () => setIsShortcutHelpOpen(true),
+    toggleMonkMode: () =>
+      setSettings((previous) => {
+        const monkMode = !previous.monkMode;
+        if (monkMode) setIsEnteringMonkMode(true);
+        return {
+          ...previous,
+          monkMode,
+          monkModeOpenedAt: monkMode ? new Date().toISOString() : undefined
+        };
+      }),
+    showList: () => setView('mobile')
+  });
 
   const handlePomodoroComplete = (minutes) => {
     if (!currentTask) return;
@@ -947,36 +888,18 @@ export default function App() {
                     style={filterFloatingStyles}
                     className="w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-[90] p-3 flex flex-col gap-2"
                   >
-                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                      Filter by Tags
-                    </h4>
-                    {allUniqueTags.length === 0 ? (
-                      <p className="text-sm text-slate-400 italic">No tags used yet.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5 max-h-[200px] overflow-y-auto custom-scrollbar">
-                        {allUniqueTags.map((tag) => (
-                          <button
-                            key={tag}
-                            onClick={() =>
-                              setActiveFilters((prev) =>
-                                prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-                              )
-                            }
-                            className={`px-2 py-1 text-xs rounded-md border transition-colors ${activeFilters.includes(tag) ? 'bg-indigo-100 border-indigo-300 text-indigo-800 dark:bg-indigo-900/50 dark:border-indigo-500/50 dark:text-indigo-200' : 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400'}`}
-                          >
-                            {tag}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {activeFilters.length > 0 && (
-                      <button
-                        onClick={() => setActiveFilters([])}
-                        className="mt-2 text-xs text-rose-500 hover:underline"
-                      >
-                        Clear all
-                      </button>
-                    )}
+                    <TagFilterMenu
+                      knownTags={tagPool}
+                      activeFilters={activeFilters}
+                      onToggleTag={(tag) =>
+                        setActiveFilters((previous) =>
+                          previous.includes(tag)
+                            ? previous.filter((item) => item !== tag)
+                            : [...previous, tag]
+                        )
+                      }
+                      onClear={() => setActiveFilters([])}
+                    />
                   </ThemedSurface>
                 )}
               </div>
@@ -1173,23 +1096,38 @@ export default function App() {
                   </div>
                 </div>
                 <MobileBoardControls settings={settings} setSettings={setSettings} />
-                <KanbanBoard
-                  filteredTasks={filteredTasks}
-                  settings={settings}
-                  columnSorts={columnSorts}
-                  cycleSort={cycleSort}
-                  draggedTaskId={draggedTaskId}
-                  dragOverInfo={dragOverInfo}
-                  setDraggedTaskId={setDraggedTaskId}
-                  setDragOverInfo={setDragOverInfo}
-                  handleDragOver={handleDragOver}
-                  handleDrop={handleDrop}
-                  handleDragStart={handleDragStart}
-                  setSelectedTaskId={setSelectedTaskId}
-                  keyboardFocusedTaskId={keyboardFocusedTaskId}
-                  now={now}
-                  startResize={startResize}
-                />
+                {settings.mobileFocusMode && (
+                  <MobileFocusView
+                    filteredTasks={filteredTasks}
+                    currentTask={currentTask}
+                    setSelectedTaskId={setSelectedTaskId}
+                    now={now}
+                    onStartTask={updateTaskTimer}
+                    onCompleteTask={completeTask}
+                    onRejectTask={rejectTask}
+                    onNextTask={updateTaskTimer}
+                  />
+                )}
+                <div className={`min-h-0 flex-1 ${settings.mobileFocusMode ? 'hidden sm:flex' : 'flex'}`}>
+                  <KanbanBoard
+                    filteredTasks={filteredTasks}
+                    settings={settings}
+                    columnSorts={columnSorts}
+                    cycleSort={cycleSort}
+                    draggedTaskId={draggedTaskId}
+                    dragOverInfo={dragOverInfo}
+                    setDraggedTaskId={setDraggedTaskId}
+                    setDragOverInfo={setDragOverInfo}
+                    handleDragOver={handleDragOver}
+                    handleDrop={handleDrop}
+                    handleDragStart={handleDragStart}
+                    setSelectedTaskId={setSelectedTaskId}
+                    keyboardFocusedTaskId={keyboardFocusedTaskId}
+                    now={now}
+                    startResize={startResize}
+                    onToggleLane={toggleBoardLane}
+                  />
+                </div>
               </>
             )}
           </div>
@@ -1296,6 +1234,7 @@ export default function App() {
               </div>
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm">
                 {[
+                  ['Ctrl+K', 'Command palette'],
                   ['n', 'Backlog task'],
                   ['f', 'Focus task'],
                   ['p', 'Plan day'],
@@ -1354,6 +1293,7 @@ export default function App() {
             restoreLocalBackup={restoreLocalBackup}
             removeLocalBackup={removeLocalBackup}
             tagPool={tagPool}
+            onTagCommand={runTagTaxonomyCommand}
             isDarkMode={isDarkMode}
             onClose={() => setIsSettingsOpen(false)}
           />
@@ -1591,6 +1531,8 @@ export default function App() {
           discardDraftTask={discardDraftTask}
           tagPool={tagPool}
           roles={tagRoles}
+          onRegisterTags={registerTags}
+          resolveTags={resolveTaskTags}
         />
       </div>
     </div>

@@ -42,7 +42,9 @@ export function TaskModalBody({
   addSubtask,
   setSubtask,
   addNote,
-  tagPool
+  tagPool,
+  onRegisterTags,
+  resolveTags = (tags) => tags
 }) {
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
@@ -201,7 +203,8 @@ export function TaskModalBody({
           <TagPicker
             label="Tags"
             value={(draftTask.tags || []).join(', ')}
-            onChange={(nextValue) => updateDraftTask({ tags: parseTagString(nextValue) })}
+            onChange={(nextValue) => updateDraftTask({ tags: resolveTags(parseTagString(nextValue)) })}
+            onCommit={(nextValue) => onRegisterTags?.(resolveTags(parseTagString(nextValue)))}
             placeholder="Backend, High Priority"
             tagPool={tagPool}
           />

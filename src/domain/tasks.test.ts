@@ -8,6 +8,7 @@ import {
   normalizeTasksPayload,
   taskMatchesSearch
 } from './tasks';
+import { applyTagTaxonomyCommand, canonicalizeTags } from './tagTaxonomy';
 
 describe('task domain helpers', () => {
   it('normalizes partial task input with safe defaults', () => {
@@ -172,6 +173,18 @@ describe('task domain helpers', () => {
     expect(mergeSettings({}).autoPromoteNextTask).toBe(false);
   });
 
+  it('normalizes durable tag inventory and board focus settings', () => {
+    const settings = mergeSettings({
+      tagInventory: [' Python ', 'python', '', 'Cloud'],
+      mobileFocusMode: true,
+      collapsedBoardLanes: ['done', 'invalid', 'done', 'backlog']
+    });
+
+    expect(settings.tagInventory).toEqual(['Python', 'Cloud']);
+    expect(settings.mobileFocusMode).toBe(true);
+    expect(settings.collapsedBoardLanes).toEqual(['done', 'backlog']);
+  });
+
   it('normalizes persisted board column order', () => {
     const settings = mergeSettings({
       boardColumnOrder: {
@@ -186,5 +199,170 @@ describe('task domain helpers', () => {
     expect(settings.boardColumnOrder.compactDone).toEqual(['rejected', 'done']);
     expect(settings.boardColumnOrder.threeColumn).toEqual(['in-progress', 'backlog', 'rejected', 'done']);
     expect(settings.boardColumnOrder.full).toEqual(['done', 'backlog', 'in-progress', 'rejected']);
+  });
+});
+
+describe('tag taxonomy commands', () => {
+  it('renames a tag across tasks, subtasks, roles, goals, inventory, and aliases', () => {
+    const task = normalizeTask({
+      id: 'task',
+      title: 'Trace service',
+      tags: ['otel'],
+      subtasks: [
+        {
+          id: 'subtask',
+          title: 'Add spans',
+          status: 'backlog',
+          tags: ['otel'],
+          logs: [],
+          activeLogStart: null
+        }
+      ]
+    });
+    const settings = mergeSettings({
+      tagInventory: ['otel', 'backend'],
+      tagAliases: { tracing: 'otel' },
+      roles: [
+        {
+          id: 'sre',
+          name: 'SRE',
+          tags: ['otel'],
+          dailyTargetHours: 0,
+          weeklyTargetHours: 0,
+          monthlyTargetHours: 0
+        }
+      ],
+      tagGoals: [{ id: 'goal', tag: 'otel', weeklyTargetHours: 3 }]
+    });
+
+    const result = applyTagTaxonomyCommand([task], settings, {
+      type: 'rename',
+      source: 'otel',
+      target: 'observability'
+    });
+
+    expect(result.tasks[0].tags).toEqual(['observability']);
+    expect(result.tasks[0].subtasks[0].tags).toEqual(['observability']);
+    expect(result.settings.tagInventory).toEqual(['observability', 'backend']);
+    expect(result.settings.roles[0].tags).toEqual(['observability']);
+    expect(result.settings.tagGoals[0].tag).toBe('observability');
+    expect(result.settings.tagAliases).toEqual({ tracing: 'observability' });
+  });
+
+  it('canonicalizes aliases and manages role links, goals, and deletion', () => {
+    const initial = mergeSettings({
+      tagInventory: ['observability'],
+      roles: [
+        {
+          id: 'sre',
+          name: 'SRE',
+          tags: [],
+          dailyTargetHours: 0,
+          weeklyTargetHours: 0,
+          monthlyTargetHours: 0
+        }
+      ]
+    });
+    const aliased = applyTagTaxonomyCommand([], initial, {
+      type: 'set-alias',
+      alias: 'otel',
+      target: 'observability'
+    });
+    expect(canonicalizeTags(['otel', 'Observability'], aliased.settings.tagAliases)).toEqual([
+      'observability'
+    ]);
+
+    const linked = applyTagTaxonomyCommand(aliased.tasks, aliased.settings, {
+      type: 'toggle-role',
+      tag: 'observability',
+      roleId: 'sre'
+    });
+    expect(linked.settings.roles[0].tags).toEqual(['observability']);
+
+    const goal = applyTagTaxonomyCommand(linked.tasks, linked.settings, {
+      type: 'set-goal',
+      tag: 'observability',
+      goal: 'weeklyTargetHours',
+      hours: 5
+    });
+    expect(goal.settings.tagGoals[0]).toMatchObject({
+      tag: 'observability',
+      weeklyTargetHours: 5
+    });
+
+    const deleted = applyTagTaxonomyCommand(
+      [normalizeTask({ id: 'tagged', title: 'Tagged', tags: ['observability'] })],
+      goal.settings,
+      { type: 'delete', tag: 'observability' }
+    );
+    expect(deleted.tasks[0].tags).toEqual([]);
+    expect(deleted.settings.tagInventory).toEqual([]);
+    expect(deleted.settings.roles[0].tags).toEqual([]);
+    expect(deleted.settings.tagGoals).toEqual([]);
+    expect(deleted.settings.tagAliases).toEqual({});
+  });
+
+  it('merges duplicate tag goals and keeps the source as an alias', () => {
+    const settings = mergeSettings({
+      tagInventory: ['otel', 'observability'],
+      tagGoals: [
+        { id: 'otel-goal', tag: 'otel', dailyTargetHours: 1 },
+        { id: 'observability-goal', tag: 'observability', weeklyTargetHours: 4 }
+      ]
+    });
+
+    const result = applyTagTaxonomyCommand([], settings, {
+      type: 'merge',
+      source: 'otel',
+      target: 'observability'
+    });
+
+    expect(result.settings.tagInventory).toEqual(['observability']);
+    expect(result.settings.tagAliases).toEqual({ otel: 'observability' });
+    expect(result.settings.tagGoals).toHaveLength(1);
+    expect(result.settings.tagGoals[0]).toMatchObject({
+      tag: 'observability',
+      dailyTargetHours: 1,
+      weeklyTargetHours: 4
+    });
+  });
+
+  it('removes aliases, disconnects roles, and updates existing goals', () => {
+    const settings = mergeSettings({
+      tagInventory: ['observability'],
+      tagAliases: { otel: 'observability' },
+      roles: [
+        {
+          id: 'sre',
+          name: 'SRE',
+          tags: ['observability'],
+          dailyTargetHours: 0,
+          weeklyTargetHours: 0,
+          monthlyTargetHours: 0
+        }
+      ],
+      tagGoals: [{ id: 'goal', tag: 'observability', weeklyTargetHours: 2 }]
+    });
+
+    const withoutAlias = applyTagTaxonomyCommand([], settings, {
+      type: 'remove-alias',
+      alias: 'OTEL'
+    });
+    expect(withoutAlias.settings.tagAliases).toEqual({});
+
+    const disconnected = applyTagTaxonomyCommand([], withoutAlias.settings, {
+      type: 'toggle-role',
+      tag: 'observability',
+      roleId: 'sre'
+    });
+    expect(disconnected.settings.roles[0].tags).toEqual([]);
+
+    const updated = applyTagTaxonomyCommand([], disconnected.settings, {
+      type: 'set-goal',
+      tag: 'observability',
+      goal: 'weeklyTargetHours',
+      hours: -3
+    });
+    expect(updated.settings.tagGoals[0].weeklyTargetHours).toBe(0);
   });
 });

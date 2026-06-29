@@ -39,6 +39,7 @@ const renderSettings = (overrides = {}) => {
     restoreLocalBackup: vi.fn(),
     removeLocalBackup: vi.fn(),
     tagPool: [],
+    onTagCommand: vi.fn(),
     isDarkMode: false,
     onClose: vi.fn(),
     ...overrides
@@ -92,6 +93,70 @@ describe('SettingsModal', () => {
     expect(sizeUpdate(props.settings)).toEqual({ ...props.settings, clockTextScale: 1.1 });
   });
 
+  it('renames a known tag from tag management', async () => {
+    const user = userEvent.setup();
+    const props = renderSettings({
+      initialSection: 'tags',
+      tagPool: ['observability', 'otel'],
+      settings: {
+        ...defaultSettings,
+        tagInventory: ['observability', 'otel'],
+        animationsEnabled: false
+      }
+    });
+
+    await user.selectOptions(screen.getByLabelText(/manage tag/i), 'otel');
+    await user.clear(screen.getByLabelText(/rename selected tag/i));
+    await user.type(screen.getByLabelText(/rename selected tag/i), 'telemetry');
+    await user.click(screen.getByRole('button', { name: /^rename tag$/i }));
+
+    expect(props.onTagCommand).toHaveBeenCalledWith({
+      type: 'rename',
+      source: 'otel',
+      target: 'telemetry'
+    });
+  });
+
+  it('manages merges, aliases, role links, goals, and deletion', async () => {
+    const user = userEvent.setup();
+    const props = renderSettings({
+      initialSection: 'tags',
+      tagPool: ['observability', 'otel'],
+      settings: {
+        ...defaultSettings,
+        tagInventory: ['observability', 'otel'],
+        roles: [
+          {
+            id: 'sre',
+            name: 'SRE',
+            tags: [],
+            dailyTargetHours: 0,
+            weeklyTargetHours: 0,
+            monthlyTargetHours: 0
+          }
+        ],
+        animationsEnabled: false
+      }
+    });
+
+    await user.selectOptions(screen.getByLabelText(/manage tag/i), 'otel');
+    await user.selectOptions(screen.getByLabelText(/merge selected tag into/i), 'observability');
+    await user.click(screen.getByRole('button', { name: /^merge tags$/i }));
+    await user.type(screen.getByLabelText(/new alias/i), 'open-telemetry');
+    await user.click(screen.getByRole('button', { name: /^add alias$/i }));
+    await user.click(screen.getByLabelText(/connect sre/i));
+    fireEvent.change(screen.getByLabelText(/weekly goal for otel/i), { target: { value: '5' } });
+    await user.click(screen.getByRole('button', { name: /delete selected tag/i }));
+
+    expect(props.onTagCommand.mock.calls.map(([command]) => command)).toEqual([
+      { type: 'merge', source: 'otel', target: 'observability' },
+      { type: 'set-alias', alias: 'open-telemetry', target: 'otel' },
+      { type: 'toggle-role', tag: 'otel', roleId: 'sre' },
+      { type: 'set-goal', tag: 'otel', goal: 'weeklyTargetHours', hours: 5 },
+      { type: 'delete', tag: 'otel' }
+    ]);
+  });
+
   it('updates board lane order controls', () => {
     const props = renderSettings({ initialSection: 'board' });
 
@@ -134,5 +199,15 @@ describe('SettingsModal', () => {
     fireEvent.click(screen.getByLabelText(/auto-start next backlog/i));
     const promoteUpdate = props.setSettings.mock.lastCall?.[0];
     expect(promoteUpdate(props.settings)).toEqual({ ...props.settings, autoPromoteNextTask: true });
+  });
+  it('persists per-lane collapse settings', () => {
+    const props = renderSettings({ initialSection: 'board' });
+
+    fireEvent.click(screen.getByLabelText(/collapse done lane/i));
+    const collapseUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(collapseUpdate(props.settings)).toEqual({
+      ...props.settings,
+      collapsedBoardLanes: ['done']
+    });
   });
 });

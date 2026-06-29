@@ -32,6 +32,8 @@ type TaskModalProps = {
   discardDraftTask: () => void;
   tagPool?: string[];
   roles?: RoleDefinition[];
+  onRegisterTags?: (tags: string[]) => void;
+  resolveTags?: (tags: string[]) => string[];
 };
 
 export function TaskModal({
@@ -56,7 +58,9 @@ export function TaskModal({
   setShowDirtyClosePrompt,
   discardDraftTask,
   tagPool = [],
-  roles = []
+  roles = [],
+  onRegisterTags,
+  resolveTags
 }: TaskModalProps) {
   const suggestedTags = useMemo(
     () =>
@@ -205,6 +209,8 @@ export function TaskModal({
           setSubtask={setSubtask}
           addNote={addNote}
           tagPool={tagPool}
+          onRegisterTags={onRegisterTags}
+          resolveTags={resolveTags}
         />
 
         <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 flex justify-between items-center shrink-0">
