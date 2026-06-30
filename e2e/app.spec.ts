@@ -132,7 +132,7 @@ test('adds a task tag from the fuzzy tag pool', async ({ page }) => {
   await page.getByRole('button', { name: /save task/i }).click();
 
   await page.getByRole('button', { name: /filters/i }).click();
-  await page.getByRole('button', { name: /^python$/i }).click();
+  await page.getByRole('option', { name: /^python$/i }).click();
   await expectTaskVisible(page, 'Pool tag smoke');
 
   await page.getByRole('button', { name: /filters/i }).click();
@@ -142,7 +142,7 @@ test('adds a task tag from the fuzzy tag pool', async ({ page }) => {
   await page.getByRole('button', { name: /save task/i }).click();
   await page.getByRole('button', { name: /filters/i }).click();
   await page.getByRole('combobox', { name: /search known tags/i }).fill('architecture');
-  await expect(page.getByRole('button', { name: 'architecture-review' })).toBeVisible();
+  await expect(page.getByRole('option', { name: 'architecture-review' })).toBeVisible();
 });
 
 test('manages tag aliases, role links, and goals through settings', async ({ page }) => {

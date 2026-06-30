@@ -436,7 +436,7 @@ it('persists a custom task tag in the known tag inventory', async () => {
 
   await user.click(screen.getByRole('button', { name: /filters/i }));
   await user.type(screen.getByRole('combobox', { name: /search known tags/i }), 'architecture');
-  expect(screen.getByRole('button', { name: 'architecture-review' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'architecture-review' })).toBeInTheDocument();
 });
 
 it('shows only current and in-progress work in mobile focus mode', async () => {
