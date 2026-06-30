@@ -299,4 +299,13 @@ describe('SettingsModal', () => {
       collapsedBoardLanes: ['done']
     });
   });
+
+  it('shows exact build metadata at the end of settings', () => {
+    renderSettings({ initialSection: 'data' });
+
+    const metadata = screen.getByTestId('settings-build-metadata');
+    expect(metadata).toHaveTextContent('Version: 1.0.0');
+    expect(metadata).toHaveTextContent(/Commit: /);
+    expect(metadata).toHaveTextContent(/Built: /);
+  });
 });

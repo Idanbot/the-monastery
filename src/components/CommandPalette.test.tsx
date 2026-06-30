@@ -10,10 +10,12 @@ const renderPalette = (groups: CommandPaletteGroup[]) => {
 };
 
 describe('CommandPalette', () => {
-  it('uses a fully transparent overlay so workspace context stays visible', () => {
+  it('uses the shared modal overlay for readable focus', () => {
     renderPalette([]);
 
-    expect(screen.getByTestId('command-palette-overlay')).toHaveClass('command-palette-overlay');
+    const overlay = screen.getByTestId('command-palette-overlay');
+    expect(overlay).toHaveClass('modal-overlay');
+    expect(overlay).not.toHaveClass('command-palette-overlay');
   });
 
   it('renders the supplied command groups and runs actions on click', async () => {

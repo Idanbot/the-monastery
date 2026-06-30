@@ -436,8 +436,8 @@ test('uses command palette, shortcuts, and task templates', async ({ page }) => 
     const style = getComputedStyle(element);
     return { backgroundColor: style.backgroundColor, backdropFilter: style.backdropFilter };
   });
-  expect(paletteEffects.backgroundColor).toBe('rgba(0, 0, 0, 0)');
-  expect(paletteEffects.backdropFilter).toBe('none');
+  expect(paletteEffects.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+  expect(paletteEffects.backdropFilter).not.toBe('none');
   await page.getByRole('option', { name: /backlog focus task/i }).click();
   await page.getByLabel('Title').fill('Palette focus task');
   await page.getByRole('button', { name: /save task/i }).click();

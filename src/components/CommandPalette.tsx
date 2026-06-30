@@ -34,6 +34,8 @@ export function CommandPalette({
     if (!open) return;
     const down = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
         onOpenChange(false);
       }
     };
@@ -49,7 +51,13 @@ export function CommandPalette({
     <ThemedSurface
       data-testid="command-palette-overlay"
       variant="overlay"
-      className="command-palette-overlay fixed inset-0 z-[100] flex items-start justify-center p-4 pt-24"
+      className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-24"
+      onKeyDownCapture={(event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      }}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}

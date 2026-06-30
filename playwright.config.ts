@@ -2,6 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  // Keep tests inside each spec file serial. The files still run across workers,
+  // but each test shares one API server and SQLite database, so fullyParallel
+  // would allow same-file tests to reset server state under each other.
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI

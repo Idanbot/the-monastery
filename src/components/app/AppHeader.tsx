@@ -120,12 +120,23 @@ export function AppHeader() {
         >
           <Menu size={20} />
         </button>
-        <div className="rounded-lg bg-indigo-600 p-1.5 text-white shadow-sm">
-          <Activity size={18} />
-        </div>
-        <h1 className="hidden text-lg font-bold leading-none tracking-tight text-slate-800 dark:text-white sm:block md:text-xl">
-          TheMonastery
-        </h1>
+        <button
+          type="button"
+          aria-label="Go to board"
+          onClick={() => {
+            setMonkMode(false);
+            setView('board');
+            setSidebarOpen(false);
+          }}
+          className="flex items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        >
+          <span className="rounded-lg bg-indigo-600 p-1.5 text-white shadow-sm">
+            <Activity size={18} />
+          </span>
+          <h1 className="hidden text-lg font-bold leading-none tracking-tight text-slate-800 dark:text-white sm:block md:text-xl">
+            TheMonastery
+          </h1>
+        </button>
         <div
           data-testid="app-version-chip"
           title={`Version ${visibleVersion(frontendVersion)}`}

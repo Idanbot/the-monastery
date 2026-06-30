@@ -77,6 +77,19 @@ it('renders analytics with a chart component', async () => {
   expect(await screen.findByTestId('analytics-status-chart', {}, { timeout: 5000 })).toBeInTheDocument();
 });
 
+it('returns to the board when the logo is clicked', async () => {
+  const user = userEvent.setup();
+  seedTasks([makeTask({ id: 'done-task', title: 'Done task', status: 'done' })]);
+  render(<App />);
+
+  await user.click(screen.getByTestId('view-switch-dashboard'));
+  expect(await screen.findByTestId('analytics-status-chart', {}, { timeout: 5000 })).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: /go to board/i }));
+  expect(screen.getByTestId('kanban-board')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Backlog' })).toBeInTheDocument();
+});
+
 it('shows virtualized mobile task list', async () => {
   const user = userEvent.setup();
   seedTasks([makeTask({ id: 'one', title: 'One' }), makeTask({ id: 'two', title: 'Two', status: 'done' })]);
@@ -166,13 +179,18 @@ it('opens keyboard shortcut help with question mark', async () => {
   expect(within(dialog).getByText(/ctrl\+k/i)).toBeInTheDocument();
 });
 
-it('keeps the command palette backdrop fully transparent', async () => {
+it('uses a modal command palette backdrop and closes cleanly with Escape', async () => {
   const user = userEvent.setup();
   render(<App />);
 
   await user.keyboard('{Control>}k{/Control}');
+  expect(screen.getByTestId('command-palette-overlay')).toHaveClass('modal-overlay');
 
-  expect(screen.getByTestId('command-palette-overlay')).toHaveClass('command-palette-overlay');
+  await user.keyboard('{Escape}');
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog', { name: /command palette/i })).not.toBeInTheDocument()
+  );
+  expect(screen.queryByRole('dialog', { name: /keyboard shortcuts/i })).not.toBeInTheDocument();
 });
 
 it('shows weekly role balance insight', async () => {

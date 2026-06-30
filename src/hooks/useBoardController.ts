@@ -61,11 +61,12 @@ export function useBoardController(setTasks) {
       const draggedTask = movedTasks.find((task) => task.id === draggedTaskId);
       if (!draggedTask) return previous;
       const next = movedTasks.filter((task) => task.id !== draggedTaskId);
-      if (!dragOverInfo?.id) next.push(draggedTask);
+      const targetDrop = dragOverInfo?.status === status ? dragOverInfo : null;
+      if (!targetDrop?.id) next.push(draggedTask);
       else {
-        const targetIndex = next.findIndex((task) => task.id === dragOverInfo.id);
+        const targetIndex = next.findIndex((task) => task.id === targetDrop.id);
         const insertIndex =
-          targetIndex < 0 ? next.length : targetIndex + (dragOverInfo.position === 'bottom' ? 1 : 0);
+          targetIndex < 0 ? next.length : targetIndex + (targetDrop.position === 'bottom' ? 1 : 0);
         next.splice(insertIndex, 0, draggedTask);
       }
       return next;

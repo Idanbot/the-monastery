@@ -39,6 +39,10 @@ import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
 import { useProfileContext } from '../../contexts/ProfileContext';
 
+const appVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
+const appBuildRef = typeof __APP_BUILD_REF__ === 'string' ? __APP_BUILD_REF__ : 'local';
+const appBuildDate = typeof __APP_BUILD_DATE__ === 'string' ? __APP_BUILD_DATE__ : 'unknown';
+
 const sectionIds = ['appearance', 'time', 'board', 'tags', 'roles', 'sidebar', 'profiles', 'data'];
 
 export function SettingsModal({
@@ -1188,6 +1192,17 @@ export function SettingsModal({
                   />
                 </SettingSection>
               )}
+              <div
+                data-testid="settings-build-metadata"
+                className="mt-4 border-t border-slate-200 pt-3 text-[11px] text-slate-400 dark:border-slate-800"
+              >
+                <div className="mb-1 font-semibold uppercase tracking-wider">Build</div>
+                <div className="grid gap-1 font-mono">
+                  <div>Version: {appVersion}</div>
+                  <div>Commit: {appBuildRef}</div>
+                  <div>Built: {appBuildDate}</div>
+                </div>
+              </div>
             </div>
           </motion.div>
         </Dialog.Content>

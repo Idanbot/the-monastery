@@ -6,6 +6,8 @@ import './index.css';
 
 declare global {
   const __APP_VERSION__: string;
+  const __APP_BUILD_REF__: string;
+  const __APP_BUILD_DATE__: string;
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

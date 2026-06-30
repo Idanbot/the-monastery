@@ -73,6 +73,42 @@ describe('useBoardController', () => {
     expect(tasks.map((task) => task.id)).toEqual(['dragged', 'target']);
   });
 
+  it('places same-column drops above or below the hovered task only for that lane', () => {
+    const setTasks = vi.fn();
+    const { result } = renderHook(() => useBoardController(setTasks));
+    act(() => {
+      result.current.setDraggedTaskId('dragged');
+      result.current.setDragOverInfo({ status: 'backlog', id: 'target', position: 'bottom' });
+    });
+
+    act(() =>
+      result.current.handleDrop({ preventDefault: vi.fn(), target: { style: { opacity: '0.5' } } }, 'backlog')
+    );
+    const dropBelow = setTasks.mock.lastCall?.[0];
+    expect(
+      dropBelow([
+        normalizeTask({ id: 'dragged', title: 'Dragged' }),
+        normalizeTask({ id: 'target', title: 'Target' }),
+        normalizeTask({ id: 'third', title: 'Third' })
+      ]).map((task) => task.id)
+    ).toEqual(['target', 'dragged', 'third']);
+
+    act(() => {
+      result.current.setDraggedTaskId('dragged');
+      result.current.setDragOverInfo({ status: 'done', id: 'target', position: 'top' });
+    });
+    act(() =>
+      result.current.handleDrop({ preventDefault: vi.fn(), target: { style: { opacity: '0.5' } } }, 'backlog')
+    );
+    const staleTargetDrop = setTasks.mock.lastCall?.[0];
+    expect(
+      staleTargetDrop([
+        normalizeTask({ id: 'target', title: 'Target' }),
+        normalizeTask({ id: 'dragged', title: 'Dragged' })
+      ]).map((task) => task.id)
+    ).toEqual(['target', 'dragged']);
+  });
+
   it('moves and reorders tasks without a pointer drag', () => {
     const setTasks = vi.fn();
     const { result } = renderHook(() => useBoardController(setTasks));

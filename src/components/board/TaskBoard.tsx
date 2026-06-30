@@ -4,8 +4,6 @@ import {
   ArrowDownUp,
   CheckSquare,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ChevronUp,
   Clock,
   Flame,
@@ -36,7 +34,6 @@ const statusColorClass = (status) =>
 
 function TaskColumn({
   status,
-  collapseAxis,
   filteredTasks,
   settings,
   columnSorts,
@@ -74,23 +71,19 @@ function TaskColumn({
     <div
       data-testid={`board-column-${status}`}
       data-collapsed={collapsed ? 'true' : 'false'}
-      className={`flex h-full ${collapsed ? 'min-h-0' : 'min-h-[14rem]'} flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-200/50 dark:border-slate-800/60 dark:bg-slate-800/40 sm:min-h-0`}
+      className={`flex ${collapsed ? 'h-auto min-h-0 self-start' : 'h-full min-h-[14rem] sm:min-h-0'} flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-200/50 dark:border-slate-800/60 dark:bg-slate-800/40`}
       onDragOver={(e) => handleDragOver(e, status)}
       onDrop={(e) => handleDrop(e, status)}
     >
-      <div
-        className={`flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/50 py-2 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/80 ${collapsed && collapseAxis === 'horizontal' ? 'px-3 sm:px-1' : 'px-3'}`}
-      >
+      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/50 px-3 py-2 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/80">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
             <div className={`h-2 w-2 shrink-0 rounded-full ${statusColorClass(status)}`}></div>
-            <span className={`truncate ${collapsed && collapseAxis === 'horizontal' ? 'sm:hidden' : ''}`}>
-              {statusLabels[status]}
-            </span>
+            <span className="truncate">{statusLabels[status]}</span>
           </h2>
           <button
             onClick={() => cycleSort(status)}
-            className={`rounded p-1 text-slate-400 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 ${collapsed && collapseAxis === 'horizontal' ? 'sm:hidden' : ''}`}
+            className={`rounded p-1 text-slate-400 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 ${collapsed ? 'hidden' : ''}`}
             title={`Sort: ${sortType}`}
           >
             {sortType === 'urgency' && <Flame size={12} className="text-orange-500" />}
@@ -100,7 +93,7 @@ function TaskColumn({
         </div>
         <div className="flex items-center gap-1">
           <span
-            className={`rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300 ${collapsed && collapseAxis === 'horizontal' ? 'sm:hidden' : ''}`}
+            className={`rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300 ${collapsed ? 'hidden' : ''}`}
           >
             {filtered.length}
           </span>
@@ -112,17 +105,7 @@ function TaskColumn({
             onClick={() => onToggleLane(status)}
             className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-slate-700 ${collapsed ? 'bg-slate-200/70 dark:bg-slate-700/70' : ''}`}
           >
-            {collapseAxis === 'horizontal' ? (
-              collapsed ? (
-                <ChevronRight size={16} />
-              ) : (
-                <ChevronLeft size={16} />
-              )
-            ) : collapsed ? (
-              <ChevronDown size={16} />
-            ) : (
-              <ChevronUp size={16} />
-            )}
+            {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
           </button>
         </div>
       </div>
@@ -336,8 +319,7 @@ const columnWidth = (settings, status) => Number(settings.columnWidths?.[widthKe
 const stackHeight = (settings, status) => Number(settings.compactHeights?.[widthKey(status)]) || 50;
 const collapsedLane = (settings, status) => settings.collapsedBoardLanes?.includes(status) || false;
 const collapsedTrack = 'var(--collapsed-lane-size, 3.5rem)';
-const columnTrack = (settings, status) =>
-  collapsedLane(settings, status) ? collapsedTrack : String(columnWidth(settings, status)) + 'fr';
+const columnTrack = (settings, status) => String(columnWidth(settings, status)) + 'fr';
 const stackTrack = (settings, status) =>
   collapsedLane(settings, status) ? collapsedTrack : String(stackHeight(settings, status)) + 'fr';
 const gridTemplate = (tracks, resizeVisible) =>
@@ -671,9 +653,7 @@ export function KanbanBoard({
       );
     }
   };
-  const column = (status, collapseAxis = 'vertical') => (
-    <TaskColumn key={status} status={status} collapseAxis={collapseAxis} {...columnProps} />
-  );
+  const column = (status) => <TaskColumn key={status} status={status} {...columnProps} />;
   const verticalHandle = (left, right) =>
     resizeVisible ? (
       <ResizeHandle
@@ -712,7 +692,7 @@ export function KanbanBoard({
           })}
         >
           {order.full.flatMap((status, index) => [
-            column(status, 'horizontal'),
+            column(status),
             index < order.full.length - 1 ? verticalHandle(status, order.full[index + 1]) : null
           ])}
         </div>
@@ -734,9 +714,9 @@ export function KanbanBoard({
             )
           })}
         >
-          {column(order.threeColumn[0], 'horizontal')}
+          {column(order.threeColumn[0])}
           {verticalHandle(order.threeColumn[0], order.threeColumn[1])}
-          {column(order.threeColumn[1], 'horizontal')}
+          {column(order.threeColumn[1])}
           {resizeVisible && (
             <ResizeHandle
               id={

@@ -155,12 +155,17 @@ describe('KanbanBoard layout controls', () => {
       <KanbanBoard {...baseProps({ ...configuredSettings, collapsedBoardLanes: ['backlog'] })} />
     );
 
+    const backlogColumn = screen.getByTestId('board-column-backlog');
+    expect(within(backlogColumn).getByText('Backlog')).toHaveClass('truncate');
+    expect(backlogColumn).toHaveClass('h-auto');
+    expect(within(backlogColumn).queryByText('Backlog item')).not.toBeInTheDocument();
+
     expect(
       (screen.getByTestId('kanban-board').firstElementChild as HTMLElement).style.getPropertyValue(
         '--kanban-grid-template'
       )
     ).toBe(
-      'var(--collapsed-lane-size, 3.5rem) var(--resize-handle-thickness, 4px) 25fr var(--resize-handle-thickness, 4px) 25fr var(--resize-handle-thickness, 4px) 25fr'
+      '37fr var(--resize-handle-thickness, 4px) 25fr var(--resize-handle-thickness, 4px) 25fr var(--resize-handle-thickness, 4px) 25fr'
     );
 
     rerender(<KanbanBoard {...baseProps({ ...configuredSettings, collapsedBoardLanes: [] })} />);

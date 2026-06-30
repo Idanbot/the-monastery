@@ -1,13 +1,28 @@
+import { execSync } from 'node:child_process';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import packageJson from './package.json';
 
 const apiTarget = process.env.THE_MONASTERY_API_URL || 'http://127.0.0.1:3000';
+const readGitValue = (command: string, fallback: string) => {
+  try {
+    return execSync(command, { encoding: 'utf8' }).trim() || fallback;
+  } catch {
+    return fallback;
+  }
+};
+const buildRef =
+  process.env.THE_MONASTERY_BUILD_REF ||
+  process.env.GITHUB_SHA ||
+  readGitValue('git rev-parse HEAD', 'local');
+const buildDate = process.env.THE_MONASTERY_BUILD_DATE || process.env.BUILD_DATE || new Date().toISOString();
 
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(packageJson.version)
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+    __APP_BUILD_REF__: JSON.stringify(buildRef),
+    __APP_BUILD_DATE__: JSON.stringify(buildDate)
   },
   plugins: [
     react(),
