@@ -21,6 +21,8 @@ export function TagFilterMenu({ knownTags, activeFilters, onToggleTag, onClear }
         role="combobox"
         aria-label="Search known tags"
         aria-autocomplete="list"
+        aria-controls="known-tag-options"
+        aria-expanded={options.length > 0}
         autoComplete="off"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
@@ -39,6 +41,7 @@ export function TagFilterMenu({ knownTags, activeFilters, onToggleTag, onClear }
         <p className="text-sm italic text-slate-400">No matching tags.</p>
       ) : (
         <div
+          id="known-tag-options"
           role="listbox"
           aria-label="Known tags"
           className="custom-scrollbar flex max-h-[200px] flex-wrap gap-1.5 overflow-y-auto"
@@ -47,6 +50,8 @@ export function TagFilterMenu({ knownTags, activeFilters, onToggleTag, onClear }
             <button
               key={tag}
               type="button"
+              role="option"
+              aria-selected={activeFilters.includes(tag)}
               onClick={() => onToggleTag(tag)}
               className={`rounded-md border px-2 py-1 text-xs transition-colors ${activeFilters.includes(tag) ? 'border-indigo-300 bg-indigo-100 text-indigo-800 dark:border-indigo-500/50 dark:bg-indigo-900/50 dark:text-indigo-200' : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'}`}
             >

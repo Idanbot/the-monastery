@@ -37,6 +37,26 @@ const waitForJson = async (url, predicate, timeoutMs = 30_000) => {
   throw lastError || new Error(`Timed out waiting for ${url}`);
 };
 
+const waitForText = async (url, predicate, timeoutMs = 30_000) => {
+  const startedAt = Date.now();
+  let lastError;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const response = await fetch(url);
+      const body = await response.text();
+      if (response.ok && predicate(body)) return body;
+      lastError = new Error(response.status + ' ' + body.slice(0, 200));
+    } catch (error) {
+      lastError = error;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 750));
+  }
+
+  throw lastError || new Error('Timed out waiting for ' + url);
+};
+
 let failed = false;
 
 try {
@@ -67,6 +87,7 @@ try {
   const baseUrl = `http://127.0.0.1:${port}`;
   await waitForJson(`${baseUrl}/api/health`, (body) => body.ok === true && typeof body.version === 'string');
   await waitForJson(`${baseUrl}/api/profiles`, (body) => Array.isArray(body.profiles));
+  await waitForText(baseUrl + '/', (body) => body.includes('<!doctype html>') && body.includes('id="root"'));
   console.log(`Docker smoke passed for ${image}`);
 } catch (error) {
   failed = true;

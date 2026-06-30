@@ -1,8 +1,8 @@
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyError, type FastifyInstance, type FastifyRequest } from 'fastify';
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import packageJson from '../package.json' with { type: 'json' };
 import { createDataStore } from './db.js';
 import { registerBackupRoutes } from './routes/backup.js';
@@ -11,8 +11,7 @@ import { registerSettingsRoutes } from './routes/settings.js';
 import { registerTaskRoutes } from './routes/tasks.js';
 import type { ServerOptions } from './types.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const projectRoot = join(__dirname, '..');
+const projectRoot = process.cwd();
 const defaultPublicDir = join(projectRoot, 'dist');
 const defaultDataDir = process.env.THE_MONASTERY_DATA_DIR || join(projectRoot, 'data');
 const defaultDbPath = process.env.THE_MONASTERY_DB_PATH || join(defaultDataDir, 'the-monastery.sqlite');

@@ -1004,3 +1004,17 @@ test('keeps a mobile-created task after reload', async ({ page, request }) => {
   await searchTasks(page, mobileTitle);
   await expectTaskVisible(page, mobileTitle);
 });
+
+test('searches and selects known tag filters on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  await page.getByRole('button', { name: /filters/i }).click();
+  const tagSearch = page.getByRole('combobox', { name: /search known tags/i });
+  await expect(tagSearch).toBeVisible();
+  await tagSearch.fill('back');
+  await expect(page.getByRole('option', { name: 'backend' })).toBeVisible();
+  await page.getByRole('option', { name: 'backend' }).click();
+
+  await expect(page.getByRole('button', { name: /filters/i })).toContainText('1');
+});

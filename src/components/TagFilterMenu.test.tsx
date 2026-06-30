@@ -16,8 +16,8 @@ describe('TagFilterMenu', () => {
 
     const search = screen.getByRole('combobox', { name: /search known tags/i });
     fireEvent.change(search, { target: { value: 'obs' } });
-    expect(screen.getByRole('button', { name: 'observability' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'backend' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'observability' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'backend' })).not.toBeInTheDocument();
 
     fireEvent.keyDown(search, { key: 'Enter' });
     expect(onToggleTag).toHaveBeenCalledWith('observability');

@@ -201,7 +201,7 @@ export function AppHeader() {
           </div>
         )}
         {!settings.monkMode && (
-          <div className="hidden sm:block">
+          <div className="block">
             <ThemedSurface
               as="button"
               variant="menuTrigger"
@@ -209,7 +209,7 @@ export function AppHeader() {
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className={`flex items-center gap-1 rounded-lg border p-2 text-sm font-medium ${activeFilters.length ? 'border-indigo-200 text-indigo-700 dark:border-indigo-700 dark:text-indigo-400' : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}
             >
-              <Filter size={16} /> <span className="hidden lg:inline">Filters</span>
+              <Filter size={16} /> <span className="sr-only lg:not-sr-only">Filters</span>
               {activeFilters.length > 0 && (
                 <span className="rounded-full bg-indigo-500 px-1.5 text-[10px] text-white">
                   {activeFilters.length}

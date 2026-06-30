@@ -400,7 +400,7 @@ it('filters tasks by tag', async () => {
   await user.click(screen.getByRole('button', { name: /save task/i }));
 
   await user.click(screen.getByRole('button', { name: /filters/i }));
-  await user.click(screen.getByRole('button', { name: /^frontend$/i }));
+  await user.click(screen.getByRole('option', { name: /^frontend$/i }));
 
   expect(screen.getAllByText(/frontend polish/i).length).toBeGreaterThan(0);
   expect(screen.queryByText(/design database schema/i)).not.toBeInTheDocument();
@@ -418,7 +418,7 @@ it('adds task tags from the fuzzy tag pool', async () => {
   await user.click(screen.getByRole('button', { name: /save task/i }));
 
   await user.click(screen.getByRole('button', { name: /filters/i }));
-  await user.click(screen.getByRole('button', { name: /^python$/i }));
+  await user.click(screen.getByRole('option', { name: /^python$/i }));
 
   expect(screen.getAllByText(/python study/i).length).toBeGreaterThan(0);
 });
