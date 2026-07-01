@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { formatClockTime } from '../../domain/calendarView';
+import type { AppSettings } from '../../domain/types';
 
 interface TimeSlotProps {
   time: string;
   date: string;
   onDropTask: (taskId: string, date: string, time: string) => void;
   onActivate: (date: string, time: string) => void;
+  clockFormat: AppSettings['clockFormat'];
   initialTabStop?: boolean;
 }
 
@@ -13,6 +16,7 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({
   date,
   onDropTask,
   onActivate,
+  clockFormat,
   initialTabStop = false
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -76,11 +80,11 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({
       onClick={() => onActivate(date, time)}
       onKeyDown={handleKeyDown}
       tabIndex={initialTabStop ? 0 : -1}
-      aria-label={`${date} at ${time}, create task`}
+      aria-label={date + ' at ' + formatClockTime(time, clockFormat) + ', create task'}
       data-calendar-slot="true"
       data-date={date}
       data-time={time}
-      className={`h-[30px] w-full border-t border-slate-200/40 dark:border-slate-800/40 transition-colors focus-visible:relative focus-visible:z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 ${
+      className={`block h-[30px] w-full border-t border-slate-200/40 dark:border-slate-800/40 transition-colors focus-visible:relative focus-visible:z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500 ${
         isDragOver
           ? 'bg-indigo-500/10 dark:bg-indigo-500/20'
           : isHour

@@ -429,6 +429,7 @@ test('customizes Liquid Glass colors and exposes material surfaces', async ({ pa
 
 test('uses command palette, shortcuts, and task templates', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'TheMonastery' })).toBeVisible();
 
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K');
   await expect(page.getByRole('dialog', { name: /command palette/i })).toBeVisible();

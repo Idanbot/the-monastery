@@ -14,12 +14,27 @@ describe('CalendarTaskBlock', () => {
       scheduledEnd: '10:00'
     });
 
-    render(<CalendarTaskBlock task={task} onSelect={vi.fn()} />);
+    render(<CalendarTaskBlock clockFormat="24h" task={task} onSelect={vi.fn()} />);
 
     const event = screen.getByTestId('calendar-task-Calendar focus task');
     expect(event).toHaveTextContent(/^Calendar focus task$/);
     expect(event).toHaveAttribute('title', 'Calendar focus task');
     expect(event).not.toHaveTextContent('deep-work');
     expect(event).not.toHaveTextContent('9');
+  });
+  it('formats event times with the selected 12-hour clock', () => {
+    const task = normalizeTask({
+      id: 'afternoon-task',
+      title: 'Afternoon focus',
+      scheduledDate: '2026-07-02',
+      scheduledStart: '13:00',
+      scheduledEnd: '14:30'
+    });
+
+    render(<CalendarTaskBlock clockFormat="12h" task={task} onSelect={vi.fn()} />);
+
+    expect(screen.getByTestId('calendar-task-Afternoon focus')).toHaveAccessibleName(
+      'Afternoon focus, 2026-07-02 from 1:00 PM to 2:30 PM'
+    );
   });
 });

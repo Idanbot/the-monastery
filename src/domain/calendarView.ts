@@ -41,6 +41,15 @@ export const clockTimeToMinutes = (time: string): number => {
   return (hours || 0) * 60 + (minutes || 0);
 };
 
+export const formatClockTime = (time: string, format: '12h' | '24h'): string => {
+  const [hoursValue, minutesValue] = time.split(':').map(Number);
+  const hours = Math.max(0, Math.min(23, hoursValue || 0));
+  const minutes = Math.max(0, Math.min(59, minutesValue || 0));
+  const minuteText = String(minutes).padStart(2, '0');
+  if (format === '24h') return String(hours).padStart(2, '0') + ':' + minuteText;
+  return (hours % 12 || 12) + ':' + minuteText + ' ' + (hours >= 12 ? 'PM' : 'AM');
+};
+
 export const minutesToClockTime = (minutes: number): string => {
   const clamped = Math.max(0, Math.min(1439, minutes));
   const hours = Math.floor(clamped / 60)

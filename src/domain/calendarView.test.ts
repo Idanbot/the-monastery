@@ -5,6 +5,7 @@ import {
   getUnscheduledTasks,
   snapToSlot,
   clockTimeToMinutes,
+  formatClockTime,
   minutesToClockTime
 } from './calendarView';
 import type { Task } from './types';
@@ -87,5 +88,14 @@ describe('calendarView domain', () => {
       expect(minutesToClockTime(1500)).toBe('23:59'); // clamped
       expect(minutesToClockTime(-10)).toBe('00:00'); // clamped
     });
+  });
+});
+
+describe('formatClockTime', () => {
+  it('formats stored clock values using the selected display mode', () => {
+    expect(formatClockTime('00:00', '24h')).toBe('00:00');
+    expect(formatClockTime('13:30', '24h')).toBe('13:30');
+    expect(formatClockTime('00:00', '12h')).toBe('12:00 AM');
+    expect(formatClockTime('13:30', '12h')).toBe('1:30 PM');
   });
 });

@@ -95,7 +95,7 @@ export const CalendarView: React.FC = () => {
           {/* Side Time Ruler */}
           <div className="sticky left-0 z-30 w-16 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 select-none">
             <div className="h-14 border-b border-slate-200 dark:border-slate-800" aria-hidden="true" />
-            <div className="relative h-[1440px]">
+            <div data-testid="calendar-time-ruler" className="relative h-[1440px] shrink-0">
               {Array.from({ length: 24 }).map((_, i) => (
                 <div
                   key={i}
@@ -120,6 +120,7 @@ export const CalendarView: React.FC = () => {
                 onCreateTask={handleCreateScheduledTask}
                 onSelectTask={setSelectedTaskId}
                 now={now}
+                clockFormat={settings.clockFormat}
                 initialTabStop={index === 0}
               />
             ))}

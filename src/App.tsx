@@ -16,19 +16,19 @@ import { ProfileImportDialog } from './components/app/ProfileImportDialog';
 import { PlanningImportDialog } from './components/app/PlanningImportDialog';
 import { ImportPreviewDialog } from './components/app/ImportPreviewDialog';
 
-export default function App() {
+export default function App({ authEnabled }: { authEnabled?: boolean } = {}) {
   return (
-    <SettingsProvider>
-      <TaskProvider>
-        <ProfileProvider>
-          <UIProvider>
-            <OwnerTokenGate>
+    <OwnerTokenGate enabled={authEnabled}>
+      <SettingsProvider>
+        <TaskProvider>
+          <ProfileProvider>
+            <UIProvider>
               <AppShell />
-            </OwnerTokenGate>
-          </UIProvider>
-        </ProfileProvider>
-      </TaskProvider>
-    </SettingsProvider>
+            </UIProvider>
+          </ProfileProvider>
+        </TaskProvider>
+      </SettingsProvider>
+    </OwnerTokenGate>
   );
 }
 

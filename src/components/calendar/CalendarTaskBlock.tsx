@@ -1,12 +1,14 @@
 import React from 'react';
-import type { Task } from '../../domain/types';
+import { formatClockTime } from '../../domain/calendarView';
+import type { AppSettings, Task } from '../../domain/types';
 
 interface CalendarTaskBlockProps {
   task: Task;
   onSelect: (taskId: string) => void;
+  clockFormat: AppSettings['clockFormat'];
 }
 
-export const CalendarTaskBlock: React.FC<CalendarTaskBlockProps> = ({ task, onSelect }) => {
+export const CalendarTaskBlock: React.FC<CalendarTaskBlockProps> = ({ task, onSelect, clockFormat }) => {
   const [startH, startM] = task.scheduledStart.split(':').map(Number);
   const top = (startH || 0) * 60 + (startM || 0);
 
@@ -32,7 +34,14 @@ export const CalendarTaskBlock: React.FC<CalendarTaskBlockProps> = ({ task, onSe
       style={{ top: `${top}px`, height: `${duration}px` }}
       data-testid={`calendar-task-${task.title || 'Untitled'}`}
       title={task.title || 'Untitled'}
-      aria-label={`${task.title || 'Untitled task'}, ${task.scheduledDate} from ${task.scheduledStart}${task.scheduledEnd ? ` to ${task.scheduledEnd}` : ''}`}
+      aria-label={
+        (task.title || 'Untitled task') +
+        ', ' +
+        task.scheduledDate +
+        ' from ' +
+        formatClockTime(task.scheduledStart, clockFormat) +
+        (task.scheduledEnd ? ' to ' + formatClockTime(task.scheduledEnd, clockFormat) : '')
+      }
     >
       <div className="font-semibold leading-snug text-slate-800 dark:text-slate-200 line-clamp-3 break-words">
         {task.title || 'Untitled'}

@@ -10,13 +10,20 @@ describe('TimeSlot keyboard accessibility', () => {
     render(
       <>
         <TimeSlot
+          clockFormat="24h"
           date="2026-07-01"
           time="00:00"
           onActivate={onActivate}
           onDropTask={onDropTask}
           initialTabStop
         />
-        <TimeSlot date="2026-07-01" time="00:30" onActivate={onActivate} onDropTask={onDropTask} />
+        <TimeSlot
+          clockFormat="24h"
+          date="2026-07-01"
+          time="00:30"
+          onActivate={onActivate}
+          onDropTask={onDropTask}
+        />
       </>
     );
 

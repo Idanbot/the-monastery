@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Task } from '../../domain/types';
+import type { AppSettings, Task } from '../../domain/types';
 import { TimeSlot } from './TimeSlot';
 import { CalendarTaskBlock } from './CalendarTaskBlock';
 import { formatDateInputValue } from '../../domain/tasks';
@@ -12,6 +12,7 @@ interface DayColumnProps {
   onCreateTask: (date: string, time: string) => void;
   onSelectTask: (taskId: string) => void;
   now: number;
+  clockFormat: AppSettings['clockFormat'];
   initialTabStop?: boolean;
 }
 
@@ -22,6 +23,7 @@ export const DayColumn: React.FC<DayColumnProps> = ({
   onCreateTask,
   onSelectTask,
   now,
+  clockFormat,
   initialTabStop = false
 }) => {
   const dateStr = formatDateInputValue(date);
@@ -63,7 +65,7 @@ export const DayColumn: React.FC<DayColumnProps> = ({
       </div>
 
       {/* Grid Container */}
-      <div className="flex-1 relative h-[1440px] bg-white dark:bg-slate-900/40">
+      <div className="relative h-[1440px] shrink-0 bg-white dark:bg-slate-900/40">
         {/* Time slots */}
         {slots.map((time) => (
           <TimeSlot
@@ -72,13 +74,14 @@ export const DayColumn: React.FC<DayColumnProps> = ({
             date={dateStr}
             onDropTask={onDropTask}
             onActivate={onCreateTask}
+            clockFormat={clockFormat}
             initialTabStop={initialTabStop && time === '00:00'}
           />
         ))}
 
         {/* Task Blocks */}
         {scheduledTasks.map((task) => (
-          <CalendarTaskBlock key={task.id} task={task} onSelect={onSelectTask} />
+          <CalendarTaskBlock key={task.id} task={task} onSelect={onSelectTask} clockFormat={clockFormat} />
         ))}
 
         {/* Red Current Time Line */}

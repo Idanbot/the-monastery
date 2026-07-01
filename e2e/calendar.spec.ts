@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { browserToday, createTask, resetServerState } from './helpers';
+import { browserToday, createTask, openSettingsSection, resetServerState } from './helpers';
 
 test.beforeEach(async ({ page, request }) => {
   const activeProfileId = await resetServerState(request);
@@ -79,4 +79,38 @@ test('toggles day and week view modes', async ({ page }) => {
   // Switch back to day view
   await page.getByRole('button', { name: /^day$/i }).click();
   await expect(page.getByTestId(/^day-column-/)).toHaveCount(1);
+});
+
+test('limits the calendar grid to one 24-hour day', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('view-switch-calendar').click();
+
+  const geometry = await page.getByTestId('calendar-scroll-area').evaluate((scrollArea) => {
+    const lastSlot = scrollArea.querySelector<HTMLElement>('[data-time="23:30"]');
+    const ruler = scrollArea.querySelector<HTMLElement>('[data-testid="calendar-time-ruler"]');
+    if (!lastSlot || !ruler) throw new Error('Missing calendar geometry elements');
+    return {
+      scrollHeight: scrollArea.scrollHeight,
+      lastSlotBottom: lastSlot.offsetTop + lastSlot.offsetHeight,
+      rulerHeight: ruler.offsetHeight
+    };
+  });
+
+  expect(geometry).toEqual({ scrollHeight: 1496, lastSlotBottom: 1440, rulerHeight: 1440 });
+});
+
+test('uses the clock format setting for calendar labels', async ({ page }) => {
+  await page.goto('/');
+  await openSettingsSection(page, 'Time');
+  await page
+    .getByRole('combobox')
+    .filter({ has: page.locator('option[value="12h"]') })
+    .selectOption('12h');
+  await page.getByRole('button', { name: /close settings/i }).click();
+
+  await page.getByTestId('view-switch-calendar').click();
+  const calendar = page.getByTestId('calendar-view');
+  await expect(calendar.getByText('1:00 PM', { exact: true })).toBeVisible();
+  await expect(calendar.getByText('13:00')).toHaveCount(0);
+  await expect(page.locator('[data-time="13:00"]')).toHaveAttribute('aria-label', /1:00 PM/);
 });
