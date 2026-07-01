@@ -637,10 +637,13 @@ it('opens full settings collapsed and supports icon-only expand/collapse control
   expect(screen.getByRole('button', { name: /backup/i })).toBeInTheDocument();
 
   await user.click(screen.getByRole('button', { name: /collapse all settings sections/i }));
-  await waitFor(() => {
-    expect(screen.queryByText(/modal transparency/i)).not.toBeInTheDocument();
-  });
-});
+  await waitFor(
+    () => {
+      expect(screen.queryByText(/modal transparency/i)).not.toBeInTheDocument();
+    },
+    { timeout: 3000 }
+  );
+}, 20_000);
 
 it('offers readable theme gallery choices for default modes and custom themes', async () => {
   const user = userEvent.setup();

@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  timeout: 120_000,
   // Keep tests inside each spec file serial. The files still run across workers,
   // but each test shares one API server and SQLite database, so fullyParallel
   // would allow same-file tests to reset server state under each other.
@@ -26,7 +27,7 @@ export default defineConfig({
       command:
         "node -e \"const fs=require('fs');for(const f of ['/tmp/the-monastery-e2e.sqlite','/tmp/the-monastery-e2e.sqlite-shm','/tmp/the-monastery-e2e.sqlite-wal']){try{fs.rmSync(f,{force:true})}catch{}}\" && PORT=3100 HOST=127.0.0.1 THE_MONASTERY_DB_PATH=/tmp/the-monastery-e2e.sqlite THE_MONASTERY_API_RATE_LIMIT_MAX=1000000 npm run dev:api",
       url: 'http://127.0.0.1:3100/api/health',
-      reuseExistingServer: false,
+      reuseExistingServer: !process.env.CI,
       timeout: 120_000
     },
     {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { Task } from '../domain/types';
 
 type Options = {
@@ -23,7 +23,7 @@ type Options = {
 export function useAppShortcuts(options: Options) {
   const optionsRef = useRef(options);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     optionsRef.current = options;
   }, [options]);
 
@@ -31,9 +31,10 @@ export function useAppShortcuts(options: Options) {
     const handleShortcut = (event: KeyboardEvent) => {
       const current = optionsRef.current;
       const target = event.target;
-      const isInteractive =
+      const isTextEntry =
         target instanceof HTMLElement &&
-        (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(target.tagName));
+        (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+      const isButtonLike = target instanceof HTMLElement && ['BUTTON', 'A'].includes(target.tagName);
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -44,9 +45,10 @@ export function useAppShortcuts(options: Options) {
       if ((current.isCommandOpen || current.selectedTaskId) && event.key === 'Escape') {
         current.closeCommandPalette();
       }
-      if (isInteractive || current.isCommandOpen || current.selectedTaskId) return;
+      if (isTextEntry || current.isCommandOpen || current.selectedTaskId) return;
 
       if (['j', 'k', 'Enter'].includes(event.key)) {
+        if (isButtonLike) return;
         if (current.filteredTasks.length === 0) return;
         event.preventDefault();
         const currentIndex = Math.max(

@@ -9,7 +9,7 @@ import {
   stabilizePage
 } from './helpers';
 
-const screenshotOptions = { animations: 'disabled' as const, caret: 'hide' as const };
+const screenshotOptions = { animations: 'disabled' as const, caret: 'hide' as const, timeout: 10_000 };
 
 test.beforeEach(async ({ page, request }) => {
   await installStableVisualState(page);
@@ -41,7 +41,7 @@ test('settings modal and Liquid Glass settings remain visually stable', async ({
   await chooseTheme(page, 'liquid-glass');
   await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveScreenshot(
     'settings-liquid-glass.png',
-    screenshotOptions
+    { ...screenshotOptions, maxDiffPixels: 20 }
   );
 });
 

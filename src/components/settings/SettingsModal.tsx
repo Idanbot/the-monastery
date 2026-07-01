@@ -7,12 +7,10 @@ import { motion } from 'motion/react';
 import {
   Calendar,
   ChevronDown,
-  Clock,
   ChevronsDown,
   ChevronsUp,
   Download,
   FileJson,
-  Hash,
   Plus,
   RotateCcw,
   Settings2,
@@ -27,6 +25,7 @@ import { TagPicker } from '../tag-picker/TagPicker';
 import { SettingSection } from './SettingSection';
 import { BoardSettingsSection } from './BoardSettingsSection';
 import { TagManagementSection } from './TagManagementSection';
+import { TimeSettingsSection } from './TimeSettingsSection';
 import { themedSurfaceClassName } from '../ui/themedSurfaceStyles';
 import { createRoleFromPreset, rolePresets } from '../../domain/rolePresets';
 import { parseTagString } from '../../domain/tags';
@@ -34,7 +33,6 @@ import { createThemeRecipe, themeRecipeSchema } from '../../domain/themeStudio';
 import { generateId } from '../../domain/tasks';
 import { useThemeStyle } from '../../hooks/useThemeStyle';
 import { themeChoiceOptions } from '../../domain/themeGallery';
-import { requestNotificationPermission, sendBrowserNotification } from '../../domain/notifications';
 
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
@@ -127,9 +125,6 @@ export function SettingsModal({
   const [openSections, setOpenSections] = useState(() =>
     Object.fromEntries(sectionIds.map((id) => [id, isScopedSettings && id === initialSection]))
   );
-  const [notificationPermission, setNotificationPermission] = useState<
-    NotificationPermission | 'unsupported'
-  >(() => (typeof Notification === 'undefined' ? 'unsupported' : Notification.permission));
 
   useEffect(() => {
     setRoleTagDrafts(roleTagValues);
@@ -165,20 +160,6 @@ export function SettingsModal({
         [key]: value
       }
     }));
-  };
-
-  const updateClockSetting = (key: keyof typeof settings, value: unknown) => {
-    updateSetting(key, value);
-  };
-
-  const toggleNotifications = async (enabled: boolean) => {
-    if (!enabled) {
-      updateSetting('notificationsEnabled', false);
-      return;
-    }
-    const permission = await requestNotificationPermission();
-    setNotificationPermission(permission);
-    updateSetting('notificationsEnabled', permission === 'granted');
   };
 
   const setThemeChoice = (value: string) => {
@@ -545,180 +526,16 @@ export function SettingsModal({
               )}
 
               {visibleSectionIds.includes('time') && (
-                <SettingSection
-                  id="time"
-                  title="Time"
+                <TimeSettingsSection
+                  settings={settings}
+                  setSettings={setSettings}
                   openSections={openSections}
                   toggleSection={toggleSection}
                   motionDuration={motionDuration}
                   motionEase={motionEase}
-                >
-                  <select
-                    value={settings.clockFormat}
-                    onChange={(e) => updateClockSetting('clockFormat', e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                  >
-                    <option value="12h">12 hour</option>
-                    <option value="24h">24 hour</option>
-                  </select>
-                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
-                    <span>Seconds</span>
-                    <input
-                      aria-label="Show seconds"
-                      type="checkbox"
-                      checked={settings.showSeconds !== false}
-                      onChange={(e) => updateClockSetting('showSeconds', e.target.checked)}
-                      className="h-4 w-4 accent-indigo-600"
-                    />
-                  </label>
-                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
-                    <span>Background</span>
-                    <input
-                      aria-label="Clock background"
-                      type="checkbox"
-                      checked={settings.clockBackgroundVisible !== false}
-                      onChange={(e) => updateClockSetting('clockBackgroundVisible', e.target.checked)}
-                      className="h-4 w-4 accent-indigo-600"
-                    />
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
-                      <span>Clock text</span>
-                      <input
-                        aria-label="Clock text color"
-                        type="color"
-                        value={effectiveClockTextColor}
-                        onChange={(e) => updateClockSetting('clockTextColor', e.target.value)}
-                        className="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => updateClockSetting('clockTextColor', '')}
-                        className="rounded-md text-xs text-slate-500 hover:text-indigo-600 text-left"
-                      >
-                        Use theme text
-                      </button>
-                    </label>
-                    <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
-                      <span>Clock fill</span>
-                      <input
-                        aria-label="Clock background color"
-                        type="color"
-                        value={effectiveClockBackgroundColor}
-                        onChange={(e) => updateClockSetting('clockBackgroundColor', e.target.value)}
-                        className="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => updateClockSetting('clockBackgroundColor', '')}
-                        className="rounded-md text-xs text-slate-500 hover:text-indigo-600 text-left"
-                      >
-                        Use theme fill
-                      </button>
-                    </label>
-                  </div>
-                  <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
-                    <span className="text-sm text-slate-700 dark:text-slate-300">Clock face</span>
-                    <button
-                      aria-label="Digital clock"
-                      aria-pressed={settings.clockDisplayMode !== 'analog'}
-                      type="button"
-                      onClick={() => updateClockSetting('clockDisplayMode', 'digital')}
-                      className="h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 grid place-items-center aria-pressed:text-indigo-600 aria-pressed:border-indigo-300"
-                    >
-                      <Hash size={16} />
-                    </button>
-                    <button
-                      aria-label="Analog clock"
-                      aria-pressed={settings.clockDisplayMode === 'analog'}
-                      type="button"
-                      onClick={() => updateClockSetting('clockDisplayMode', 'analog')}
-                      className="h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 grid place-items-center aria-pressed:text-indigo-600 aria-pressed:border-indigo-300"
-                    >
-                      <Clock size={16} />
-                    </button>
-                  </div>
-                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
-                    <span>Hour lines</span>
-                    <input
-                      aria-label="Hourly timeline guide lines"
-                      type="checkbox"
-                      checked={settings.timelineHourLinesVisible !== false}
-                      onChange={(e) => updateClockSetting('timelineHourLinesVisible', e.target.checked)}
-                      className="h-4 w-4 accent-indigo-600"
-                    />
-                  </label>
-                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
-                    <span>Now line</span>
-                    <input
-                      aria-label="Current time red line"
-                      type="checkbox"
-                      checked={settings.timelineNowLineVisible !== false}
-                      onChange={(e) => updateClockSetting('timelineNowLineVisible', e.target.checked)}
-                      className="h-4 w-4 accent-indigo-600"
-                    />
-                  </label>
-                  <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-                    <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
-                      <span>Browser notifications</span>
-                      <input
-                        aria-label="Browser notifications"
-                        type="checkbox"
-                        checked={settings.notificationsEnabled === true}
-                        disabled={notificationPermission === 'unsupported'}
-                        onChange={(event) => void toggleNotifications(event.target.checked)}
-                        className="h-4 w-4 accent-indigo-600 disabled:opacity-50"
-                      />
-                    </label>
-                    <p className="mt-1 text-xs text-slate-500" aria-live="polite">
-                      {notificationPermission === 'unsupported'
-                        ? 'Notifications are not supported by this browser.'
-                        : notificationPermission === 'denied'
-                          ? 'Permission is blocked in browser settings.'
-                          : 'Alerts for task starts, overdue tasks, long-running timers, and Pomodoro completion.'}
-                    </p>
-                    {settings.notificationsEnabled && notificationPermission === 'granted' && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          sendBrowserNotification('The Monastery', { body: 'Notifications are working.' })
-                        }
-                        className="mt-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:border-indigo-300 dark:border-slate-700 dark:text-slate-300"
-                      >
-                        Send test notification
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
-                    <span className="text-sm text-slate-700 dark:text-slate-300">Clock size</span>
-                    <button
-                      aria-label="Decrease clock size"
-                      type="button"
-                      onClick={() =>
-                        setSettings((previous) => ({
-                          ...previous,
-                          clockTextScale: Math.max(0.7, Number(previous.clockTextScale || 1) - 0.1)
-                        }))
-                      }
-                      className="h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 text-lg font-semibold"
-                    >
-                      -
-                    </button>
-                    <button
-                      aria-label="Increase clock size"
-                      type="button"
-                      onClick={() =>
-                        setSettings((previous) => ({
-                          ...previous,
-                          clockTextScale: Math.min(1.4, Number(previous.clockTextScale || 1) + 0.1)
-                        }))
-                      }
-                      className="h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-indigo-300 text-lg font-semibold"
-                    >
-                      +
-                    </button>
-                  </div>
-                </SettingSection>
+                  effectiveClockTextColor={effectiveClockTextColor}
+                  effectiveClockBackgroundColor={effectiveClockBackgroundColor}
+                />
               )}
 
               {visibleSectionIds.includes('board') && (

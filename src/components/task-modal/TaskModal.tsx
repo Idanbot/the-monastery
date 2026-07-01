@@ -124,7 +124,7 @@ export function TaskModal() {
     });
   }, [draftTask, roles, tagPool]);
 
-  if (!draftTask) return null;
+  if (!selectedTaskId || !draftTask) return null;
 
   return (
     <ThemedSurface

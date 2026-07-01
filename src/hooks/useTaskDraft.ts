@@ -10,7 +10,10 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
   const [draftSaveStatus, setDraftSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [modalBaselineSnapshot, setModalBaselineSnapshot] = useState('');
+  const [modalOpeningSnapshot, setModalOpeningSnapshot] = useState('');
   const modalBaselineRef = useRef(null);
+  const modalOpeningSnapshotRef = useRef(null);
+  const draftSessionActiveRef = useRef(false);
   const tasksRef = useRef(tasks);
 
   useEffect(() => {
@@ -20,22 +23,28 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
   useEffect(() => {
     const selected = tasksRef.current.find((task) => task.id === selectedTaskId);
     if (!selected) {
+      draftSessionActiveRef.current = false;
       setDraftTask(null);
       modalBaselineRef.current = null;
+      modalOpeningSnapshotRef.current = null;
       setDraftNoteState('');
       setShowDirtyClosePrompt(false);
       setShowDeleteTaskPrompt(false);
       setDraftSavedAt(null);
       setDraftSaveStatus('saved');
       setModalBaselineSnapshot('');
+      setModalOpeningSnapshot('');
       return;
     }
 
     const nextDraft = cloneTask(selected);
     const nextBaseline = cloneTask(selected);
+    draftSessionActiveRef.current = true;
     setDraftTask(nextDraft);
     modalBaselineRef.current = nextBaseline;
+    modalOpeningSnapshotRef.current = cloneTask(selected);
     setModalBaselineSnapshot(JSON.stringify(nextBaseline));
+    setModalOpeningSnapshot(JSON.stringify(selected));
     setDraftNoteState('');
     setShowDirtyClosePrompt(false);
     setShowDeleteTaskPrompt(false);
@@ -48,9 +57,18 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
     return JSON.stringify(draftTask) !== modalBaselineSnapshot;
   }, [draftTask, modalBaselineSnapshot]);
 
+  const draftTaskDiffersFromOpening = useMemo(() => {
+    if (!draftTask || !modalOpeningSnapshot) return false;
+    return JSON.stringify(draftTask) !== modalOpeningSnapshot;
+  }, [draftTask, modalOpeningSnapshot]);
+
   const draftIsDirty = useMemo(() => {
     return draftTaskIsDirty || draftNote.trim().length > 0;
   }, [draftNote, draftTaskIsDirty]);
+
+  const draftHasChangesSinceOpen = useMemo(() => {
+    return draftTaskDiffersFromOpening || draftNote.trim().length > 0;
+  }, [draftNote, draftTaskDiffersFromOpening]);
 
   const updateDraftTask = (updates) =>
     setDraftTask((prev) => {
@@ -66,7 +84,7 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
 
   const persistDraftTask = useCallback(
     ({ includePendingNote = true } = {}) => {
-      if (!draftTask) return false;
+      if (!draftTask || !draftSessionActiveRef.current) return false;
       const noteText = includePendingNote ? draftNote.trim() : '';
       const withPendingNote = noteText
         ? {
@@ -108,7 +126,7 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
     return () => window.clearTimeout(timeout);
   }, [draftTask, draftTaskIsDirty, persistDraftTask]);
 
-  const hasDraftChanges = () => draftIsDirty;
+  const hasDraftChanges = () => draftHasChangesSinceOpen;
 
   const saveDraftTask = () => {
     persistDraftTask({ includePendingNote: true });
@@ -119,15 +137,26 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
       setShowDirtyClosePrompt(true);
       return;
     }
+    draftSessionActiveRef.current = false;
     setSelectedTaskId(null);
   };
 
   const discardDraftTask = () => {
+    // Invalidate the session before restoring the task so an autosave callback
+    // already queued by the browser cannot reapply the discarded draft.
+    draftSessionActiveRef.current = false;
+    if (modalOpeningSnapshotRef.current) {
+      const baseline = cloneTask(modalOpeningSnapshotRef.current);
+      setTasks((previous) =>
+        previous.map((task) => (task.id === baseline.id ? normalizeTask(baseline) : task))
+      );
+    }
     setSelectedTaskId(null);
   };
 
   const deleteDraftTask = () => {
     if (!draftTask) return;
+    draftSessionActiveRef.current = false;
     setTasks((prev) => executeTaskCommand(prev, { type: 'delete', taskId: draftTask.id }).tasks);
     setSelectedTaskId(null);
   };

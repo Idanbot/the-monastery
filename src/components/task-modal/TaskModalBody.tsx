@@ -13,17 +13,13 @@ import {
 import {
   calculateTotalDuration,
   formatDate,
-  formatDateInputValue,
   formatDurationString,
   formatLiveTimer,
   formatTime,
   fromDateTimeLocal,
-  toDateTimeLocal,
-  statusLabels,
-  taskStatuses
+  toDateTimeLocal
 } from '../../domain/tasks';
-import { parseTagString } from '../../domain/tags';
-import { TagPicker } from '../tag-picker/TagPicker';
+import { TaskDetailsFields } from './TaskDetailsFields';
 
 export function TaskModalBody({
   draftTask,
@@ -48,186 +44,14 @@ export function TaskModalBody({
 }) {
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
-      <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-3">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Templates</div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              updateDraftTask({
-                title: 'Deep Work Block',
-                urgency: 7,
-                tags: Array.from(new Set([...(draftTask.tags || []), 'focus'])),
-                scheduledDate: formatDateInputValue(new Date()),
-                scheduledStart: '09:00',
-                scheduledEnd: '11:00'
-              })
-            }
-            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs font-medium hover:border-indigo-300"
-          >
-            Deep work template
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              updateDraftTask({
-                title: 'Review Queue',
-                urgency: 4,
-                tags: Array.from(new Set([...(draftTask.tags || []), 'review'])),
-                scheduledDate: formatDateInputValue(new Date()),
-                scheduledStart: '15:00',
-                scheduledEnd: '16:00'
-              })
-            }
-            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs font-medium hover:border-indigo-300"
-          >
-            Review template
-          </button>
-        </div>
-      </section>
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label className="md:col-span-2 flex flex-col gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-          Title
-          <input
-            value={draftTask.title}
-            onChange={(e) => updateDraftTask({ title: e.target.value })}
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-400"
-            autoFocus
-          />
-        </label>
-
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-          Status
-          <select
-            value={draftTask.status}
-            onChange={(e) => updateDraftTask({ status: e.target.value })}
-            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-400"
-          >
-            <option value="backlog">Backlog</option>
-            <option value="in-progress">In-Progress</option>
-            <option value="done">Done</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </label>
-
-        <div className="md:col-span-2 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Move task</div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {taskStatuses.map((status) => (
-              <button
-                key={status}
-                type="button"
-                aria-label={'Move task to ' + statusLabels[status]}
-                onClick={() => updateDraftTask({ status })}
-                disabled={draftTask.status === status}
-                className={
-                  'rounded-lg border px-3 py-2 text-xs font-semibold transition-colors disabled:cursor-default ' +
-                  (draftTask.status === status
-                    ? 'border-indigo-200 bg-indigo-50 text-indigo-700 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200'
-                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-300 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-indigo-500')
-                }
-              >
-                {statusLabels[status]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-          Urgency
-          <div className="flex items-center gap-3">
-            <input
-              type="range"
-              min="1"
-              max="10"
-              value={draftTask.urgency}
-              onChange={(e) => updateDraftTask({ urgency: Number(e.target.value) })}
-              className="flex-1 accent-indigo-600"
-            />
-            <span className="w-10 text-center rounded-md bg-slate-100 dark:bg-slate-800 py-1 font-mono text-sm">
-              {draftTask.urgency}
-            </span>
-          </div>
-        </label>
-
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-          Date
-          <input
-            type="date"
-            value={draftTask.scheduledDate}
-            onChange={(e) => updateDraftTask({ scheduledDate: e.target.value })}
-            className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-400"
-          />
-        </label>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-            Start
-            <input
-              type="time"
-              value={draftTask.scheduledStart}
-              onChange={(e) => updateDraftTask({ scheduledStart: e.target.value })}
-              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-400"
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-            End
-            <input
-              type="time"
-              value={draftTask.scheduledEnd}
-              onChange={(e) => updateDraftTask({ scheduledEnd: e.target.value })}
-              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-400"
-            />
-          </label>
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-300">
-            Repeat
-            <select
-              value={draftTask.recurrence || 'none'}
-              onChange={(e) =>
-                updateDraftTask({
-                  recurrence: e.target.value,
-                  recurrenceRootId: e.target.value === 'none' ? null : draftTask.recurrenceRootId
-                })
-              }
-              className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-400"
-            >
-              <option value="none">No repeat</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="md:col-span-2 space-y-2">
-          <TagPicker
-            label="Tags"
-            value={(draftTask.tags || []).join(', ')}
-            onChange={(nextValue) => updateDraftTask({ tags: resolveTags(parseTagString(nextValue)) })}
-            onCommit={(nextValue) => onRegisterTags?.(resolveTags(parseTagString(nextValue)))}
-            placeholder="Backend, High Priority"
-            tagPool={tagPool}
-          />
-          {suggestedTags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-              <span>Suggested</span>
-              {suggestedTags.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  aria-label={`Add suggested tag ${tag}`}
-                  onClick={() =>
-                    updateDraftTask({ tags: Array.from(new Set([...(draftTask.tags || []), tag])) })
-                  }
-                  className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200"
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+      <TaskDetailsFields
+        draftTask={draftTask}
+        updateDraftTask={updateDraftTask}
+        suggestedTags={suggestedTags}
+        tagPool={tagPool}
+        onRegisterTags={onRegisterTags}
+        resolveTags={resolveTags}
+      />
 
       <section className="rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden">
         <button
