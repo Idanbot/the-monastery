@@ -21,6 +21,9 @@ describe('CalendarView component', () => {
     // Side ruler hour marks
     expect(screen.getByText('00:00')).toBeInTheDocument();
     expect(screen.getByText('12:00')).toBeInTheDocument();
+    expect(screen.getAllByTestId('calendar-hour-label')).toHaveLength(24);
+    expect(screen.getByText('00:00')).toHaveStyle({ top: '0px' });
+    expect(screen.getByTestId('calendar-scroll-area')).toHaveProperty('scrollTop', 0);
 
     // Unscheduled sidebar
     expect(screen.getByTestId('unscheduled-sidebar')).toBeInTheDocument();

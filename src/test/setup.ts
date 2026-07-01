@@ -2,6 +2,25 @@ import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
 if (typeof window !== 'undefined') {
+  if (typeof globalThis.localStorage?.clear !== 'function') {
+    const values = new Map<string, string>();
+    const storage: Storage = {
+      get length() {
+        return values.size;
+      },
+      clear: () => values.clear(),
+      getItem: (key) => values.get(key) ?? null,
+      key: (index) => Array.from(values.keys())[index] ?? null,
+      removeItem: (key) => values.delete(key),
+      setItem: (key, value) => values.set(key, String(value))
+    };
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: storage
+    });
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: storage });
+  }
+
   class ResizeObserverMock {
     observe() {}
     unobserve() {}

@@ -10,6 +10,7 @@ import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
 import { useProfileContext } from '../../contexts/ProfileContext';
 import { useUIContext } from '../../contexts/UIContext';
+import { sendBrowserNotification } from '../../domain/notifications';
 
 const AnalyticsView = lazy(() =>
   import('../dashboard/AnalyticsView').then((module) => ({ default: module.AnalyticsView }))
@@ -77,6 +78,12 @@ export function WorkspaceContent() {
           onIntroComplete={() => setIsEnteringMonkMode(false)}
           onAddTask={() => addTask('backlog')}
           onPomodoroComplete={(minutes) => {
+            if (settings.notificationsEnabled) {
+              sendBrowserNotification('Pomodoro complete', {
+                body: 'Focus session complete. Time for a short break.',
+                tag: 'pomodoro-complete'
+              });
+            }
             if (!currentTask) return;
             setTasks((prev) =>
               prev.map((task) =>

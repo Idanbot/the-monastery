@@ -139,6 +139,7 @@ export const appSettingsSchema = z.object({
   resizeHandleColor: z.string(),
   timelineHourLinesVisible: z.boolean(),
   timelineNowLineVisible: z.boolean(),
+  notificationsEnabled: z.boolean(),
   columnWidths: z.object({
     backlog: z.number(),
     inProgress: z.number(),

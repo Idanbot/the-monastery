@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
 import { useUIContext } from '../../contexts/UIContext';
@@ -15,8 +15,6 @@ export const CalendarView: React.FC = () => {
 
   const [currentDate, setCurrentDate] = useState(() => new Date(now));
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
-
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const weekDates = getWeekDates(currentDate);
   const displayDates = viewMode === 'week' ? weekDates : [currentDate];
@@ -49,13 +47,6 @@ export const CalendarView: React.FC = () => {
     [setTasks]
   );
 
-  // Auto-scroll to 8:00 AM on initial load to avoid staring at midnight
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = 8 * 60 - 60; // 8:00 AM minus some padding
-    }
-  }, []);
-
   const handleAddUnscheduled = () => {
     addTask('backlog', {
       title: '',
@@ -64,6 +55,20 @@ export const CalendarView: React.FC = () => {
       scheduledStart: '',
       scheduledEnd: ''
     });
+  };
+
+  const handleCreateScheduledTask = (date: string, time: string) => {
+    const startMinutes = clockTimeToMinutes(time);
+    addTask(
+      'backlog',
+      {
+        title: '',
+        scheduledDate: date,
+        scheduledStart: time,
+        scheduledEnd: minutesToClockTime(startMinutes + 60)
+      },
+      (task) => setSelectedTaskId(task.id)
+    );
   };
 
   return (
@@ -82,32 +87,40 @@ export const CalendarView: React.FC = () => {
 
         {/* Calendar Scroll Area */}
         <div
-          ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden relative flex border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 custom-scrollbar"
+          data-testid="calendar-scroll-area"
+          role="region"
+          aria-label="Calendar schedule"
+          className="flex-1 overflow-auto relative flex border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 custom-scrollbar"
         >
           {/* Side Time Ruler */}
-          <div className="w-16 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 relative select-none">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <div
-                key={i}
-                className="absolute right-0 pr-2 text-[10px] font-medium text-slate-400 dark:text-slate-500 -translate-y-1/2"
-                style={{ top: `${i * 60}px` }}
-              >
-                {formatTime(new Date(new Date().setHours(i, 0, 0, 0)), settings.clockFormat)}
-              </div>
-            ))}
+          <div className="sticky left-0 z-30 w-16 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 select-none">
+            <div className="h-14 border-b border-slate-200 dark:border-slate-800" aria-hidden="true" />
+            <div className="relative h-[1440px]">
+              {Array.from({ length: 24 }).map((_, i) => (
+                <div
+                  key={i}
+                  data-testid="calendar-hour-label"
+                  className={`absolute right-0 pr-2 text-[10px] font-medium text-slate-700 dark:text-slate-200 ${i === 0 ? 'translate-y-0' : '-translate-y-1/2'}`}
+                  style={{ top: `${i * 60}px` }}
+                >
+                  {formatTime(new Date(new Date().setHours(i, 0, 0, 0)), settings.clockFormat)}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Day Columns View Container */}
-          <div className="flex-1 flex min-w-0 overflow-x-auto custom-scrollbar">
-            {displayDates.map((date) => (
+          <div className="flex flex-1 min-w-0">
+            {displayDates.map((date, index) => (
               <DayColumn
                 key={date.toISOString()}
                 date={date}
                 tasks={tasks}
                 onDropTask={handleDropTask}
+                onCreateTask={handleCreateScheduledTask}
                 onSelectTask={setSelectedTaskId}
                 now={now}
+                initialTabStop={index === 0}
               />
             ))}
           </div>

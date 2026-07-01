@@ -15,6 +15,7 @@ test('navigates to calendar view and shows layout elements', async ({ page }) =>
   // Navigate to Calendar View
   await page.getByTestId('view-switch-calendar').click();
   await expect(page.getByTestId('calendar-view')).toBeVisible();
+  await expect(page.getByTestId('app-sidebar')).toHaveCount(0);
 
   // Header and switchers
   await expect(page.getByTestId('calendar-header-title')).toBeVisible();
@@ -23,6 +24,7 @@ test('navigates to calendar view and shows layout elements', async ({ page }) =>
 
   // Side ruler and Unscheduled sidebar
   await expect(page.getByTestId('calendar-view').getByText('00:00')).toBeVisible();
+  await expect(page.getByTestId('calendar-scroll-area')).toHaveJSProperty('scrollTop', 0);
   await expect(page.getByTestId('unscheduled-sidebar')).toBeVisible();
 });
 

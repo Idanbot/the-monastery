@@ -138,6 +138,9 @@ export function TaskModal() {
       <ThemedSurface
         variant="modal"
         data-testid="task-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="task-modal-title"
         className="flex h-full max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-200 shadow-2xl dark:border-slate-800"
       >
         {/* Modal Header */}
@@ -146,7 +149,9 @@ export function TaskModal() {
             <div className="rounded-lg bg-indigo-500/10 p-1.5 text-indigo-600 dark:text-indigo-400">
               <ListTodo size={18} />
             </div>
-            <h3 className="truncate text-base font-bold text-slate-900 dark:text-white">Task Details</h3>
+            <h3 id="task-modal-title" className="truncate text-base font-bold text-slate-900 dark:text-white">
+              Task Details
+            </h3>
             <span data-testid="task-save-state" className="text-[10px] text-slate-400">
               {draftSaveStatus === 'saving'
                 ? 'Saving...'

@@ -79,7 +79,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           </button>
           <button
             onClick={handleToday}
-            className="px-2.5 py-1 text-xs font-medium rounded-md hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
+            className="px-2.5 py-1 text-xs font-semibold rounded-md hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200"
           >
             Today
           </button>
@@ -95,13 +95,15 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
           <button
             onClick={() => setViewMode('day')}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === 'day' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
+            aria-pressed={viewMode === 'day'}
+            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${viewMode === 'day' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-200'}`}
           >
             Day
           </button>
           <button
             onClick={() => setViewMode('week')}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === 'week' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
+            aria-pressed={viewMode === 'week'}
+            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${viewMode === 'week' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-200'}`}
           >
             Week
           </button>

@@ -456,6 +456,90 @@ test('uses command palette, shortcuts, and task templates', async ({ page }) => 
   await expect(page.getByTestId('monk-minimap')).toBeVisible();
 });
 
+test('searches tasks and applies scheduling, timer, status, and navigation commands', async ({ page }) => {
+  test.setTimeout(60_000);
+  const title = 'Palette command target';
+  await page.goto('/');
+  await createTask(page, title);
+  await expect(page.getByTestId('task-modal')).toHaveCount(0);
+  const profileId = await page.getByTestId('active-profile-control').getAttribute('data-active-profile-id');
+  if (!profileId) throw new Error('Missing active profile id');
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/profiles/${profileId}/tasks`);
+      const body = await response.json();
+      return (body.tasks || []).map((task) => task.title);
+    })
+    .toContain(title);
+  await page.reload();
+  await expect(page.getByTestId('board-column-backlog')).toContainText(title);
+
+  const openPalette = async (query: string) => {
+    const trigger = page.getByRole('button', { name: 'Open command palette' });
+    await trigger.click();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const input = page.locator('input[aria-label="Search commands"]');
+    await expect(input).toBeVisible();
+    await input.fill(query);
+  };
+
+  await openPalette(`start timer ${title}`);
+  await page.getByRole('option', { name: `Start timer: ${title}` }).click();
+  await openPalette(`stop timer ${title}`);
+  await expect(page.getByRole('option', { name: `Stop timer: ${title}` })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await openPalette(`schedule today ${title}`);
+  await page.getByRole('option', { name: `Schedule today: ${title}` }).click();
+  await page.getByTestId('board-column-backlog').getByText(title).click();
+  await expect(page.getByLabel('Date')).toHaveValue(await browserToday(page));
+  await page.getByRole('button', { name: /close task details/i }).click();
+
+  await openPalette(`move ${title} to done`);
+  await page.getByRole('option', { name: `Move ${title} to Done` }).click();
+  await expect(page.getByTestId('board-column-done')).toContainText(title);
+
+  await openPalette('go to calendar');
+  await page.getByRole('option', { name: 'Go to calendar' }).click();
+  await expect(page.getByTestId('calendar-view')).toBeVisible();
+});
+
+test('enables and sends browser notifications from settings', async ({ page }) => {
+  await page.addInitScript(() => {
+    const sent: Array<{ title: string; body: string }> = [];
+    Object.defineProperty(window, '__testNotifications', { value: sent, configurable: true });
+    class NotificationMock {
+      static permission: NotificationPermission = 'default';
+      static async requestPermission() {
+        NotificationMock.permission = 'granted';
+        return 'granted' as NotificationPermission;
+      }
+      onclick: (() => void) | null = null;
+      constructor(title: string, options?: NotificationOptions) {
+        sent.push({ title, body: options?.body || '' });
+      }
+      close() {}
+    }
+    Object.defineProperty(window, 'Notification', { value: NotificationMock, configurable: true });
+  });
+
+  await page.goto('/');
+  await openSettingsSection(page, 'Time');
+  await page.getByLabel('Browser notifications').check();
+  await expect(page.getByLabel('Browser notifications')).toBeChecked();
+  await page.getByRole('button', { name: 'Send test notification' }).click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as typeof window & { __testNotifications?: Array<{ title: string }> })
+            .__testNotifications || []
+      )
+    )
+    .toContainEqual(expect.objectContaining({ title: 'The Monastery' }));
+});
+
 test('exports and imports the active profile from settings', async ({ page }) => {
   await page.goto('/');
   await createTask(page, 'Profile portable task');

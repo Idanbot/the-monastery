@@ -12,7 +12,9 @@ export function WorkspaceSidebar() {
 
   const { currentTask, setSelectedTaskId, addTask, updateTaskTimer, completeTask } = useTaskContext();
 
-  const { now, sidebarOpen, setSidebarOpen } = useUIContext();
+  const { view, now, sidebarOpen, setSidebarOpen } = useUIContext();
+
+  if (view === 'calendar') return null;
 
   return (
     <>

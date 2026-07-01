@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defaultSettings } from '../../domain/tasks';
 import { SettingsModal } from './SettingsModal';
 
@@ -138,6 +138,8 @@ const renderSettings = (overrides = {}) => {
 };
 
 describe('SettingsModal', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it('updates appearance colors, modal effects, and closes from the header', async () => {
     const user = userEvent.setup();
     const props = renderSettings({ initialSection: 'appearance' });
@@ -180,6 +182,25 @@ describe('SettingsModal', () => {
     await user.click(screen.getByRole('button', { name: /increase clock size/i }));
     const sizeUpdate = props.setSettings.mock.lastCall?.[0];
     expect(sizeUpdate(props.settings)).toEqual({ ...props.settings, clockTextScale: 1.1 });
+  });
+
+  it('requests permission before enabling browser notifications', async () => {
+    const requestPermission = vi.fn().mockResolvedValue('granted');
+    vi.stubGlobal(
+      'Notification',
+      class NotificationMock {
+        static permission = 'default';
+        static requestPermission = requestPermission;
+      }
+    );
+    const user = userEvent.setup();
+    const props = renderSettings({ initialSection: 'time' });
+
+    await user.click(screen.getByLabelText('Browser notifications'));
+
+    expect(requestPermission).toHaveBeenCalledOnce();
+    const notificationUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(notificationUpdate(props.settings)).toEqual({ ...props.settings, notificationsEnabled: true });
   });
 
   it('renames a known tag from tag management', async () => {

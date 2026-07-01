@@ -9,11 +9,21 @@ interface DayColumnProps {
   date: Date;
   tasks: Task[];
   onDropTask: (taskId: string, date: string, time: string) => void;
+  onCreateTask: (date: string, time: string) => void;
   onSelectTask: (taskId: string) => void;
   now: number;
+  initialTabStop?: boolean;
 }
 
-export const DayColumn: React.FC<DayColumnProps> = ({ date, tasks, onDropTask, onSelectTask, now }) => {
+export const DayColumn: React.FC<DayColumnProps> = ({
+  date,
+  tasks,
+  onDropTask,
+  onCreateTask,
+  onSelectTask,
+  now,
+  initialTabStop = false
+}) => {
   const dateStr = formatDateInputValue(date);
   const scheduledTasks = getTasksForDate(tasks, dateStr);
 
@@ -33,13 +43,15 @@ export const DayColumn: React.FC<DayColumnProps> = ({ date, tasks, onDropTask, o
     <div
       className="flex-1 min-w-[120px] flex flex-col border-r border-slate-200 dark:border-slate-800 last:border-r-0"
       data-testid={`day-column-${dateStr}`}
+      role="group"
+      aria-label={date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
     >
       {/* Header */}
       <div
-        className={`p-2 border-b border-slate-200 dark:border-slate-800 text-center shrink-0 ${isToday ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''}`}
+        className={`h-14 p-1.5 border-b border-slate-200 dark:border-slate-800 text-center shrink-0 ${isToday ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
       >
         <div
-          className={`text-[10px] uppercase font-bold tracking-wider ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}
+          className={`text-[10px] uppercase font-bold tracking-wider ${isToday ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-200'}`}
         >
           {date.toLocaleDateString('en-US', { weekday: 'short' })}
         </div>
@@ -54,7 +66,14 @@ export const DayColumn: React.FC<DayColumnProps> = ({ date, tasks, onDropTask, o
       <div className="flex-1 relative h-[1440px] bg-white dark:bg-slate-900/40">
         {/* Time slots */}
         {slots.map((time) => (
-          <TimeSlot key={time} time={time} date={dateStr} onDropTask={onDropTask} />
+          <TimeSlot
+            key={time}
+            time={time}
+            date={dateStr}
+            onDropTask={onDropTask}
+            onActivate={onCreateTask}
+            initialTabStop={initialTabStop && time === '00:00'}
+          />
         ))}
 
         {/* Task Blocks */}
@@ -66,6 +85,7 @@ export const DayColumn: React.FC<DayColumnProps> = ({ date, tasks, onDropTask, o
         {isToday && (
           <div
             data-testid="calendar-now-line"
+            aria-hidden="true"
             className="absolute left-0 right-0 flex items-center z-20 pointer-events-none"
             style={{ top: `${currentMinutes}px` }}
           >

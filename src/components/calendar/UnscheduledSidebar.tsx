@@ -13,7 +13,7 @@ interface UnscheduledSidebarProps {
 export const UnscheduledSidebar: React.FC<UnscheduledSidebarProps> = ({ tasks, onAddTask, onSelectTask }) => {
   const unscheduled = getUnscheduledTasks(tasks);
 
-  const handleDragStart = (event: React.DragEvent<HTMLDivElement>, taskId: string) => {
+  const handleDragStart = (event: React.DragEvent<HTMLButtonElement>, taskId: string) => {
     event.dataTransfer.setData('text/plain', taskId);
     event.dataTransfer.effectAllowed = 'move';
     window.sessionStorage.setItem('the-monastery-dragged-task-id', taskId);
@@ -35,19 +35,20 @@ export const UnscheduledSidebar: React.FC<UnscheduledSidebarProps> = ({ tasks, o
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+      <div className="scrollbar-hidden flex-1 overflow-y-auto p-3 space-y-2">
         {unscheduled.length === 0 ? (
           <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500">
             No unscheduled tasks
           </div>
         ) : (
           unscheduled.map((task) => (
-            <div
+            <button
+              type="button"
               key={task.id}
               draggable
               onDragStart={(e) => handleDragStart(e, task.id)}
               onClick={() => onSelectTask(task.id)}
-              className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg cursor-grab active:cursor-grabbing transition-colors shadow-sm text-left group"
+              className="w-full p-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-lg cursor-grab active:cursor-grabbing transition-colors shadow-sm text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               data-testid={`unscheduled-task-${task.title || 'Untitled'}`}
             >
               <div className="font-medium text-xs text-slate-800 dark:text-slate-200 line-clamp-2">
@@ -71,7 +72,7 @@ export const UnscheduledSidebar: React.FC<UnscheduledSidebarProps> = ({ tasks, o
                   </div>
                 )}
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>

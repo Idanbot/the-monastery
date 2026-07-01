@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Command } from 'cmdk';
 import { Keyboard } from 'lucide-react';
 import { ThemedSurface } from './ui/ThemedSurface';
@@ -30,8 +30,14 @@ export function CommandPalette({
   onOpenChange: (open: boolean) => void;
   groups: CommandPaletteGroup[];
 }) {
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     if (!open) return;
+    previouslyFocusedRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    window.requestAnimationFrame(() => inputRef.current?.focus());
     const down = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -40,18 +46,20 @@ export function CommandPalette({
       }
     };
     document.addEventListener('keydown', down);
-    return () => document.removeEventListener('keydown', down);
+    return () => {
+      document.removeEventListener('keydown', down);
+      previouslyFocusedRef.current?.focus();
+    };
   }, [open, onOpenChange]);
-
-  if (!open) return null;
 
   const close = () => onOpenChange(false);
 
   return (
     <ThemedSurface
       data-testid="command-palette-overlay"
+      aria-hidden={!open}
       variant="overlay"
-      className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-24"
+      className={`fixed inset-0 z-[100] items-start justify-center p-4 pt-24 ${open ? 'flex' : 'hidden'}`}
       onKeyDownCapture={(event) => {
         if (event.key !== 'Escape') return;
         event.preventDefault();
@@ -74,6 +82,7 @@ export function CommandPalette({
         </div>
         <Command className="p-2" shouldFilter loop>
           <Command.Input
+            ref={inputRef}
             aria-label="Search commands"
             placeholder="Search commands"
             className="mb-2 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm outline-none focus:border-indigo-400"

@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Calendar, Target } from 'lucide-react';
-import { UrgencyBadge } from '../UrgencyBadge';
 import { formatDateInputValue, formatTime } from '../../domain/tasks';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
@@ -106,7 +105,7 @@ export function AgendaTimeline() {
                 className="absolute w-full flex items-center pointer-events-none z-0"
                 style={{ top: `${i * 60}px` }}
               >
-                <div className="w-20 text-[10px] font-medium text-slate-400 dark:text-slate-500 text-right pr-3 whitespace-nowrap">
+                <div className="w-20 text-[10px] font-medium text-slate-700 dark:text-slate-200 text-right pr-3 whitespace-nowrap">
                   {formatTime(new Date(new Date().setHours(i, 0, 0, 0)), settings.clockFormat)}
                 </div>
                 <div className="flex-1 border-t border-slate-300/30 dark:border-slate-600/30 w-full h-px"></div>
@@ -138,7 +137,8 @@ export function AgendaTimeline() {
                 duration = Math.max(15, endH * 60 + endM - top);
               }
               return (
-                <div
+                <button
+                  type="button"
                   key={task.id}
                   data-testid={'timeline-task-' + (task.title || 'Untitled')}
                   data-scheduled-start={task.scheduledStart}
@@ -249,18 +249,15 @@ export function AgendaTimeline() {
                     }
                     setSelectedTaskId(task.id);
                   }}
-                  className="absolute left-1 right-1 rounded-md p-2 text-xs cursor-pointer overflow-hidden border transition-all shadow-sm group hover:z-30 hover:shadow-md bg-white/95 dark:bg-slate-800/95 border-indigo-200 dark:border-indigo-500/30 hover:border-indigo-400"
+                  className="absolute left-1 right-1 rounded-md p-2 text-left text-xs cursor-pointer overflow-hidden border transition-all shadow-sm group hover:z-30 hover:shadow-md bg-white/95 dark:bg-slate-800/95 border-indigo-200 dark:border-indigo-500/30 hover:border-indigo-400 focus-visible:z-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   style={{ top: `${top}px`, height: `${duration}px` }}
+                  title={task.title || 'Untitled'}
+                  aria-label={`${task.title || 'Untitled task'}, scheduled from ${task.scheduledStart}${task.scheduledEnd ? ` to ${task.scheduledEnd}` : ''}`}
                 >
-                  <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                  <div className="font-semibold leading-snug text-slate-800 dark:text-slate-200 line-clamp-3 break-words">
                     {task.title || 'Untitled'}
                   </div>
-                  {duration >= 45 && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <UrgencyBadge urgency={task.urgency} />
-                    </div>
-                  )}
-                </div>
+                </button>
               );
             })}
           </div>

@@ -48,4 +48,16 @@ describe('useAppShortcuts', () => {
     expect(handlers.addBacklogTask).not.toHaveBeenCalled();
     input.remove();
   });
+
+  it('does not intercept Enter on interactive controls', () => {
+    const handlers = options();
+    renderHook(() => useAppShortcuts(handlers));
+    const button = document.createElement('button');
+    document.body.appendChild(button);
+
+    fireEvent.keyDown(button, { key: 'Enter' });
+
+    expect(handlers.setSelectedTaskId).not.toHaveBeenCalled();
+    button.remove();
+  });
 });

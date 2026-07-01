@@ -34,6 +34,7 @@ import { createThemeRecipe, themeRecipeSchema } from '../../domain/themeStudio';
 import { generateId } from '../../domain/tasks';
 import { useThemeStyle } from '../../hooks/useThemeStyle';
 import { themeChoiceOptions } from '../../domain/themeGallery';
+import { requestNotificationPermission, sendBrowserNotification } from '../../domain/notifications';
 
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
@@ -126,6 +127,9 @@ export function SettingsModal({
   const [openSections, setOpenSections] = useState(() =>
     Object.fromEntries(sectionIds.map((id) => [id, isScopedSettings && id === initialSection]))
   );
+  const [notificationPermission, setNotificationPermission] = useState<
+    NotificationPermission | 'unsupported'
+  >(() => (typeof Notification === 'undefined' ? 'unsupported' : Notification.permission));
 
   useEffect(() => {
     setRoleTagDrafts(roleTagValues);
@@ -165,6 +169,16 @@ export function SettingsModal({
 
   const updateClockSetting = (key: keyof typeof settings, value: unknown) => {
     updateSetting(key, value);
+  };
+
+  const toggleNotifications = async (enabled: boolean) => {
+    if (!enabled) {
+      updateSetting('notificationsEnabled', false);
+      return;
+    }
+    const permission = await requestNotificationPermission();
+    setNotificationPermission(permission);
+    updateSetting('notificationsEnabled', permission === 'granted');
   };
 
   const setThemeChoice = (value: string) => {
@@ -644,6 +658,37 @@ export function SettingsModal({
                       className="h-4 w-4 accent-indigo-600"
                     />
                   </label>
+                  <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+                    <label className="flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-300">
+                      <span>Browser notifications</span>
+                      <input
+                        aria-label="Browser notifications"
+                        type="checkbox"
+                        checked={settings.notificationsEnabled === true}
+                        disabled={notificationPermission === 'unsupported'}
+                        onChange={(event) => void toggleNotifications(event.target.checked)}
+                        className="h-4 w-4 accent-indigo-600 disabled:opacity-50"
+                      />
+                    </label>
+                    <p className="mt-1 text-xs text-slate-500" aria-live="polite">
+                      {notificationPermission === 'unsupported'
+                        ? 'Notifications are not supported by this browser.'
+                        : notificationPermission === 'denied'
+                          ? 'Permission is blocked in browser settings.'
+                          : 'Alerts for task starts, overdue tasks, long-running timers, and Pomodoro completion.'}
+                    </p>
+                    {settings.notificationsEnabled && notificationPermission === 'granted' && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          sendBrowserNotification('The Monastery', { body: 'Notifications are working.' })
+                        }
+                        className="mt-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:border-indigo-300 dark:border-slate-700 dark:text-slate-300"
+                      >
+                        Send test notification
+                      </button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2">
                     <span className="text-sm text-slate-700 dark:text-slate-300">Clock size</span>
                     <button

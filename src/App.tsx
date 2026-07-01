@@ -12,7 +12,6 @@ import { WorkspaceContent } from './components/workspace/WorkspaceContent';
 import { ShortcutHelpDialog, ProfileActionDialog } from './components/app/AppDialogs';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { TaskModal } from './components/task-modal/TaskModal';
-import { CommandPalette } from './components/CommandPalette';
 import { ProfileImportDialog } from './components/app/ProfileImportDialog';
 import { PlanningImportDialog } from './components/app/PlanningImportDialog';
 import { ImportPreviewDialog } from './components/app/ImportPreviewDialog';
@@ -59,8 +58,7 @@ function AppShell() {
     removeActiveProfile
   } = useProfileContext();
 
-  const { isShortcutHelpOpen, setIsShortcutHelpOpen, isCommandOpen, setIsCommandOpen, commandPaletteGroups } =
-    useUIContext();
+  const { isShortcutHelpOpen, setIsShortcutHelpOpen } = useUIContext();
 
   return (
     <div
@@ -159,8 +157,6 @@ function AppShell() {
         <ProfileImportDialog />
         <PlanningImportDialog />
         <ImportPreviewDialog />
-
-        <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} groups={commandPaletteGroups} />
 
         <TaskModal />
       </div>

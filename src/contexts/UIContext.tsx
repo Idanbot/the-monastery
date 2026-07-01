@@ -2,8 +2,10 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { useSettingsContext } from './SettingsContext';
 import { useTaskContext } from './TaskContext';
 import { useAppShortcuts } from '../hooks/useAppShortcuts';
+import { useTaskNotifications } from '../hooks/useTaskNotifications';
 import { parseQuickAddTask } from '../domain/quickAdd';
 import { formatDateInputValue } from '../domain/tasks';
+import { statusLabels, taskStatuses } from '../domain/tasks';
 import { visualThemeOptions, themeContracts } from '../domain/themes';
 
 const MANTRAS = [
@@ -58,8 +60,18 @@ import { useProfileContext } from './ProfileContext';
 
 export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { settings, setSettings, openSettings } = useSettingsContext();
-  const { filteredTasks, addTask, planMyDay, createRoleRoutineTasks, selectedTaskId, setSelectedTaskId } =
-    useTaskContext();
+  const {
+    tasks,
+    setTasks,
+    filteredTasks,
+    addTask,
+    planMyDay,
+    createRoleRoutineTasks,
+    selectedTaskId,
+    setSelectedTaskId,
+    moveTask,
+    updateTaskTimer
+  } = useTaskContext();
 
   const { profiles, selectProfile } = useProfileContext();
 
@@ -75,6 +87,13 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [keyboardFocusedTaskId, setKeyboardFocusedTaskId] = useState<string | null>(null);
   const [quickAddText, setQuickAddText] = useState('');
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)]);
+
+  useTaskNotifications({
+    enabled: settings.notificationsEnabled,
+    tasks,
+    now,
+    onOpenTask: setSelectedTaskId
+  });
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -142,6 +161,24 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     });
   }, [planMyDay]);
 
+  const scheduleTaskToday = useCallback(
+    (taskId: string) => {
+      setTasks((previous) =>
+        previous.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                scheduledDate: formatDateInputValue(new Date()),
+                scheduledStart: task.scheduledStart || '09:00',
+                scheduledEnd: task.scheduledEnd || '10:00'
+              }
+            : task
+        )
+      );
+    },
+    [setTasks]
+  );
+
   useAppShortcuts({
     filteredTasks,
     isCommandOpen,
@@ -187,11 +224,6 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           },
           { value: 'open settings', label: 'Open settings', onSelect: () => openSettings() },
           {
-            value: 'go to analytics dashboard',
-            label: 'Go to analytics',
-            onSelect: () => setView('dashboard')
-          },
-          {
             value: 'theme studio appearance',
             label: 'Theme Studio',
             onSelect: () => openSettings('appearance')
@@ -208,6 +240,31 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
             onSelect: () => createRoleRoutineTasks()
           }
         ]
+      },
+      {
+        heading: 'Tasks',
+        commands: tasks.slice(0, 30).flatMap((task) => [
+          {
+            value: `open task ${task.title}`,
+            label: `Open: ${task.title || 'Untitled'}`,
+            onSelect: () => setSelectedTaskId(task.id)
+          },
+          {
+            value: `${task.activeLogStart ? 'stop' : 'start'} timer ${task.title}`,
+            label: `${task.activeLogStart ? 'Stop' : 'Start'} timer: ${task.title || 'Untitled'}`,
+            onSelect: () => updateTaskTimer(task.id)
+          },
+          {
+            value: `schedule today ${task.title}`,
+            label: `Schedule today: ${task.title || 'Untitled'}`,
+            onSelect: () => scheduleTaskToday(task.id)
+          },
+          ...taskStatuses.map((status) => ({
+            value: `move ${task.title} to ${statusLabels[status]} status`,
+            label: `Move ${task.title || 'Untitled'} to ${statusLabels[status]}`,
+            onSelect: () => moveTask(task.id, status)
+          }))
+        ])
       },
       {
         heading: 'Themes',
@@ -239,17 +296,25 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       },
       {
         heading: 'Navigation',
-        commands: (
-          [
-            ['Liquid Glass', 'liquid-glass', 'light'],
-            ['Zen', 'zen', 'light'],
-            ['Terminal White', 'terminal-white', 'dark']
-          ] as const
-        ).map(([label, visualTheme, theme]) => ({
-          value: String(label),
-          label,
-          onSelect: () => setSettings((previous) => ({ ...previous, visualTheme, theme }))
-        }))
+        commands: [
+          { value: 'go to board navigate', label: 'Go to board', onSelect: () => setView('board') },
+          {
+            value: 'go to calendar navigate',
+            label: 'Go to calendar',
+            onSelect: () => setView('calendar')
+          },
+          {
+            value: 'go to task list navigate',
+            label: 'Go to task list',
+            onSelect: () => setView('mobile')
+          },
+          {
+            value: 'go to analytics navigate',
+            label: 'Go to analytics',
+            onSelect: () => setView('dashboard')
+          },
+          { value: 'go to settings navigate', label: 'Go to settings', onSelect: () => openSettings() }
+        ]
       },
       {
         heading: 'Profiles',
@@ -262,6 +327,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     ],
     [
       settings.monkMode,
+      tasks,
       profiles,
       startFocusTask,
       addTask,
@@ -272,7 +338,10 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       createRoleRoutineTasks,
       setSettings,
       selectProfile,
-      setSelectedTaskId
+      setSelectedTaskId,
+      updateTaskTimer,
+      scheduleTaskToday,
+      moveTask
     ]
   );
 

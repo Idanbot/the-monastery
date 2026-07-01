@@ -121,6 +121,13 @@ export const settingDefinitions = [
     kind: 'toggle',
     defaultValue: true
   },
+  {
+    key: 'notificationsEnabled',
+    section: 'time',
+    label: 'Browser notifications',
+    kind: 'toggle',
+    defaultValue: false
+  },
   { key: 'sidebarVisible', section: 'sidebar', label: 'Sidebar', kind: 'toggle', defaultValue: true }
 ] as const satisfies readonly SettingDefinition[];
 

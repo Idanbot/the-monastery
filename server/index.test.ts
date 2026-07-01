@@ -80,6 +80,7 @@ const fullSettings = (overrides: Record<string, unknown> = {}) => ({
   resizeHandleColor: '#94a3b8',
   timelineHourLinesVisible: true,
   timelineNowLineVisible: true,
+  notificationsEnabled: false,
   columnWidths: { backlog: 1, inProgress: 1, done: 1, rejected: 1 },
   compactColumnWidths: { left: 50, right: 50 },
   compactHeights: { backlog: 1, inProgress: 1, done: 1, rejected: 1 },

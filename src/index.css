@@ -613,6 +613,14 @@ h6,
   border-radius: 999px;
 }
 
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 [data-text-size='small'] .text-xs {
   font-size: 0.6875rem;
   line-height: 0.9375rem;

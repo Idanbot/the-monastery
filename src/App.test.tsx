@@ -67,6 +67,17 @@ it('filters commands in the command palette', async () => {
   expect(within(palette).queryByRole('option', { name: /new focus task/i })).not.toBeInTheDocument();
 });
 
+it('opens the command palette from the header control', async () => {
+  const user = userEvent.setup();
+  seedTasks([makeTask({ title: 'Palette command target' })]);
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: /open command palette/i }));
+
+  expect(screen.getByRole('dialog', { name: /command palette/i })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: /start timer: palette command target/i })).toBeInTheDocument();
+});
+
 it('renders analytics with a chart component', async () => {
   const user = userEvent.setup();
   seedTasks([makeTask({ id: 'done-task', title: 'Done task', status: 'done' })]);
@@ -187,9 +198,7 @@ it('uses a modal command palette backdrop and closes cleanly with Escape', async
   expect(screen.getByTestId('command-palette-overlay')).toHaveClass('modal-overlay');
 
   await user.keyboard('{Escape}');
-  await waitFor(() =>
-    expect(screen.queryByRole('dialog', { name: /command palette/i })).not.toBeInTheDocument()
-  );
+  await waitFor(() => expect(screen.getByTestId('command-palette-overlay')).toHaveClass('hidden'));
   expect(screen.queryByRole('dialog', { name: /keyboard shortcuts/i })).not.toBeInTheDocument();
 });
 

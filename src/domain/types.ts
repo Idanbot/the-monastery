@@ -119,6 +119,7 @@ export type AppSettings = {
   resizeHandleColor: string;
   timelineHourLinesVisible: boolean;
   timelineNowLineVisible: boolean;
+  notificationsEnabled: boolean;
   columnWidths: { backlog: number; inProgress: number; done: number; rejected: number; new?: number };
   compactColumnWidths: { left: number; right: number };
   compactHeights: { backlog: number; inProgress: number; done: number; rejected: number };

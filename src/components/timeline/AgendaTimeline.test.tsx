@@ -61,7 +61,7 @@ describe('AgendaTimeline', () => {
     expect(screen.getByText("Today's Timeline")).toBeInTheDocument();
     expect(screen.getAllByTestId('timeline-hour-line')).toHaveLength(24);
     expect(screen.getByTestId('timeline-now-line')).toBeInTheDocument();
-    expect(screen.getByTestId('timeline-task-Timeline focus')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-task-Timeline focus')).toHaveTextContent(/^Timeline focus$/);
     expect(screen.queryByTestId('timeline-task-Done task')).not.toBeInTheDocument();
   });
 
