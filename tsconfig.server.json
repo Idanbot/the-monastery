@@ -13,5 +13,6 @@
     "outDir": "server-dist",
     "types": ["node"]
   },
-  "include": ["server/index.ts", "shared/**/*.ts"]
+  "include": ["server/**/*.ts", "shared/**/*.ts"],
+  "exclude": ["server/**/*.test.ts"]
 }

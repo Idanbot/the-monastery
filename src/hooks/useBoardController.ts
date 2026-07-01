@@ -1,14 +1,17 @@
 import { useState } from 'react';
+import type { Task } from '../domain/types';
 import { executeTaskCommand } from '../domain/taskCommands';
 import type { TaskStatus } from '../domain/types';
 
-export function useBoardController(setTasks) {
+export type DragOverInfo = {
+  status: TaskStatus;
+  id: string | null;
+  position: 'top' | 'bottom';
+} | null;
+
+export function useBoardController(setTasks: React.Dispatch<React.SetStateAction<Task[]>>) {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
-  const [dragOverInfo, setDragOverInfo] = useState<{
-    status: TaskStatus;
-    id: string | null;
-    position: 'top' | 'bottom';
-  } | null>(null);
+  const [dragOverInfo, setDragOverInfo] = useState<DragOverInfo>(null);
   const [columnSorts, setColumnSorts] = useState<Record<TaskStatus, 'none' | 'urgency' | 'time'>>({
     backlog: 'none',
     'in-progress': 'none',

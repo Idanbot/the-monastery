@@ -8,10 +8,12 @@ import {
   parseStoredJson,
   setIndexedDbValue,
   settingsStorageKey,
-  tasksStorageKey
+  tasksStorageKey,
+  writeStoredJson
 } from '../lib/storage';
+import type { AppSettings, Task } from '../domain/types';
 
-export const loadInitialLocalTasks = () => {
+export const loadInitialLocalTasks = (): Task[] => {
   try {
     return migrateStoredTasks(parseStoredJson(tasksStorageKey, defaultTasks));
   } catch {
@@ -22,7 +24,19 @@ export const loadInitialLocalTasks = () => {
 export const loadInitialLocalSettings = () =>
   migrateStoredSettings(parseStoredJson(settingsStorageKey, defaultSettings));
 
-export function useLocalFallbackPersistence({ tasks, setTasks, settings, setSettings, isProfileReady }) {
+export function useLocalFallbackPersistence({
+  tasks,
+  setTasks,
+  settings,
+  setSettings,
+  isProfileReady
+}: {
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  settings: AppSettings;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  isProfileReady: boolean;
+}) {
   const [isStorageReady, setIsStorageReady] = useState(() => !hasIndexedDb());
 
   // The async IDB read is a *fallback* for offline/test mode. When the backend
@@ -66,18 +80,14 @@ export function useLocalFallbackPersistence({ tasks, setTasks, settings, setSett
   useEffect(() => {
     if (!isStorageReady || !isProfileReady) return;
     const storedTasks = createStoredEnvelope(tasks);
-    if (typeof localStorage !== 'undefined' && localStorage.setItem) {
-      localStorage.setItem(tasksStorageKey, JSON.stringify(storedTasks));
-    }
+    writeStoredJson(tasksStorageKey, storedTasks);
     setIndexedDbValue(tasksStorageKey, storedTasks).catch(() => {});
   }, [tasks, isStorageReady, isProfileReady]);
 
   useEffect(() => {
     if (!isStorageReady || !isProfileReady) return;
     const storedSettings = createStoredEnvelope(settings);
-    if (typeof localStorage !== 'undefined' && localStorage.setItem) {
-      localStorage.setItem(settingsStorageKey, JSON.stringify(storedSettings));
-    }
+    writeStoredJson(settingsStorageKey, storedSettings);
     setIndexedDbValue(settingsStorageKey, storedSettings).catch(() => {});
   }, [settings, isStorageReady, isProfileReady]);
 

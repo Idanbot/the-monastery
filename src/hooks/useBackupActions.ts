@@ -5,9 +5,10 @@ import { generateId } from '../domain/tasks';
 import { apiRequest } from '../lib/api';
 import { apiPaths, backupResponseSchema } from '../../shared/apiContracts';
 import { downloadJson } from '../lib/download';
-import { backupHistoryStorageKey, parseStoredJson } from '../lib/storage';
+import { backupHistoryStorageKey, parseStoredJson, writeStoredJson } from '../lib/storage';
 import taskSchema from '../task.schema.json';
 import { currentDataSchemaVersion, migrateProfileData } from '../domain/dataMigrations';
+import type { AppSettings, LocalBackup, Task } from '../domain/types';
 
 const taskSchemaId = (taskSchema as { $id?: string }).$id || 'https://the-monastery.local/task.schema.json';
 
@@ -21,13 +22,25 @@ export function useBackupActions({
   isBackendAvailable,
   setSelectedTaskId,
   setIsSettingsOpen
+}: {
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  settings: AppSettings;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  activeProfile: { id?: string; name?: string } | undefined;
+  activeProfileId: string;
+  isBackendAvailable: boolean;
+  setSelectedTaskId: React.Dispatch<React.SetStateAction<string | null>>;
+  setIsSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-  const [localBackups, setLocalBackups] = useState(() => parseStoredJson(backupHistoryStorageKey, []));
+  const [localBackups, setLocalBackups] = useState<LocalBackup[]>(() =>
+    parseStoredJson<LocalBackup[]>(backupHistoryStorageKey, [])
+  );
 
-  const persistLocalBackups = (nextBackups) => {
+  const persistLocalBackups = (nextBackups: LocalBackup[]) => {
     const limited = nextBackups.slice(0, 8);
     setLocalBackups(limited);
-    localStorage.setItem(backupHistoryStorageKey, JSON.stringify(limited));
+    writeStoredJson(backupHistoryStorageKey, limited);
   };
 
   const saveLocalBackupSnapshot = (label = 'Manual backup') => {
@@ -45,7 +58,7 @@ export function useBackupActions({
     return snapshot;
   };
 
-  const restoreLocalBackup = (backupId) => {
+  const restoreLocalBackup = (backupId: string) => {
     const backup = localBackups.find((item) => item.id === backupId);
     if (!backup) return;
     const migrated = migrateProfileData(backup);
@@ -56,7 +69,7 @@ export function useBackupActions({
     toast.success('Local backup restored.');
   };
 
-  const removeLocalBackup = (backupId) => {
+  const removeLocalBackup = (backupId: string) => {
     persistLocalBackups(localBackups.filter((item) => item.id !== backupId));
     toast.success('Local backup deleted.');
   };

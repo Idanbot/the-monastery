@@ -7,10 +7,10 @@ import { useProfilesSync } from './useProfilesSync';
 import type { Task } from '../domain/types';
 import { getPendingProfileMutation, queueProfileMutation } from '../domain/profileMutationQueue';
 
-vi.mock('../lib/api', () => ({
-  shouldUseBackend: () => true,
-  apiRequest: vi.fn()
-}));
+vi.mock('../lib/api', async (importActual) => {
+  const actual = await importActual<typeof import('../lib/api')>();
+  return { shouldUseBackend: () => true, apiRequest: vi.fn(), ApiError: actual.ApiError };
+});
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }));
 

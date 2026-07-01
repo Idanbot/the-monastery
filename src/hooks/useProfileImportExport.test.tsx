@@ -18,7 +18,7 @@ const setup = () => {
   const setSelectedTaskId = vi.fn();
   const input = document.createElement('input');
   input.value = 'profile.json';
-  const importProfileInputRef = createRef();
+  const importProfileInputRef = createRef<HTMLInputElement>();
   importProfileInputRef.current = input;
   const hook = renderHook(() =>
     useProfileImportExport({

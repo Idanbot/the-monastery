@@ -3,7 +3,7 @@ import { loadInitialLocalSettings } from '../hooks/useLocalFallbackPersistence';
 import { useThemeStyle } from '../hooks/useThemeStyle';
 import { useResizableLayout } from '../hooks/useResizableLayout';
 import { generateId } from '../domain/tasks';
-import type { AppSettings, TaskStatus } from '../domain/types';
+import type { AppSettings, RoleDefinition, TaskStatus } from '../domain/types';
 
 interface SettingsContextType {
   settings: AppSettings;
@@ -14,7 +14,7 @@ interface SettingsContextType {
   isSidebarVisible: boolean;
   startResize: (id: string) => void;
   addRole: () => void;
-  updateRole: (roleId: string, updates: Partial<any>) => void;
+  updateRole: (roleId: string, updates: Partial<RoleDefinition>) => void;
   removeRole: (roleId: string) => void;
   toggleBoardLane: (status: TaskStatus) => void;
   toggleSidebarVisible: () => void;
@@ -67,7 +67,7 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode; systemIsDar
     }));
   }, []);
 
-  const updateRole = useCallback((roleId: string, updates: Partial<any>) => {
+  const updateRole = useCallback((roleId: string, updates: Partial<RoleDefinition>) => {
     setSettings((prev) => ({
       ...prev,
       roles: (prev.roles || []).map((role) => (role.id === roleId ? { ...role, ...updates } : role))

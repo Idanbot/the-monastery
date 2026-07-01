@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { mergeSettings, normalizeTasksPayload } from '../domain/tasks';
-import { apiRequest, shouldUseBackend } from '../lib/api';
+import { apiRequest, shouldUseBackend, ApiError } from '../lib/api';
+import { deepEqual } from '../lib/deepEqual';
 import { activeProfileStorageKey } from '../lib/storage';
 import { createProfileSyncQueue, type ProfileSyncQueue } from '../domain/profileSyncQueue';
 import {
@@ -21,16 +22,26 @@ import {
   settingsResponseSchema,
   tasksResponseSchema
 } from '../../shared/apiContracts';
+import type { AppSettings, Profile, Task } from '../domain/types';
 
-const getErrorMessage = (error, fallback) => (error instanceof Error ? error.message : fallback);
-const isConflictError = (error) =>
-  (typeof error === 'object' && error !== null && 'status' in error && error.status === 409) ||
-  /conflict|changed elsewhere/i.test(getErrorMessage(error, ''));
+export type ProfileAction = 'reset' | 'remove';
 
-type SyncConflict = {
+export type ProfileSummary = Profile;
+
+export type PersistenceStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error' | 'offline';
+
+export type SyncConflict = {
   resource: ProfileMutationResource;
   entry: PendingProfileMutation;
   message: string;
+};
+
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error ? error.message : fallback;
+
+const isConflictError = (error: unknown): boolean => {
+  if (error instanceof ApiError) return error.status === 409;
+  return /conflict|changed elsewhere/i.test(getErrorMessage(error, ''));
 };
 
 function useProfileBootstrap({
@@ -214,9 +225,14 @@ function useActiveProfileLoader({
   ]);
 }
 
-const tasksEqual = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+const tasksEqual = deepEqual;
 
-const saveTasksDelta = async (activeProfileId, previousTasks, nextTasks, baseRevision) => {
+const saveTasksDelta = async (
+  activeProfileId: string,
+  previousTasks: Task[],
+  nextTasks: Task[],
+  baseRevision: number
+) => {
   const previousById = new Map(previousTasks.map((task) => [task.id, task]));
   const nextById = new Map(nextTasks.map((task) => [task.id, task]));
   const added = nextTasks.filter((task) => !previousById.has(task.id));
@@ -485,15 +501,29 @@ function useDebouncedProfileSave({
   return { persistenceStatus, lastSavedAt, keepLocalChanges, discardLocalConflict };
 }
 
-export function useProfilesSync({ tasks, setTasks, settings, setSettings, setSelectedTaskId }) {
+type UseProfilesSyncArgs = {
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  settings: AppSettings;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  setSelectedTaskId: React.Dispatch<React.SetStateAction<string | null>>;
+};
+
+export function useProfilesSync({
+  tasks,
+  setTasks,
+  settings,
+  setSettings,
+  setSelectedTaskId
+}: UseProfilesSyncArgs) {
   const [syncQueue] = useState<ProfileSyncQueue>(() => createProfileSyncQueue());
   const [isBackendAvailable, setIsBackendAvailable] = useState(false);
   const [isProfileReady, setIsProfileReady] = useState(false);
   const [isProfileSettingsReady, setIsProfileSettingsReady] = useState(false);
-  const [profiles, setProfiles] = useState([]);
+  const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
   const [activeProfileId, setActiveProfileId] = useState('');
   const [newProfileName, setNewProfileName] = useState('');
-  const [profileAction, setProfileAction] = useState(null);
+  const [profileAction, setProfileAction] = useState<ProfileAction | null>(null);
   const [profileError, setProfileError] = useState('');
   const [syncConflict, setSyncConflict] = useState<SyncConflict | null>(null);
   const [reloadVersion, setReloadVersion] = useState(0);

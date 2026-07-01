@@ -12,7 +12,9 @@ export const profileSchema = z
   .object({
     id: z.string(),
     name: z.string(),
-    taskCount: z.number().int().nonnegative().optional()
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    taskCount: z.number().int().nonnegative()
   })
   .passthrough();
 export const profilesResponseSchema = z.object({ profiles: z.array(profileSchema) });

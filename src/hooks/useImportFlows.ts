@@ -3,15 +3,26 @@ import { toast } from 'sonner';
 import { parseIcsTasks } from '../domain/calendar';
 import { normalizePlanningImportPayload } from '../domain/tasks';
 import { migrateStoredTasks } from '../domain/dataMigrations';
+import type { AppSettings, ImportPreview, PlanningImportPreview, Task } from '../domain/types';
 
-export function useImportFlows({ tasks, setTasks, setSettings, setSelectedTaskId }) {
-  const [importPreview, setImportPreview] = useState(null);
-  const [planningImportPreview, setPlanningImportPreview] = useState(null);
-  const importInputRef = useRef(null);
-  const importCalendarInputRef = useRef(null);
-  const importPlanningInputRef = useRef(null);
+export function useImportFlows({
+  tasks,
+  setTasks,
+  setSettings,
+  setSelectedTaskId
+}: {
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  setSelectedTaskId: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [planningImportPreview, setPlanningImportPreview] = useState<PlanningImportPreview | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const importCalendarInputRef = useRef<HTMLInputElement>(null);
+  const importPlanningInputRef = useRef<HTMLInputElement>(null);
 
-  const importCalendarTasks = async (file) => {
+  const importCalendarTasks = async (file: File) => {
     if (!file) return;
     try {
       const imported = parseIcsTasks(await file.text());
@@ -28,7 +39,7 @@ export function useImportFlows({ tasks, setTasks, setSettings, setSelectedTaskId
     }
   };
 
-  const importTasks = async (file) => {
+  const importTasks = async (file: File) => {
     if (!file) return;
     try {
       const text = await file.text();
@@ -64,7 +75,7 @@ export function useImportFlows({ tasks, setTasks, setSettings, setSelectedTaskId
     toast.success('Tasks imported.');
   };
 
-  const importPlanningData = async (file) => {
+  const importPlanningData = async (file: File) => {
     if (!file) return;
     try {
       const imported = normalizePlanningImportPayload(JSON.parse(await file.text()));

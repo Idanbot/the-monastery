@@ -7,7 +7,7 @@ const theMonasteryDbName = 'the-monastery_app';
 const theMonasteryStoreName = 'kv';
 const theMonasteryDbVersion = 1;
 
-export const hasIndexedDb = () => typeof window !== 'undefined' && 'indexedDB' in window;
+export const hasIndexedDb = (): boolean => typeof window !== 'undefined' && 'indexedDB' in window;
 
 const openTheMonasteryDb = (): Promise<IDBDatabase> =>
   new Promise((resolve, reject) => {
@@ -29,19 +29,19 @@ const openTheMonasteryDb = (): Promise<IDBDatabase> =>
     request.onerror = () => reject(request.error);
   });
 
-export const getIndexedDbValue = async (key) => {
+export const getIndexedDbValue = async <T = unknown>(key: string): Promise<T | undefined> => {
   const db = await openTheMonasteryDb();
-  return new Promise((resolve, reject) => {
+  return new Promise<T | undefined>((resolve, reject) => {
     const transaction = db.transaction(theMonasteryStoreName, 'readonly');
     const request = transaction.objectStore(theMonasteryStoreName).get(key);
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => resolve(request.result as T | undefined);
     request.onerror = () => reject(request.error);
     transaction.oncomplete = () => db.close();
     transaction.onerror = () => db.close();
   });
 };
 
-export const setIndexedDbValue = async (key, value) => {
+export const setIndexedDbValue = async <T = unknown>(key: string, value: T): Promise<void> => {
   const db = await openTheMonasteryDb();
   return new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(theMonasteryStoreName, 'readwrite');
@@ -53,11 +53,28 @@ export const setIndexedDbValue = async (key, value) => {
   });
 };
 
-export const parseStoredJson = (key, fallback) => {
+/**
+ * Read and JSON-parse a localStorage value, returning `fallback` on any error.
+ * The write companion (`writeStoredJson`) swallows `QuotaExceededError` so a
+ * full localStorage never crashes the app — the IndexedDB mirror keeps a copy.
+ */
+export const parseStoredJson = <T>(key: string, fallback: T): T => {
   try {
     const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : fallback;
+    return saved ? (JSON.parse(saved) as T) : fallback;
   } catch {
     return fallback;
+  }
+};
+
+export const writeStoredJson = (key: string, value: unknown): boolean => {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    // QuotaExceededError or private-mode restrictions: the IndexedDB mirror
+    // in useLocalFallbackPersistence still holds the data.
+    return false;
   }
 };

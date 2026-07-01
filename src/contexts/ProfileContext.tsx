@@ -1,51 +1,63 @@
 import React, { createContext, useContext, useRef, useMemo } from 'react';
 import { useSettingsContext } from './SettingsContext';
 import { useTaskContext } from './TaskContext';
-import { useProfilesSync } from '../hooks/useProfilesSync';
+import {
+  useProfilesSync,
+  type PersistenceStatus,
+  type ProfileAction,
+  type ProfileSummary,
+  type SyncConflict
+} from '../hooks/useProfilesSync';
 import { useProfileImportExport } from '../hooks/useProfileImportExport';
 import { useImportFlows } from '../hooks/useImportFlows';
 import { useBackupActions } from '../hooks/useBackupActions';
 import { useLocalFallbackPersistence } from '../hooks/useLocalFallbackPersistence';
+import type {
+  ImportPreview,
+  LocalBackup,
+  PlanningImportPreview,
+  ProfileImportPreview
+} from '../domain/types';
 
 interface ProfileContextType {
   isBackendAvailable: boolean;
   isProfileReady: boolean;
-  persistenceStatus: string;
+  persistenceStatus: PersistenceStatus;
   lastSavedAt: number | null;
-  profiles: any[];
+  profiles: ProfileSummary[];
   activeProfileId: string;
   selectProfile: (id: string) => void;
   newProfileName: string;
   setNewProfileName: (name: string) => void;
-  profileAction: any;
-  setProfileAction: (action: any) => void;
+  profileAction: ProfileAction | null;
+  setProfileAction: (action: ProfileAction | null) => void;
   profileError: string;
-  syncConflict: any;
+  syncConflict: SyncConflict | null;
   keepLocalChanges: () => void;
   useServerChanges: () => void;
-  activeProfile: any;
+  activeProfile: ProfileSummary | undefined;
   reloadActiveProfile: () => void;
   createProfile: () => void;
   resetActiveProfile: () => void;
   removeActiveProfile: () => void;
 
-  profileImportPreview: any;
-  setProfileImportPreview: (preview: any) => void;
+  profileImportPreview: ProfileImportPreview | null;
+  setProfileImportPreview: React.Dispatch<React.SetStateAction<ProfileImportPreview | null>>;
   exportActiveProfile: () => void;
-  importActiveProfile: (file: any) => void;
+  importActiveProfile: (file: File) => void;
   confirmProfileImport: () => void;
 
-  importPreview: any;
-  setImportPreview: (preview: any) => void;
-  planningImportPreview: any;
-  setPlanningImportPreview: (preview: any) => void;
-  importTasks: (file: any) => void;
-  importCalendarTasks: (file: any) => void;
-  importPlanningData: (file: any) => void;
+  importPreview: ImportPreview | null;
+  setImportPreview: React.Dispatch<React.SetStateAction<ImportPreview | null>>;
+  planningImportPreview: PlanningImportPreview | null;
+  setPlanningImportPreview: React.Dispatch<React.SetStateAction<PlanningImportPreview | null>>;
+  importTasks: (file: File) => void;
+  importCalendarTasks: (file: File) => void;
+  importPlanningData: (file: File) => void;
   confirmImportTasks: () => void;
   confirmPlanningImport: () => void;
 
-  localBackups: any[];
+  localBackups: LocalBackup[];
   restoreLocalBackup: (id: string) => void;
   removeLocalBackup: (id: string) => void;
   exportTasks: () => void;
@@ -162,7 +174,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     () => ({
       isBackendAvailable,
       isProfileReady,
-      persistenceStatus: persistenceStatus as any,
+      persistenceStatus: persistenceStatus as PersistenceStatus,
       lastSavedAt,
       profiles,
       activeProfileId,
@@ -254,5 +266,5 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ]
   );
 
-  return <ProfileContext.Provider value={value as any}>{children}</ProfileContext.Provider>;
+  return <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>;
 };

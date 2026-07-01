@@ -4,6 +4,7 @@ import Fastify, { type FastifyError, type FastifyInstance, type FastifyRequest }
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import packageJson from '../package.json' with { type: 'json' };
+import { createOwnerTokenGuard, readOwnerToken } from './auth.js';
 import { createDataStore } from './db.js';
 import { registerBackupRoutes } from './routes/backup.js';
 import { registerProfileRoutes } from './routes/profiles.js';
@@ -17,6 +18,7 @@ const defaultDataDir = process.env.THE_MONASTERY_DATA_DIR || join(projectRoot, '
 const defaultDbPath = process.env.THE_MONASTERY_DB_PATH || join(defaultDataDir, 'the-monastery.sqlite');
 const appVersion = process.env.THE_MONASTERY_VERSION || packageJson.version;
 const buildRef = process.env.THE_MONASTERY_BUILD_REF || process.env.GITHUB_SHA || 'local';
+const ownerToken = readOwnerToken();
 const defaultApiRateLimit = {
   max: Number(process.env.THE_MONASTERY_API_RATE_LIMIT_MAX || 300),
   timeWindow: process.env.THE_MONASTERY_API_RATE_LIMIT_WINDOW || '1 minute',
@@ -25,14 +27,17 @@ const defaultApiRateLimit = {
     request.log.warn({ key, method: request.method, url: request.url }, 'rate limit exceeded');
   }
 };
-
 export const createApp = (options: ServerOptions = {}): FastifyInstance => {
   const store = createDataStore(options.dbPath || defaultDbPath);
+  const token = options.ownerToken !== undefined ? options.ownerToken : ownerToken;
+  const ownerTokenGuard = createOwnerTokenGuard(token);
+  const bodyLimit = options.bodyLimit ?? Number(process.env.THE_MONASTERY_BODY_LIMIT || 1024 * 1024);
   const app = Fastify({
     logger: options.logger ?? {
       level: process.env.LOG_LEVEL || 'info',
       redact: ['req.headers.authorization', 'req.headers.cookie']
-    }
+    },
+    bodyLimit
   });
 
   app.addHook('onClose', async () => {
@@ -62,9 +67,16 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
         ok: true,
         version: appVersion,
         buildRef,
-        uptimeSeconds: Math.round(process.uptime())
+        uptimeSeconds: Math.round(process.uptime()),
+        authRequired: Boolean(token)
       })
     );
+
+    // Every authenticated route is gated by the owner token when configured.
+    if (ownerTokenGuard) {
+      api.addHook('preHandler', ownerTokenGuard);
+    }
+
     registerProfileRoutes(api, store);
     registerTaskRoutes(api, store);
     registerSettingsRoutes(api, store);

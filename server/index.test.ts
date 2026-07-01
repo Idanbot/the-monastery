@@ -116,6 +116,53 @@ it('reports health with version metadata', async () => {
   expect(response.json()).not.toHaveProperty('storage');
 });
 
+it('reports authRequired on health when an owner token is configured', async () => {
+  const app = makeApp({ ownerToken: 'secret-token' });
+
+  const open = await app.inject({ method: 'GET', url: '/api/health' });
+  const blocked = await app.inject({ method: 'GET', url: '/api/profiles' });
+  const authorized = await app.inject({
+    method: 'GET',
+    url: '/api/profiles',
+    headers: { authorization: 'Bearer secret-token' }
+  });
+  const wrongToken = await app.inject({
+    method: 'GET',
+    url: '/api/profiles',
+    headers: { authorization: 'Bearer nope' }
+  });
+  await app.close();
+
+  expect(open.statusCode).toBe(200);
+  expect(open.json().authRequired).toBe(true);
+  expect(blocked.statusCode).toBe(401);
+  expect(blocked.json()).toMatchObject({ error: 'Owner token required.', authRequired: true });
+  expect(authorized.statusCode).toBe(200);
+  expect(wrongToken.statusCode).toBe(401);
+});
+
+it('also accepts the owner token via the X-Owner-Token header', async () => {
+  const app = makeApp({ ownerToken: 'header-token' });
+
+  const response = await app.inject({
+    method: 'GET',
+    url: '/api/profiles',
+    headers: { 'x-owner-token': 'header-token' }
+  });
+  await app.close();
+
+  expect(response.statusCode).toBe(200);
+});
+
+it('does not require a token when no owner token is configured', async () => {
+  const app = makeApp();
+
+  const response = await app.inject({ method: 'GET', url: '/api/profiles' });
+  await app.close();
+
+  expect(response.statusCode).toBe(200);
+});
+
 it('rate-limits API routes before health checks can be repeated aggressively', async () => {
   const app = makeApp({ apiRateLimit: { max: 1, timeWindow: '1 minute' } });
 
@@ -165,6 +212,45 @@ it('supports task action endpoints for create, update, and delete', async () => 
   expect(listed.json().tasks).toMatchObject([{ id: 'action-task', title: 'Updated action task' }]);
   expect(deleted.statusCode).toBe(200);
   expect(afterDelete.json().tasks).toHaveLength(0);
+});
+
+it('shifts only the moved task and its siblings on reorder (no full rewrite)', async () => {
+  const app = makeApp();
+  const tasks = [0, 1, 2, 3].map((index) => makeTask({ id: `t${index}`, title: `Task ${index}` }));
+  await app.inject({
+    method: 'PUT',
+    url: '/api/profiles/default/tasks',
+    payload: { tasks }
+  });
+
+  // Move t0 from position 0 to position 2: t1,t2 shift down by 1, t0 lands at 2.
+  const moved = await app.inject({
+    method: 'PATCH',
+    url: '/api/profiles/default/tasks/t0',
+    payload: { task: { ...tasks[0], title: 'Task 0 moved' }, position: 2 }
+  });
+  const listed = await app.inject({ method: 'GET', url: '/api/profiles/default/tasks' });
+  await app.close();
+
+  expect(moved.statusCode).toBe(200);
+  const ordered = listed.json().tasks.map((task) => task.id);
+  expect(ordered).toEqual(['t1', 't2', 't0', 't3']);
+  // Untouched siblings keep their original JSON (title unchanged).
+  const t1 = listed.json().tasks.find((task) => task.id === 't1');
+  expect(t1.title).toBe('Task 1');
+});
+
+it('rejects an oversized request body with 413', async () => {
+  const app = makeApp({ bodyLimit: 256 });
+  const hugeTitle = 'x'.repeat(2048);
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/profiles/default/tasks',
+    payload: { task: makeTask({ title: hugeTitle }) }
+  });
+  await app.close();
+
+  expect(response.statusCode).toBe(413);
 });
 
 it('rejects stale task writes against the tasks revision and returns the latest revision', async () => {

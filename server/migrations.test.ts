@@ -64,4 +64,14 @@ describe('database migrations', () => {
     expect(db.pragma('user_version', { simple: true })).toBe(currentDatabaseVersion);
     db.close();
   });
+
+  it('creates the composite index used by position-ordered task scans', () => {
+    directory = mkdtempSync(join(tmpdir(), 'the-monastery-index-'));
+    const db = new Database(join(directory, 'indexes.sqlite'));
+    runDatabaseMigrations(db);
+
+    const indexes = db.pragma('index_list(tasks)') as { name: string }[];
+    expect(indexes.map((index) => index.name)).toContain('idx_tasks_profile_position');
+    db.close();
+  });
 });

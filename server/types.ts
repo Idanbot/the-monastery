@@ -20,4 +20,8 @@ export type ServerOptions = {
   publicDir?: string;
   logger?: boolean | { level?: string; redact?: string[] };
   apiRateLimit?: RateLimitPluginOptions | false;
+  /** Override the owner-token gate (defaults to `THE_MONASTERY_OWNER_TOKEN` env). */
+  ownerToken?: string;
+  /** Override the request body size limit in bytes (default 1 MiB). */
+  bodyLimit?: number;
 };

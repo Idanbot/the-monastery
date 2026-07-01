@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useMemo, useCallback } from
 import { loadInitialLocalTasks } from '../hooks/useLocalFallbackPersistence';
 import { useTaskFilters } from '../hooks/useTaskFilters';
 import { useRecurringTasks } from '../hooks/useRecurringTasks';
-import { useBoardController } from '../hooks/useBoardController';
+import { useBoardController, type DragOverInfo } from '../hooks/useBoardController';
 import { useSettingsContext } from './SettingsContext';
 import { executeTaskCommand } from '../domain/taskCommands';
 import { inferTaskTags } from '../domain/taskIntelligence';
@@ -10,6 +10,8 @@ import { rolePresets } from '../domain/rolePresets';
 import { canonicalizeTags, applyTagTaxonomyCommand, type TagTaxonomyCommand } from '../domain/tagTaxonomy';
 import { generateId, normalizeTask, activeTaskStatuses, formatDateInputValue } from '../domain/tasks';
 import type { Task, TaskStatus } from '../domain/types';
+
+export type TaskOverrides = Partial<Task> & { activity?: Task['activity'] };
 
 interface TaskContextType {
   tasks: Task[];
@@ -32,9 +34,9 @@ interface TaskContextType {
   columnSorts: Record<TaskStatus, 'none' | 'urgency' | 'time'>;
   cycleSort: (status: TaskStatus) => void;
   draggedTaskId: string | null;
-  dragOverInfo: any;
+  dragOverInfo: DragOverInfo;
   setDraggedTaskId: (id: string | null) => void;
-  setDragOverInfo: (info: any) => void;
+  setDragOverInfo: (info: DragOverInfo) => void;
   handleDragStart: (event: React.DragEvent<HTMLElement>, taskId: string) => void;
   handleDragOver: (
     event: React.DragEvent<HTMLElement>,
@@ -44,7 +46,7 @@ interface TaskContextType {
   handleDrop: (event: React.DragEvent<HTMLElement>, status: TaskStatus) => void;
   moveTask: (taskId: string, status: TaskStatus) => void;
   reorderTask: (taskId: string, direction: 'earlier' | 'later') => void;
-  addTask: (status?: TaskStatus, overrides?: any, onCreated?: (task: Task) => void) => void;
+  addTask: (status?: TaskStatus, overrides?: TaskOverrides, onCreated?: (task: Task) => void) => void;
   updateTaskTimer: (taskId: string) => void;
   completeTask: (taskId: string) => void;
   rejectTask: (taskId: string) => void;
@@ -186,7 +188,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const addTask = useCallback(
-    (status: TaskStatus = 'backlog', overrides: any = {}, onCreated?: (task: Task) => void) => {
+    (status: TaskStatus = 'backlog', overrides: TaskOverrides = {}, onCreated?: (task: Task) => void) => {
       const createdAt = new Date().toISOString();
       const title = typeof overrides.title === 'string' ? overrides.title : '';
       const baseTags = Array.isArray(overrides.tags) ? overrides.tags : [];

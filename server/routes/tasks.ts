@@ -5,6 +5,7 @@ import type { ZodType } from 'zod';
 import { taskMutationPayloadSchema, tasksPayloadSchema, validationErrorResponse } from '../validation.js';
 import { rejectStaleTasksRevision } from './revisions.js';
 import { contractResponse, tasksResponseSchema } from '../../shared/apiContracts.js';
+import { requireProfile } from './profileGuard.js';
 
 const validateBody = <T>(schema: ZodType<T>, body: unknown) => {
   const result = schema.safeParse(body);
@@ -15,25 +16,18 @@ const validateBody = <T>(schema: ZodType<T>, body: unknown) => {
 };
 
 export const registerTaskRoutes = (app: FastifyInstance, store: DataStore) => {
-  app.get('/api/profiles/:id/tasks', async (request, reply) => {
-    const { id } = request.params as { id: string };
+  const loadProfile = requireProfile(store);
 
-    if (!store.getProfile(id)) {
-      return reply.code(404).send({ error: 'Profile not found.' });
-    }
-
+  app.get('/api/profiles/:id/tasks', { preHandler: loadProfile }, async (request) => {
+    const id = request.profileId!;
     return contractResponse(tasksResponseSchema, {
       tasks: store.listTasks(id),
       revision: store.getTasksRevision(id)
     });
   });
 
-  app.put('/api/profiles/:id/tasks', async (request, reply) => {
-    const { id } = request.params as { id: string };
-
-    if (!store.getProfile(id)) {
-      return reply.code(404).send({ error: 'Profile not found.' });
-    }
+  app.put('/api/profiles/:id/tasks', { preHandler: loadProfile }, async (request, reply) => {
+    const id = request.profileId!;
 
     const parsed = validateBody(tasksPayloadSchema, request.body);
     if ('error' in parsed) {
@@ -46,12 +40,8 @@ export const registerTaskRoutes = (app: FastifyInstance, store: DataStore) => {
     return { ok: true, revision: store.getTasksRevision(id) };
   });
 
-  app.post('/api/profiles/:id/tasks', async (request, reply) => {
-    const { id } = request.params as { id: string };
-
-    if (!store.getProfile(id)) {
-      return reply.code(404).send({ error: 'Profile not found.' });
-    }
+  app.post('/api/profiles/:id/tasks', { preHandler: loadProfile }, async (request, reply) => {
+    const id = request.profileId!;
 
     const parsed = validateBody(taskMutationPayloadSchema, request.body);
     if ('error' in parsed) {
@@ -68,12 +58,8 @@ export const registerTaskRoutes = (app: FastifyInstance, store: DataStore) => {
     });
   });
 
-  app.patch('/api/profiles/:id/tasks/:taskId', async (request, reply) => {
+  app.patch('/api/profiles/:id/tasks/:taskId', { preHandler: loadProfile }, async (request, reply) => {
     const { id, taskId } = request.params as { id: string; taskId: string };
-
-    if (!store.getProfile(id)) {
-      return reply.code(404).send({ error: 'Profile not found.' });
-    }
 
     const parsed = validateBody(taskMutationPayloadSchema, request.body);
     if ('error' in parsed) {
@@ -92,12 +78,8 @@ export const registerTaskRoutes = (app: FastifyInstance, store: DataStore) => {
     return { ok: true, task: parsed.data.task, revision: store.getTasksRevision(id) };
   });
 
-  app.delete('/api/profiles/:id/tasks/:taskId', async (request, reply) => {
+  app.delete('/api/profiles/:id/tasks/:taskId', { preHandler: loadProfile }, async (request, reply) => {
     const { id, taskId } = request.params as { id: string; taskId: string };
-
-    if (!store.getProfile(id)) {
-      return reply.code(404).send({ error: 'Profile not found.' });
-    }
 
     const body = request.body as { baseRevision?: unknown } | undefined;
     const baseRevision = typeof body?.baseRevision === 'number' ? body.baseRevision : undefined;

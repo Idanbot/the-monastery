@@ -58,6 +58,12 @@ export const createDataStore = (dbPath: string) => {
   );
   const deleteTaskStmt = db.prepare('DELETE FROM tasks WHERE profile_id = ? AND task_id = ?');
   const getTaskPositionStmt = db.prepare('SELECT position FROM tasks WHERE profile_id = ? AND task_id = ?');
+  const countTasksStmt = db.prepare('SELECT COUNT(*) AS count FROM tasks WHERE profile_id = ?');
+  const shiftPositionsStmt = db.prepare(`
+    UPDATE tasks
+    SET position = position + ?
+    WHERE profile_id = ? AND position BETWEEN ? AND ? AND task_id != ?
+  `);
   const upsertTaskStmt = db.prepare(`
     INSERT INTO tasks (profile_id, task_id, task_json, position, updated_at)
     VALUES (?, ?, ?, ?, ?)
@@ -100,11 +106,20 @@ export const createDataStore = (dbPath: string) => {
   });
 
   /**
-   * Persist a single task. Uses a fast path that UPSERTs only the touched row
-   * when the task already exists and its position is unchanged (the common
-   * case — e.g. editing a title). Falls back to a full `replaceTasks` rewrite
-   * only when the task is new or is being moved, so a single-field edit no
-   * longer rewrites every task row in the profile.
+   * Persist a single task.
+   *
+   * Three fast paths avoid the O(n) `replaceTasks` rewrite that previously ran
+   * on every edit:
+   *
+   * 1. Existing task whose position is unchanged — a single UPSERT of the
+   *    touched row (e.g. editing a title).
+   * 2. Existing task moving to a new position — only the moved row is rewritten
+   *    and the contiguous slice of siblings between the old and new position is
+   *    shifted by ±1, so a reorder no longer rewrites every row.
+   * 3. New task appended at the tail (the common `addTask` case) — a single
+   *    INSERT at `position = count`, plus a shift when inserted mid-list.
+   *
+   * Anything else falls back to the full `replaceTasks` rewrite.
    */
   const saveTask = db.transaction((profileId: string, task: Task, position?: number) => {
     const taskId = typeof task.id === 'string' ? task.id : createId();
@@ -114,6 +129,36 @@ export const createDataStore = (dbPath: string) => {
     if (existing && (position === undefined || position === existing.position)) {
       const timestamp = nowIso();
       upsertTaskStmt.run(profileId, taskId, serialized, existing.position, timestamp);
+      touchTasksRevisionStmt.run(timestamp, profileId);
+      return;
+    }
+
+    if (existing && typeof position === 'number' && position !== existing.position) {
+      const oldPos = existing.position;
+      const newPos = Math.max(0, position);
+      const timestamp = nowIso();
+      if (oldPos < newPos) {
+        shiftPositionsStmt.run(-1, profileId, oldPos + 1, newPos, taskId);
+      } else {
+        shiftPositionsStmt.run(1, profileId, newPos, oldPos - 1, taskId);
+      }
+      upsertTaskStmt.run(profileId, taskId, serialized, newPos, timestamp);
+      touchTasksRevisionStmt.run(timestamp, profileId);
+      return;
+    }
+
+    const count = (countTasksStmt.get(profileId) as { count: number }).count;
+    if (!existing && (position === undefined || position >= count)) {
+      const timestamp = nowIso();
+      insertTaskStmt.run(profileId, taskId, serialized, count, timestamp);
+      touchTasksRevisionStmt.run(timestamp, profileId);
+      return;
+    }
+
+    if (!existing && typeof position === 'number' && position < count) {
+      const timestamp = nowIso();
+      shiftPositionsStmt.run(1, profileId, position, count - 1, taskId);
+      insertTaskStmt.run(profileId, taskId, serialized, position, timestamp);
       touchTasksRevisionStmt.run(timestamp, profileId);
       return;
     }

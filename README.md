@@ -122,6 +122,25 @@ If Cloudflare Tunnel is running on the host, point your public hostname to `http
 
 _The app does not implement multi-user authentication. Your proxy acts as the authentication boundary._
 
+### Optional owner token
+
+For self-hosters who cannot put an identity-aware proxy in front, the server
+supports an opt-in single-owner token. Set `THE_MONASTERY_OWNER_TOKEN` in the
+environment and every `/api/*` route (except `/api/health`) will require a
+matching `Authorization: Bearer <token>` (or `X-Owner-Token`) header. When the
+token is configured the SPA shows a small unlock form on first load; the token
+is stored in `localStorage` and attached to subsequent requests. Leave the env
+var unset to keep the open-by-default behaviour.
+
+```sh
+THE_MONASTERY_OWNER_TOKEN=$(openssl rand -hex 32) docker compose up -d
+```
+
+Other request-hardening env vars:
+
+- `THE_MONASTERY_BODY_LIMIT` — max request body size in bytes (default `1048576`, i.e. 1 MiB; oversized bodies return `413`).
+- `THE_MONASTERY_API_RATE_LIMIT_MAX` / `THE_MONASTERY_API_RATE_LIMIT_WINDOW` — rate-limit settings for `/api/*`.
+
 ## 💾 Data & Backups
 
 Server data resides in `THE_MONASTERY_DATA_DIR` (defaults to `/data` in Docker, backed by the `the-monastery-data` volume).
@@ -135,6 +154,34 @@ Server data resides in `THE_MONASTERY_DATA_DIR` (defaults to `/data` in Docker, 
 - ICS calendar import.
 
 _Manual import schemas and examples can be found in `import/`._
+
+## 🔄 Sync & Offline Architecture
+
+The client and server cooperate through a revision-based optimistic-sync
+protocol so the UI stays responsive while writes are debounced and serialised.
+
+- **Independent revisions.** Each profile keeps separate `tasks_revision` and
+  `settings_revision` counters. A settings save cannot invalidate a concurrent
+  task save's base revision (and vice versa). Mutations send `baseRevision`;
+  the server returns `409 { revision }` when it is stale, letting the client
+  offer "Keep local changes" or "Use server version".
+- **Serialised writes.** `src/domain/profileSyncQueue.ts` funnels every write
+  through one promise chain per resource so a second writer cannot race ahead;
+  the latest server revision is tracked and reused as the next base.
+- **Offline mutation queue.** When a write is about to leave the browser,
+  `src/domain/profileMutationQueue.ts` records it in `localStorage` first.
+  If the request fails (or the browser is offline) the mutation survives a
+  reload and is replayed against the freshly loaded profile on next boot.
+- **Local fallback.** `useLocalFallbackPersistence` mirrors tasks and settings
+  to IndexedDB (and a `localStorage` best-effort copy) so the app keeps working
+  with no backend. When the server is reachable again the canonical server
+  state wins; the IDB mirror is only consulted in offline/test mode to avoid
+  clobbering fresh server data with a stale snapshot.
+- **Delta writes.** `saveTasksDelta` diffs the previous baseline against the
+  next snapshot and emits a single-task `POST`/`PATCH`/`DELETE` when exactly
+  one task changed, falling back to a full `PUT` replace only for bulk changes.
+
+See `src/hooks/useProfilesSync.ts` for the orchestration.
 
 ## 🧪 Verification & Testing
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { mergeSettings } from '../domain/tasks';
 import { currentDataSchemaVersion, migrateProfileData } from '../domain/dataMigrations';
 import { downloadJson } from '../lib/download';
+import type { AppSettings, ProfileImportPreview, Task } from '../domain/types';
 
 export function useProfileImportExport({
   tasks,
@@ -12,8 +13,17 @@ export function useProfileImportExport({
   activeProfileId,
   setSelectedTaskId,
   importProfileInputRef
+}: {
+  tasks: Task[];
+  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
+  settings: AppSettings;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  activeProfile: { id?: string; name?: string } | undefined;
+  activeProfileId: string;
+  setSelectedTaskId: React.Dispatch<React.SetStateAction<string | null>>;
+  importProfileInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
-  const [profileImportPreview, setProfileImportPreview] = useState(null);
+  const [profileImportPreview, setProfileImportPreview] = useState<ProfileImportPreview | null>(null);
 
   const exportActiveProfile = () => {
     downloadJson('the-monastery-profile-' + (activeProfile?.name || 'profile') + '.json', {
@@ -28,7 +38,7 @@ export function useProfileImportExport({
     });
   };
 
-  const importActiveProfile = async (file) => {
+  const importActiveProfile = async (file: File) => {
     if (!file) return;
     try {
       const parsed = JSON.parse(await file.text());

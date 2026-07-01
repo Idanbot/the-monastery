@@ -3,6 +3,7 @@ import { SettingsProvider, useSettingsContext } from './contexts/SettingsContext
 import { TaskProvider } from './contexts/TaskContext';
 import { ProfileProvider, useProfileContext } from './contexts/ProfileContext';
 import { UIProvider, useUIContext } from './contexts/UIContext';
+import { OwnerTokenGate } from './components/app/OwnerTokenGate';
 import { cssVars } from './lib/cssVars';
 
 import { AppHeader } from './components/app/AppHeader';
@@ -22,7 +23,9 @@ export default function App() {
       <TaskProvider>
         <ProfileProvider>
           <UIProvider>
-            <AppShell />
+            <OwnerTokenGate>
+              <AppShell />
+            </OwnerTokenGate>
           </UIProvider>
         </ProfileProvider>
       </TaskProvider>

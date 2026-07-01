@@ -144,3 +144,30 @@ export type ImportPreview = {
   updatedTasks: Task[];
   unchangedTasks: Task[];
 };
+
+export type ProfileImportPreview = {
+  name: string;
+  settings?: unknown;
+  tasks: Task[];
+  currentTaskCount: number;
+};
+
+export type PlanningImportPreview = {
+  tasks: Task[];
+  roles: RoleDefinition[];
+  tags: string[];
+  tagGoals: TagGoal[];
+  newTasks: Task[];
+  updatedTasks: Task[];
+};
+
+export type LocalBackup = {
+  schemaVersion: number;
+  id: string;
+  label: string;
+  createdAt: string;
+  taskCount: number;
+  profileName: string;
+  settings: AppSettings;
+  tasks: Task[];
+};

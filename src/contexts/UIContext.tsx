@@ -14,6 +14,11 @@ const MANTRAS = [
   'Wherever you are, be there totally.'
 ];
 
+export type CommandGroup = {
+  heading: string;
+  commands: { value: string; label: string; leading?: React.ReactNode; onSelect: () => void }[];
+};
+
 interface UIContextType {
   view: string;
   setView: React.Dispatch<React.SetStateAction<string>>;
@@ -35,7 +40,7 @@ interface UIContextType {
   setMonkMode: (enabled: boolean) => void;
   submitQuickAddTask: (event: React.FormEvent) => void;
   startFocusTask: () => void;
-  commandPaletteGroups: any[];
+  commandPaletteGroups: CommandGroup[];
   startFocusTaskAction: () => void;
 }
 
@@ -314,5 +319,5 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     ]
   );
 
-  return <UIContext.Provider value={value as any}>{children}</UIContext.Provider>;
+  return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 };

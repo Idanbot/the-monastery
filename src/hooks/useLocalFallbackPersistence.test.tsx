@@ -15,7 +15,8 @@ vi.mock('../lib/storage', () => ({
   tasksStorageKey: 'tasks',
   parseStoredJson: (_key: string, fallback: unknown) => fallback,
   getIndexedDbValue: vi.fn(),
-  setIndexedDbValue: vi.fn(() => Promise.resolve())
+  setIndexedDbValue: vi.fn(() => Promise.resolve()),
+  writeStoredJson: vi.fn(() => true)
 }));
 
 const { getIndexedDbValue } = await import('../lib/storage');

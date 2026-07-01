@@ -3,27 +3,21 @@ import type { DataStore } from '../db.js';
 import { settingsPayloadSchema, validationErrorResponse } from '../validation.js';
 import { rejectStaleSettingsRevision } from './revisions.js';
 import { contractResponse, settingsResponseSchema } from '../../shared/apiContracts.js';
+import { requireProfile } from './profileGuard.js';
 
 export const registerSettingsRoutes = (app: FastifyInstance, store: DataStore) => {
-  app.get('/api/profiles/:id/settings', async (request, reply) => {
-    const { id } = request.params as { id: string };
+  const loadProfile = requireProfile(store);
 
-    if (!store.getProfile(id)) {
-      return reply.code(404).send({ error: 'Profile not found.' });
-    }
-
+  app.get('/api/profiles/:id/settings', { preHandler: loadProfile }, async (request) => {
+    const id = request.profileId!;
     return contractResponse(settingsResponseSchema, {
       settings: store.getSettings(id),
       revision: store.getSettingsRevision(id)
     });
   });
 
-  app.put('/api/profiles/:id/settings', async (request, reply) => {
-    const { id } = request.params as { id: string };
-
-    if (!store.getProfile(id)) {
-      return reply.code(404).send({ error: 'Profile not found.' });
-    }
+  app.put('/api/profiles/:id/settings', { preHandler: loadProfile }, async (request, reply) => {
+    const id = request.profileId!;
 
     const parsed = settingsPayloadSchema.safeParse(request.body);
     if (!parsed.success) {
