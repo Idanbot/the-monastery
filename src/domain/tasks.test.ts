@@ -56,12 +56,26 @@ describe('task domain helpers', () => {
     const planning = normalizePlanningImportPayload({
       tasks: [{ id: 'task-a', title: 'Ship importer', tags: ['import'], notes: ['Implementation note'] }],
       roles: [{ id: 'role-a', name: 'Builder', tags: ['build'], weeklyTargetHours: 6 }],
+      projects: [
+        {
+          id: 'project-a',
+          name: 'Backend Track',
+          taskIds: ['task-a'],
+          milestones: [{ title: 'Ship importer' }]
+        }
+      ],
       tags: ['monk', 'import'],
       goals: { monk: { dailyTargetHours: 1 }, learning: 3 }
     });
 
     expect(planning.tasks[0]).toMatchObject({ id: 'task-a', title: 'Ship importer', tags: ['import'] });
     expect(planning.tasks[0].activity[0]).toMatchObject({ type: 'note', text: 'Implementation note' });
+    expect(planning.projects[0]).toMatchObject({
+      id: 'project-a',
+      name: 'Backend Track',
+      taskIds: ['task-a'],
+      milestones: [expect.objectContaining({ title: 'Ship importer', completed: false })]
+    });
     expect(planning.roles[0]).toEqual({
       id: 'role-a',
       name: 'Builder',
@@ -130,6 +144,40 @@ describe('task domain helpers', () => {
       weeklyTargetHours: 4,
       monthlyTargetHours: 0
     });
+  });
+
+  it('normalizes lightweight projects and their milestones', () => {
+    const settings = mergeSettings({
+      projects: [
+        {
+          id: 'cloud-track',
+          name: 'Cloud Architect',
+          description: 'Migration and architecture practice',
+          status: 'active',
+          tags: ['cloud', 42],
+          taskIds: ['task-a', 42],
+          milestones: [
+            { id: 'networking', title: 'Complete networking lab', completed: true },
+            { title: 'Present migration plan' }
+          ]
+        },
+        { name: '' }
+      ]
+    });
+    expect(settings.projects).toEqual([
+      {
+        id: 'cloud-track',
+        name: 'Cloud Architect',
+        description: 'Migration and architecture practice',
+        status: 'active',
+        tags: ['cloud'],
+        taskIds: ['task-a'],
+        milestones: [
+          { id: 'networking', title: 'Complete networking lab', completed: true },
+          expect.objectContaining({ title: 'Present migration plan', completed: false })
+        ]
+      }
+    ]);
   });
 
   it('uses Liquid Glass readability defaults for a clean profile', () => {

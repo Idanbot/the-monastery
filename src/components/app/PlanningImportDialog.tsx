@@ -29,6 +29,7 @@ export const PlanningImportDialog: React.FC = () => {
           {[
             ['Tasks', planningImportPreview.tasks.length],
             ['Roles', planningImportPreview.roles.length],
+            ['Projects', planningImportPreview.projects.length],
             ['Tags', planningImportPreview.tags.length],
             ['Goals', planningImportPreview.tagGoals.length]
           ].map(([label, count]) => (

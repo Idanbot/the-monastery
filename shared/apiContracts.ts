@@ -30,7 +30,12 @@ export const apiPaths = {
     `/api/profiles/${encodeURIComponent(profileId)}/tasks/${encodeURIComponent(taskId)}`,
   settings: (profileId: string) => `/api/profiles/${encodeURIComponent(profileId)}/settings`,
   resetProfile: (profileId: string) => `/api/profiles/${encodeURIComponent(profileId)}/reset`,
-  backup: '/api/backup'
+  backup: '/api/backup',
+  integrationStatus: '/api/integrations/status',
+  integrationAlerts: '/api/integrations/alerts',
+  integrationAlertTest: '/api/integrations/alerts/test',
+  calendarPull: '/api/integrations/calendar/pull',
+  calendarPush: '/api/integrations/calendar/push'
 } as const;
 
 export type TasksResponse = z.infer<typeof tasksResponseSchema>;

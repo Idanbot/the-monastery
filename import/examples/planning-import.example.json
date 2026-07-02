@@ -7,6 +7,23 @@
       "title": "Learn React server state patterns",
       "status": "backlog",
       "urgency": 6,
+      "projects": [
+        {
+          "id": "mock-project-learning",
+          "name": "Frontend Learning Track",
+          "description": "Build practical React architecture skills.",
+          "status": "active",
+          "tags": ["learning", "react"],
+          "taskIds": ["mock-learning-react-001"],
+          "milestones": [
+            {
+              "id": "mock-milestone-summary",
+              "title": "Publish architecture summary",
+              "completed": false
+            }
+          ]
+        }
+      ],
       "tags": ["learning", "react", "frontend"],
       "scheduledDate": "",
       "scheduledStart": "",

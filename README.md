@@ -15,6 +15,7 @@
 - **⏱️ Daily Timeline:** Scheduled blocks, drag-to-reschedule, current-time marker, and current-task controls.
 - **🧘 Monk Mode:** A simplified focus surface and minimap for lower-clutter execution.
 - **🎯 Role & Tag Goals:** Set and track daily, weekly, and monthly target hours.
+- **Projects and Learning Tracks:** Group tasks, milestones, tags, and outcomes per profile.
 - **📊 Analytics:** Task status, tracked time, role balance, tag hours, radar view, and activity trends.
 - **🧠 Smart Task Creation:** Infer tags from task names and configured role/tag relationships.
 - **🎨 Theme Gallery:** Liquid Glass, terminal, dark, and light styles plus simple color customization.
@@ -140,6 +141,29 @@ Other request-hardening env vars:
 
 - `THE_MONASTERY_BODY_LIMIT` — max request body size in bytes (default `1048576`, i.e. 1 MiB; oversized bodies return `413`).
 - `THE_MONASTERY_API_RATE_LIMIT_MAX` / `THE_MONASTERY_API_RATE_LIMIT_WINDOW` — rate-limit settings for `/api/*`.
+
+### Calendar and webhook integrations
+
+Integrations are optional and configured only through server environment variables, so credentials are never stored in profile exports or browser storage. Open **Settings > Integrations** to pull calendar events into the import preview, push scheduled tasks to CalDAV, test alerts, or opt into automatic task alerts.
+
+| Variable                                                              | Purpose                                                |
+| --------------------------------------------------------------------- | ------------------------------------------------------ |
+| `THE_MONASTERY_ICS_SUBSCRIPTION_URLS`                                 | Comma- or newline-separated read-only ICS feed URLs    |
+| `THE_MONASTERY_CALDAV_URL`                                            | CalDAV calendar collection URL used for REPORT and PUT |
+| `THE_MONASTERY_CALDAV_USERNAME` / `THE_MONASTERY_CALDAV_PASSWORD`     | Optional CalDAV basic-auth credentials                 |
+| `THE_MONASTERY_DISCORD_WEBHOOK_URL`                                   | Discord incoming webhook URL                           |
+| `THE_MONASTERY_SLACK_WEBHOOK_URL`                                     | Slack incoming webhook URL                             |
+| `THE_MONASTERY_TELEGRAM_BOT_TOKEN` / `THE_MONASTERY_TELEGRAM_CHAT_ID` | Telegram Bot API destination                           |
+
+Example:
+
+```sh
+export THE_MONASTERY_ICS_SUBSCRIPTION_URLS="https://calendar.example/private.ics"
+export THE_MONASTERY_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
+docker compose up -d
+```
+
+Treat webhook URLs, bot tokens, and CalDAV passwords as secrets. CalDAV pushes overwrite matching task UID resources; calendar pulls always use the existing import preview before data is merged.
 
 ## 💾 Data & Backups
 

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://the-monastery.local/import/schemas/planning-import.schema.json",
   "title": "TheMonastery Planning Import",
-  "description": "Manual import format for tasks, roles, tags, and goals. This is the best format for later enrichment.",
+  "description": "Manual import format for tasks, roles, projects, tags, and goals. This is the best format for later enrichment.",
   "oneOf": [
     {
       "type": "array",
@@ -19,6 +19,9 @@
         },
         {
           "required": ["roles"]
+        },
+        {
+          "required": ["projects"]
         },
         {
           "required": ["tags"]

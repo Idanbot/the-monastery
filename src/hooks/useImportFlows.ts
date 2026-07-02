@@ -103,12 +103,21 @@ export function useImportFlows({
         (planningImportPreview.roles || []).flatMap((role) => [role.id, role.name.toLowerCase()])
       );
       const goalTags = new Set((planningImportPreview.tagGoals || []).map((goal) => goal.tag.toLowerCase()));
+      const projectKeys = new Set(
+        (planningImportPreview.projects || []).flatMap((project) => [project.id, project.name.toLowerCase()])
+      );
       return {
         ...previous,
         roles: [
           ...(planningImportPreview.roles || []),
           ...(previous.roles || []).filter(
             (role) => !roleKeys.has(role.id) && !roleKeys.has(String(role.name || '').toLowerCase())
+          )
+        ],
+        projects: [
+          ...(planningImportPreview.projects || []),
+          ...(previous.projects || []).filter(
+            (project) => !projectKeys.has(project.id) && !projectKeys.has(project.name.toLowerCase())
           )
         ],
         tagGoals: [

@@ -1103,3 +1103,20 @@ test('searches and selects known tag filters on mobile', async ({ page }) => {
 
   await expect(page.getByRole('button', { name: /filters/i })).toContainText('1');
 });
+
+test('persists a learning project with milestones', async ({ page }) => {
+  await page.goto('/');
+  await openSettingsSection(page, 'Projects');
+  await page.getByRole('button', { name: 'Add project' }).click();
+  await page.getByLabel('Project name').fill('Cloud Architect Track');
+  await page.getByRole('button', { name: '+ milestone' }).click();
+  await page.getByLabel('Milestone title').fill('Present migration plan');
+  await page.getByLabel('Milestone complete').check();
+  await page.waitForTimeout(700);
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await page.reload();
+  await openSettingsSection(page, 'Projects');
+  await expect(page.getByLabel('Project name')).toHaveValue('Cloud Architect Track');
+  await expect(page.getByLabel('Milestone title')).toHaveValue('Present migration plan');
+  await expect(page.getByLabel('Milestone complete')).toBeChecked();
+});

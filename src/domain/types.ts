@@ -77,6 +77,22 @@ export type TagGoal = GoalCadence & {
   tag: string;
 };
 
+export type ProjectMilestone = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
+
+export type Project = {
+  id: string;
+  name: string;
+  description: string;
+  status: 'active' | 'paused' | 'completed';
+  tags: string[];
+  taskIds: string[];
+  milestones: ProjectMilestone[];
+};
+
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';
   visualTheme: VisualTheme;
@@ -109,6 +125,7 @@ export type AppSettings = {
   tagGoals: TagGoal[];
   tagInventory: string[];
   tagAliases: Record<string, string>;
+  projects: Project[];
   mobileFocusMode: boolean;
   collapsedBoardLanes: TaskStatus[];
   collapseTasks: boolean;
@@ -120,6 +137,7 @@ export type AppSettings = {
   timelineHourLinesVisible: boolean;
   timelineNowLineVisible: boolean;
   notificationsEnabled: boolean;
+  webhookAlertsEnabled: boolean;
   columnWidths: { backlog: number; inProgress: number; done: number; rejected: number; new?: number };
   compactColumnWidths: { left: number; right: number };
   compactHeights: { backlog: number; inProgress: number; done: number; rejected: number };
@@ -158,6 +176,7 @@ export type PlanningImportPreview = {
   roles: RoleDefinition[];
   tags: string[];
   tagGoals: TagGoal[];
+  projects: Project[];
   newTasks: Task[];
   updatedTasks: Task[];
 };

@@ -57,6 +57,13 @@ export const settingDefinitions = [
     defaultValue: '24h',
     options: ['12h', '24h']
   },
+  {
+    key: 'webhookAlertsEnabled',
+    section: 'time',
+    label: 'Webhook alerts',
+    kind: 'toggle',
+    defaultValue: false
+  },
   { key: 'showSeconds', section: 'time', label: 'Show seconds', kind: 'toggle', defaultValue: true },
   {
     key: 'clockDisplayMode',

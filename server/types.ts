@@ -1,3 +1,4 @@
+import type { IntegrationConfig } from './integrationRoutes.js';
 import type { RateLimitPluginOptions } from '@fastify/rate-limit';
 
 export type Task = Record<string, unknown>;
@@ -24,4 +25,6 @@ export type ServerOptions = {
   ownerToken?: string;
   /** Override the request body size limit in bytes (default 1 MiB). */
   bodyLimit?: number;
+  integrations?: IntegrationConfig;
+  integrationFetch?: typeof fetch;
 };

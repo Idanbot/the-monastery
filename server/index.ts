@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import packageJson from '../package.json' with { type: 'json' };
 import { createOwnerTokenGuard, readOwnerToken } from './auth.js';
 import { createDataStore } from './db.js';
+import { readIntegrationConfig, registerIntegrationRoutes } from './integrationRoutes.js';
 import { registerBackupRoutes } from './routes/backup.js';
 import { registerProfileRoutes } from './routes/profiles.js';
 import { registerSettingsRoutes } from './routes/settings.js';
@@ -32,6 +33,7 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
   const token = options.ownerToken !== undefined ? options.ownerToken : ownerToken;
   const ownerTokenGuard = createOwnerTokenGuard(token);
   const bodyLimit = options.bodyLimit ?? Number(process.env.THE_MONASTERY_BODY_LIMIT || 1024 * 1024);
+  const integrations = options.integrations ?? readIntegrationConfig();
   const app = Fastify({
     logger: options.logger ?? {
       level: process.env.LOG_LEVEL || 'info',
@@ -81,6 +83,7 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
     registerTaskRoutes(api, store);
     registerSettingsRoutes(api, store);
     registerBackupRoutes(api, store);
+    registerIntegrationRoutes(api, integrations, options.integrationFetch);
   });
 
   app.register(fastifyStatic, {

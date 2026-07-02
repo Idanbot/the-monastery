@@ -14,6 +14,7 @@ const contextMocks = vi.hoisted(() => ({
     isDarkMode: false
   },
   taskContext: {
+    tasks: [],
     tagPool: [],
     runTagTaxonomyCommand: vi.fn(),
     createRoleRoutineTasks: vi.fn()
@@ -37,6 +38,7 @@ const contextMocks = vi.hoisted(() => ({
     exportTaskSchema: vi.fn(),
     importInputRef: { current: null },
     importTasks: vi.fn(),
+    setImportPreview: vi.fn(),
     importCalendarInputRef: { current: null },
     importCalendarTasks: vi.fn(),
     importPlanningInputRef: { current: null },
@@ -86,6 +88,7 @@ const renderSettings = (overrides = {}) => {
     exportTaskSchema: vi.fn(),
     importInputRef: { current: null },
     importTasks: vi.fn(),
+    setImportPreview: vi.fn(),
     importCalendarInputRef: { current: null },
     importCalendarTasks: vi.fn(),
     importPlanningInputRef: { current: null },
@@ -93,6 +96,7 @@ const renderSettings = (overrides = {}) => {
     localBackups: [],
     restoreLocalBackup: vi.fn(),
     removeLocalBackup: vi.fn(),
+    tasks: [],
     tagPool: [],
     onTagCommand: vi.fn(),
     isDarkMode: false,
@@ -105,6 +109,7 @@ const renderSettings = (overrides = {}) => {
   contextMocks.settingsContext.updateRole = props.updateRole;
   contextMocks.settingsContext.removeRole = props.removeRole;
   contextMocks.settingsContext.isDarkMode = props.isDarkMode;
+  contextMocks.taskContext.tasks = props.tasks;
   contextMocks.taskContext.tagPool = props.tagPool;
   contextMocks.taskContext.runTagTaxonomyCommand = props.onTagCommand;
   contextMocks.taskContext.createRoleRoutineTasks = props.createRoleRoutineTasks;
@@ -126,6 +131,7 @@ const renderSettings = (overrides = {}) => {
   contextMocks.profileContext.exportTaskSchema = props.exportTaskSchema;
   contextMocks.profileContext.importInputRef = props.importInputRef;
   contextMocks.profileContext.importTasks = props.importTasks;
+  contextMocks.profileContext.setImportPreview = props.setImportPreview;
   contextMocks.profileContext.importCalendarInputRef = props.importCalendarInputRef;
   contextMocks.profileContext.importCalendarTasks = props.importCalendarTasks;
   contextMocks.profileContext.importPlanningInputRef = props.importPlanningInputRef;
@@ -201,6 +207,18 @@ describe('SettingsModal', () => {
     expect(requestPermission).toHaveBeenCalledOnce();
     const notificationUpdate = props.setSettings.mock.lastCall?.[0];
     expect(notificationUpdate(props.settings)).toEqual({ ...props.settings, notificationsEnabled: true });
+  });
+
+  it('adds a project and edits linked project data', async () => {
+    const user = userEvent.setup();
+    const props = renderSettings({
+      initialSection: 'projects',
+      tasks: [{ id: 'task-a', title: 'Migration lab' }]
+    });
+    await user.click(screen.getByRole('button', { name: 'Add project' }));
+    const addUpdate = props.setSettings.mock.lastCall?.[0];
+    const added = addUpdate(props.settings);
+    expect(added.projects[0]).toMatchObject({ name: 'New project', status: 'active', taskIds: [] });
   });
 
   it('renames a known tag from tag management', async () => {

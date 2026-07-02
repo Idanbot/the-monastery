@@ -175,6 +175,7 @@ export const defaultSettings: AppSettings = {
   tagGoals: [],
   tagInventory: [],
   tagAliases: {},
+  projects: [],
   mobileFocusMode: false,
   collapsedBoardLanes: [],
   resizeHandleColor: '#94a3b8',
@@ -236,6 +237,29 @@ const normalizeRoles = (roles) => {
     tags: normalizeStringArray(role.tags),
     ...normalizeGoalCadence(role)
   }));
+};
+
+const normalizeProjects = (projects) => {
+  if (!Array.isArray(projects)) return [];
+  return projects
+    .filter((project) => typeof project?.name === 'string' && project.name.trim())
+    .map((project) => ({
+      id: typeof project.id === 'string' && project.id ? project.id : generateId(),
+      name: project.name.trim(),
+      description: typeof project.description === 'string' ? project.description.trim() : '',
+      status: ['active', 'paused', 'completed'].includes(project.status) ? project.status : 'active',
+      tags: normalizeStringArray(project.tags),
+      taskIds: normalizeStringArray(project.taskIds),
+      milestones: Array.isArray(project.milestones)
+        ? project.milestones
+            .filter((milestone) => typeof milestone?.title === 'string' && milestone.title.trim())
+            .map((milestone) => ({
+              id: typeof milestone.id === 'string' && milestone.id ? milestone.id : generateId(),
+              title: milestone.title.trim(),
+              completed: Boolean(milestone.completed)
+            }))
+        : []
+    }));
 };
 
 const normalizeTagGoals = (tagGoals) => {
@@ -309,6 +333,7 @@ export const mergeSettings = (saved) => ({
   tagGoals: normalizeTagGoals(saved?.tagGoals),
   tagInventory: normalizeTagInventory(saved?.tagInventory),
   tagAliases: normalizeTagAliases(saved?.tagAliases),
+  projects: normalizeProjects(saved?.projects),
   mobileFocusMode: Boolean(saved?.mobileFocusMode),
   collapsedBoardLanes: Array.from(
     new Set(
@@ -484,6 +509,7 @@ export const normalizePlanningImportPayload = (payload) => {
   const rawGoals = settingsSource.tagGoals || settingsSource.goals || [];
   const mappedGoals = normalizeGoalMap(settingsSource.goals);
   const tasks = normalizeTasksPayload({ tasks: rawTasks });
+  const projects = normalizeProjects(settingsSource.projects);
   const roles = normalizeRoles(rawRoles);
   const explicitTags = normalizeImportedTagList(settingsSource.tags);
   const roleTags = roles.flatMap((role) => role.tags || []);
@@ -501,11 +527,11 @@ export const normalizePlanningImportPayload = (payload) => {
       .map((tag) => ({ id: generateId(), tag, ...normalizeGoalCadence({}) }))
   ];
 
-  if (!tasks.length && !roles.length && !tags.length && !tagGoals.length) {
-    throw new Error('Import must include tasks, roles, tags, tagGoals, or goals.');
+  if (!tasks.length && !roles.length && !tags.length && !tagGoals.length && !projects.length) {
+    throw new Error('Import must include tasks, roles, projects, tags, tagGoals, or goals.');
   }
 
-  return { tasks, roles, tags, tagGoals };
+  return { tasks, roles, projects, tags, tagGoals };
 };
 
 export const taskMatchesSearch = (task, query) => {

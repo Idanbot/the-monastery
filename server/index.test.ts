@@ -3,7 +3,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createApp } from './index.js';
 import type { ServerOptions } from './types.js';
 
@@ -70,6 +70,7 @@ const fullSettings = (overrides: Record<string, unknown> = {}) => ({
   tagGoals: [],
   tagInventory: [],
   tagAliases: {},
+  projects: [],
   mobileFocusMode: false,
   collapsedBoardLanes: [],
   collapseTasks: false,
@@ -81,6 +82,7 @@ const fullSettings = (overrides: Record<string, unknown> = {}) => ({
   timelineHourLinesVisible: true,
   timelineNowLineVisible: true,
   notificationsEnabled: false,
+  webhookAlertsEnabled: false,
   columnWidths: { backlog: 1, inProgress: 1, done: 1, rejected: 1 },
   compactColumnWidths: { left: 50, right: 50 },
   compactHeights: { backlog: 1, inProgress: 1, done: 1, rejected: 1 },
@@ -474,4 +476,63 @@ it('serves the SPA fallback for non-api routes and JSON 404 for api routes', asy
   expect(spaRoute.body).toContain('TheMonastery');
   expect(apiRoute.statusCode).toBe(404);
   expect(apiRoute.json()).toEqual({ error: 'Not found.' });
+});
+
+it('reports configured integrations without exposing secrets', async () => {
+  const app = makeApp({
+    integrations: {
+      discordWebhookUrl: 'https://discord.example/secret',
+      icsSubscriptionUrls: ['https://calendar.example/feed.ics'],
+      calDavUrl: 'https://calendar.example/caldav',
+      calDavUsername: 'idan',
+      calDavPassword: 'secret'
+    }
+  });
+  const response = await app.inject({ method: 'GET', url: '/api/integrations/status' });
+  await app.close();
+  expect(response.statusCode).toBe(200);
+  expect(response.json()).toEqual({
+    webhooks: { discord: true, slack: false, telegram: false },
+    calendar: { subscriptions: 1, calDav: true }
+  });
+  expect(response.body).not.toContain('secret');
+});
+
+it('sends test alerts and synchronizes configured calendars', async () => {
+  const ics = `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:sync-1\nSUMMARY:Synced task\nDTSTART:20260702T090000Z\nDTEND:20260702T100000Z\nEND:VEVENT\nEND:VCALENDAR`;
+  const fetchImpl = vi
+    .fn()
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(new Response(ics, { status: 200 }))
+    .mockResolvedValueOnce(new Response(`<d:multistatus xmlns:d="DAV:"/>`, { status: 207 }))
+    .mockResolvedValueOnce(new Response(null, { status: 201 }));
+  const app = makeApp({
+    integrations: {
+      discordWebhookUrl: 'https://discord.example/hook',
+      icsSubscriptionUrls: ['https://calendar.example/feed.ics'],
+      calDavUrl: 'https://calendar.example/caldav'
+    },
+    integrationFetch: fetchImpl
+  });
+  const alert = await app.inject({ method: 'POST', url: '/api/integrations/alerts/test' });
+  const pull = await app.inject({ method: 'POST', url: '/api/integrations/calendar/pull' });
+  const push = await app.inject({
+    method: 'POST',
+    url: '/api/integrations/calendar/push',
+    payload: {
+      tasks: [
+        {
+          id: 'task-1',
+          title: 'Review',
+          scheduledDate: '2026-07-02',
+          scheduledStart: '09:00',
+          scheduledEnd: '10:00'
+        }
+      ]
+    }
+  });
+  await app.close();
+  expect(alert.json()).toEqual({ sent: ['discord'], failed: [] });
+  expect(pull.json().tasks[0]).toMatchObject({ id: 'sync-1', title: 'Synced task' });
+  expect(push.json()).toEqual({ pushed: 1, failed: [] });
 });

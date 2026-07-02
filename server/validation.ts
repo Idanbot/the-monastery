@@ -91,6 +91,16 @@ const tagGoalSchema = goalCadenceSchema.extend({
   tag: z.string()
 });
 
+const projectSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  status: z.enum(['active', 'paused', 'completed']),
+  tags: z.array(z.string()),
+  taskIds: z.array(z.string()),
+  milestones: z.array(z.object({ id: z.string(), title: z.string(), completed: z.boolean() }))
+});
+
 /**
  * Server-side validation for the settings payload. Previously the server
  * accepted any `Record<string, unknown>` and silently stored garbage that the
@@ -129,6 +139,7 @@ export const appSettingsSchema = z.object({
   tagGoals: z.array(tagGoalSchema),
   tagInventory: z.array(z.string()),
   tagAliases: z.record(z.string(), z.string()),
+  projects: z.array(projectSchema),
   mobileFocusMode: z.boolean(),
   collapsedBoardLanes: z.array(taskStatusEnumSchema),
   collapseTasks: z.boolean(),
@@ -140,6 +151,7 @@ export const appSettingsSchema = z.object({
   timelineHourLinesVisible: z.boolean(),
   timelineNowLineVisible: z.boolean(),
   notificationsEnabled: z.boolean(),
+  webhookAlertsEnabled: z.boolean(),
   columnWidths: z.object({
     backlog: z.number(),
     inProgress: z.number(),
