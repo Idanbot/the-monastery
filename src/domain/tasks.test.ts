@@ -180,6 +180,17 @@ describe('task domain helpers', () => {
     ]);
   });
 
+  it('normalizes webhook provider toggles and templates', () => {
+    const settings = mergeSettings({
+      webhookProviderSettings: { discord: { enabled: false, template: 'Review {title}: {body}' } }
+    });
+    expect(settings.webhookProviderSettings.discord).toEqual({
+      enabled: false,
+      template: 'Review {title}: {body}'
+    });
+    expect(settings.webhookProviderSettings.slack).toEqual({ enabled: true, template: '*{title}*\n{body}' });
+  });
+
   it('uses Liquid Glass readability defaults for a clean profile', () => {
     expect(defaultSettings.visualTheme).toBe('liquid-glass');
     expect(defaultSettings.modalBlur).toBe(1);

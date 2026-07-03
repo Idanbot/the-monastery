@@ -45,4 +45,24 @@ describe('webhook alerts', () => {
       )
     ).toEqual({ sent: [], failed: ['discord'] });
   });
+
+  it('limits delivery to enabled providers and renders their templates', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    const result = await sendWebhookAlert(
+      { discordWebhookUrl: 'https://discord.example/hook', slackWebhookUrl: 'https://slack.example/hook' },
+      {
+        title: 'Task overdue',
+        body: 'Review architecture',
+        providers: ['slack'],
+        templates: { slack: 'MONK: {title} | {body}' }
+      },
+      fetchImpl
+    );
+    expect(result).toEqual({ sent: ['slack'], failed: [] });
+    expect(fetchImpl).toHaveBeenCalledOnce();
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://slack.example/hook',
+      expect.objectContaining({ body: JSON.stringify({ text: 'MONK: Task overdue | Review architecture' }) })
+    );
+  });
 });

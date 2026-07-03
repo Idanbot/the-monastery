@@ -1119,4 +1119,7 @@ test('persists a learning project with milestones', async ({ page }) => {
   await expect(page.getByLabel('Project name')).toHaveValue('Cloud Architect Track');
   await expect(page.getByLabel('Milestone title')).toHaveValue('Present migration plan');
   await expect(page.getByLabel('Milestone complete')).toBeChecked();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await page.getByTestId('view-switch-projects').click();
+  await expect(page.getByTestId('projects-view')).toContainText('Cloud Architect Track');
 });

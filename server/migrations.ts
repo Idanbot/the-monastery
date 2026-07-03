@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 
-export const currentDatabaseVersion = 3;
+export const currentDatabaseVersion = 4;
 
 const migrationOne = (db: Database.Database) => {
   db.exec(`
@@ -56,9 +56,30 @@ const migrationThree = (db: Database.Database) => {
   }
 };
 
+const migrationFour = (db: Database.Database) => {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS alert_outbox (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      event_key TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      due_at INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      next_attempt_at INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      sent_at TEXT,
+      UNIQUE(profile_id, event_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_alert_outbox_due
+      ON alert_outbox(status, next_attempt_at);
+  `);
+};
+
 export const runDatabaseMigrations = (db: Database.Database) => {
   const version = db.pragma('user_version', { simple: true }) as number;
-  const migrations = [migrationOne, migrationTwo, migrationThree];
+  const migrations = [migrationOne, migrationTwo, migrationThree, migrationFour];
 
   db.transaction(() => {
     for (let index = version; index < migrations.length; index += 1) migrations[index](db);

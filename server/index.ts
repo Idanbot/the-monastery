@@ -4,6 +4,7 @@ import Fastify, { type FastifyError, type FastifyInstance, type FastifyRequest }
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import packageJson from '../package.json' with { type: 'json' };
+import { createAlertScheduler } from './alertScheduler.js';
 import { createOwnerTokenGuard, readOwnerToken } from './auth.js';
 import { createDataStore } from './db.js';
 import { readIntegrationConfig, registerIntegrationRoutes } from './integrationRoutes.js';
@@ -34,6 +35,10 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
   const ownerTokenGuard = createOwnerTokenGuard(token);
   const bodyLimit = options.bodyLimit ?? Number(process.env.THE_MONASTERY_BODY_LIMIT || 1024 * 1024);
   const integrations = options.integrations ?? readIntegrationConfig();
+  const alertScheduler =
+    options.alertScheduler === false
+      ? null
+      : createAlertScheduler(store, integrations, options.integrationFetch, options.alertScheduler);
   const app = Fastify({
     logger: options.logger ?? {
       level: process.env.LOG_LEVEL || 'info',
@@ -43,6 +48,7 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
   });
 
   app.addHook('onClose', async () => {
+    alertScheduler?.stop();
     store.close();
   });
 
@@ -100,6 +106,7 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
     reply.sendFile('index.html');
   });
 
+  alertScheduler?.start();
   return app;
 };
 

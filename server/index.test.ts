@@ -83,6 +83,11 @@ const fullSettings = (overrides: Record<string, unknown> = {}) => ({
   timelineNowLineVisible: true,
   notificationsEnabled: false,
   webhookAlertsEnabled: false,
+  webhookProviderSettings: {
+    discord: { enabled: true, template: '**{title}**\n{body}' },
+    slack: { enabled: true, template: '*{title}*\n{body}' },
+    telegram: { enabled: true, template: '{title}\n{body}' }
+  },
   columnWidths: { backlog: 1, inProgress: 1, done: 1, rejected: 1 },
   compactColumnWidths: { left: 50, right: 50 },
   compactHeights: { backlog: 1, inProgress: 1, done: 1, rejected: 1 },
@@ -535,4 +540,78 @@ it('sends test alerts and synchronizes configured calendars', async () => {
   expect(alert.json()).toEqual({ sent: ['discord'], failed: [] });
   expect(pull.json().tasks[0]).toMatchObject({ id: 'sync-1', title: 'Synced task' });
   expect(push.json()).toEqual({ pushed: 1, failed: [] });
+});
+
+it('applies provider choices and templates to test alerts', async () => {
+  const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+  const app = makeApp({
+    integrations: {
+      discordWebhookUrl: 'https://discord.example/hook',
+      slackWebhookUrl: 'https://slack.example/hook'
+    },
+    integrationFetch: fetchImpl
+  });
+  const response = await app.inject({
+    method: 'POST',
+    url: '/api/integrations/alerts/test',
+    payload: { providers: ['slack'], templates: { slack: '{title}: {body}' } }
+  });
+  await app.close();
+  expect(response.statusCode).toBe(200);
+  expect(response.json()).toEqual({ sent: ['slack'], failed: [] });
+  expect(fetchImpl).toHaveBeenCalledOnce();
+  expect(fetchImpl).toHaveBeenCalledWith(
+    'https://slack.example/hook',
+    expect.objectContaining({ body: JSON.stringify({ text: 'The Monastery: Webhook alerts are working.' }) })
+  );
+});
+
+it('delivers persisted task alerts without a connected browser', async () => {
+  const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+  const app = makeApp({
+    integrations: { slackWebhookUrl: 'https://slack.example/hook' },
+    integrationFetch: fetchImpl,
+    alertScheduler: { intervalMs: 10 }
+  });
+  const now = new Date();
+  const scheduled = new Date(now.getTime() - 60_000);
+  const scheduledDate = `${scheduled.getFullYear()}-${String(scheduled.getMonth() + 1).padStart(2, '0')}-${String(scheduled.getDate()).padStart(2, '0')}`;
+  const scheduledStart = `${String(scheduled.getHours()).padStart(2, '0')}:${String(scheduled.getMinutes()).padStart(2, '0')}`;
+  await app.inject({
+    method: 'PUT',
+    url: '/api/profiles/default/settings',
+    payload: {
+      settings: fullSettings({
+        webhookAlertsEnabled: true,
+        webhookProviderSettings: {
+          discord: { enabled: false, template: 'D {title} {body}' },
+          slack: { enabled: true, template: 'SERVER {title}: {body}' },
+          telegram: { enabled: false, template: 'T {title} {body}' }
+        }
+      })
+    }
+  });
+  await app.inject({
+    method: 'PUT',
+    url: '/api/profiles/default/tasks',
+    payload: {
+      tasks: [
+        makeTask({ id: 'scheduled-server-task', title: 'Architecture review', scheduledDate, scheduledStart })
+      ]
+    }
+  });
+
+  await vi.waitFor(
+    () =>
+      expect(fetchImpl).toHaveBeenCalledWith(
+        'https://slack.example/hook',
+        expect.objectContaining({
+          body: JSON.stringify({ text: 'SERVER Task starting now: Architecture review' })
+        })
+      ),
+    { timeout: 1000 }
+  );
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  await app.close();
 });

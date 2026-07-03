@@ -12,6 +12,10 @@ import { useProfileContext } from '../../contexts/ProfileContext';
 import { useUIContext } from '../../contexts/UIContext';
 import { sendBrowserNotification } from '../../domain/notifications';
 
+const ProjectsView = lazy(() =>
+  import('../projects/ProjectsView').then((module) => ({ default: module.ProjectsView }))
+);
+
 const AnalyticsView = lazy(() =>
   import('../dashboard/AnalyticsView').then((module) => ({ default: module.AnalyticsView }))
 );
@@ -61,7 +65,7 @@ export function WorkspaceContent() {
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-      {!settings.monkMode && view !== 'dashboard' && view !== 'calendar' && (
+      {!settings.monkMode && view !== 'dashboard' && view !== 'calendar' && view !== 'projects' && (
         <TaskSearchInput value={searchQuery} onChange={setSearchQuery} variant="inline" />
       )}
 
@@ -120,6 +124,24 @@ export function WorkspaceContent() {
             activeProfile={activeProfile ?? null}
             currentTask={currentTask}
             openRoleSettings={() => {}}
+          />
+        </Suspense>
+      )}
+
+      {!settings.monkMode && view === 'projects' && (
+        <Suspense
+          fallback={
+            <div className="flex flex-1 items-center justify-center text-sm text-slate-500">
+              Loading projects...
+            </div>
+          }
+        >
+          <ProjectsView
+            projects={settings.projects || []}
+            tasks={tasks}
+            now={now}
+            onOpenTask={setSelectedTaskId}
+            onOpenSettings={() => openSettings('projects')}
           />
         </Suspense>
       )}

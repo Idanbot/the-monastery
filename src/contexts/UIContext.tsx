@@ -90,7 +90,6 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   useTaskNotifications({
     enabled: settings.notificationsEnabled,
-    webhookEnabled: settings.webhookAlertsEnabled,
     tasks,
     now,
     onOpenTask: setSelectedTaskId

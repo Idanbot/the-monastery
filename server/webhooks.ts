@@ -7,7 +7,12 @@ export type WebhookConfig = {
   telegramChatId?: string;
 };
 
-export type WebhookAlert = { title: string; body: string };
+export type WebhookAlert = {
+  title: string;
+  body: string;
+  providers?: WebhookProvider[];
+  templates?: Partial<Record<WebhookProvider, string>>;
+};
 
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
@@ -32,27 +37,36 @@ export const sendWebhookAlert = async (
 ) => {
   const title = alert.title.trim().slice(0, 200);
   const body = alert.body.trim().slice(0, 3500);
+  const enabledProviders = new Set(alert.providers ?? ['discord', 'slack', 'telegram']);
+  const render = (provider: WebhookProvider, fallback: string) =>
+    (alert.templates?.[provider] || fallback).replaceAll('{title}', title).replaceAll('{body}', body);
   const deliveries: Array<{ provider: WebhookProvider; send: () => Promise<boolean> }> = [];
 
-  if (config.discordWebhookUrl) {
+  if (config.discordWebhookUrl && enabledProviders.has('discord')) {
     deliveries.push({
       provider: 'discord',
-      send: () => postJson(fetchImpl, config.discordWebhookUrl!, { content: `**${title}**\n${body}` })
+      send: () =>
+        postJson(fetchImpl, config.discordWebhookUrl!, {
+          content: render('discord', ['**{title}**', '{body}'].join(String.fromCharCode(10)))
+        })
     });
   }
-  if (config.slackWebhookUrl) {
+  if (config.slackWebhookUrl && enabledProviders.has('slack')) {
     deliveries.push({
       provider: 'slack',
-      send: () => postJson(fetchImpl, config.slackWebhookUrl!, { text: `*${title}*\n${body}` })
+      send: () =>
+        postJson(fetchImpl, config.slackWebhookUrl!, {
+          text: render('slack', ['*{title}*', '{body}'].join(String.fromCharCode(10)))
+        })
     });
   }
-  if (config.telegramBotToken && config.telegramChatId) {
+  if (config.telegramBotToken && config.telegramChatId && enabledProviders.has('telegram')) {
     deliveries.push({
       provider: 'telegram',
       send: () =>
         postJson(fetchImpl, `https://api.telegram.org/bot${config.telegramBotToken}/sendMessage`, {
           chat_id: config.telegramChatId,
-          text: `${title}\n${body}`
+          text: render('telegram', ['{title}', '{body}'].join(String.fromCharCode(10)))
         })
     });
   }

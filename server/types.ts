@@ -12,6 +12,16 @@ export type ProfileRow = {
   revision?: number;
 };
 
+export type AlertOutboxRow = {
+  id: number;
+  profile_id: string;
+  event_key: string;
+  title: string;
+  body: string;
+  due_at: number;
+  attempts: number;
+};
+
 export type SettingsRow = {
   settings_json: string;
 };
@@ -27,4 +37,5 @@ export type ServerOptions = {
   bodyLimit?: number;
   integrations?: IntegrationConfig;
   integrationFetch?: typeof fetch;
+  alertScheduler?: false | { intervalMs?: number; now?: () => number };
 };

@@ -93,6 +93,9 @@ export type Project = {
   milestones: ProjectMilestone[];
 };
 
+export type WebhookProviderPreference = { enabled: boolean; template: string };
+export type WebhookProviderSettings = Record<'discord' | 'slack' | 'telegram', WebhookProviderPreference>;
+
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';
   visualTheme: VisualTheme;
@@ -138,6 +141,7 @@ export type AppSettings = {
   timelineNowLineVisible: boolean;
   notificationsEnabled: boolean;
   webhookAlertsEnabled: boolean;
+  webhookProviderSettings: WebhookProviderSettings;
   columnWidths: { backlog: number; inProgress: number; done: number; rejected: number; new?: number };
   compactColumnWidths: { left: number; right: number };
   compactHeights: { backlog: number; inProgress: number; done: number; rejected: number };

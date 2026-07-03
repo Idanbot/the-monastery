@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { ProfileRow, SettingsRow, Task } from './types.js';
+import type { AlertOutboxRow, ProfileRow, SettingsRow, Task } from './types.js';
 import { runDatabaseMigrations } from './migrations.js';
 
 const nowIso = () => new Date().toISOString();
@@ -84,6 +84,26 @@ export const createDataStore = (dbPath: string) => {
   const insertTaskStmt = db.prepare(`
     INSERT INTO tasks (profile_id, task_id, task_json, position, updated_at)
     VALUES (?, ?, ?, ?, ?)
+  `);
+  const enqueueAlertStmt = db.prepare(`
+    INSERT OR IGNORE INTO alert_outbox
+      (profile_id, event_key, title, body, due_at, next_attempt_at, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const listDueAlertsStmt = db.prepare(`
+    SELECT id, profile_id, event_key, title, body, due_at, attempts
+    FROM alert_outbox
+    WHERE status = 'pending' AND next_attempt_at <= ?
+    ORDER BY next_attempt_at ASC
+    LIMIT ?
+  `);
+  const markAlertSentStmt = db.prepare(`
+    UPDATE alert_outbox SET status = 'sent', sent_at = ? WHERE id = ?
+  `);
+  const markAlertFailedStmt = db.prepare(`
+    UPDATE alert_outbox
+    SET attempts = attempts + 1, next_attempt_at = ?
+    WHERE id = ?
   `);
 
   const ensureDefaultProfile = () => {
@@ -240,6 +260,13 @@ export const createDataStore = (dbPath: string) => {
       upsertSettingsStmt.run(profileId, JSON.stringify(settings), timestamp);
       touchSettingsRevisionStmt.run(timestamp, profileId);
     },
+    enqueueAlert: (profileId: string, eventKey: string, title: string, body: string, dueAt: number) => {
+      const timestamp = nowIso();
+      enqueueAlertStmt.run(profileId, eventKey, title, body, dueAt, dueAt, timestamp);
+    },
+    listDueAlerts: (now: number, limit = 100) => listDueAlertsStmt.all(now, limit) as AlertOutboxRow[],
+    markAlertSent: (id: number) => markAlertSentStmt.run(nowIso(), id),
+    markAlertFailed: (id: number, retryAt: number) => markAlertFailedStmt.run(retryAt, id),
     backup: () => {
       const profiles = (listProfilesStmt.all() as ProfileRow[]).map((row) => {
         const profile = serializeProfile(row);

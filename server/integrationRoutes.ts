@@ -26,7 +26,21 @@ export const readIntegrationConfig = (env: NodeJS.ProcessEnv = process.env): Int
   calDavPassword: text(env.THE_MONASTERY_CALDAV_PASSWORD)
 });
 
-const alertSchema = z.object({ title: z.string().min(1).max(200), body: z.string().min(1).max(3500) });
+const webhookProviderSchema = z.enum(['discord', 'slack', 'telegram']);
+const deliveryOptionsSchema = z.object({
+  providers: z.array(webhookProviderSchema).max(3).optional(),
+  templates: z
+    .object({
+      discord: z.string().max(4000).optional(),
+      slack: z.string().max(4000).optional(),
+      telegram: z.string().max(4000).optional()
+    })
+    .optional()
+});
+const alertSchema = deliveryOptionsSchema.extend({
+  title: z.string().min(1).max(200),
+  body: z.string().min(1).max(3500)
+});
 const calendarTaskSchema = z.object({
   id: z.string().min(1),
   title: z.string().max(500),
@@ -46,9 +60,15 @@ export const registerIntegrationRoutes = (
     calendar: calendarStatus(config)
   }));
 
-  app.post('/api/integrations/alerts/test', async () =>
-    sendWebhookAlert(config, { title: 'The Monastery', body: 'Webhook alerts are working.' }, fetchImpl)
-  );
+  app.post('/api/integrations/alerts/test', async (request, reply) => {
+    const parsed = deliveryOptionsSchema.safeParse(request.body || {});
+    if (!parsed.success) return reply.code(400).send({ error: 'Invalid alert options.' });
+    return sendWebhookAlert(
+      config,
+      { title: 'The Monastery', body: 'Webhook alerts are working.', ...parsed.data },
+      fetchImpl
+    );
+  });
   app.post('/api/integrations/alerts', async (request, reply) => {
     const parsed = alertSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: 'Invalid alert payload.' });

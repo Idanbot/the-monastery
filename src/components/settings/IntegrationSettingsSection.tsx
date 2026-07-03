@@ -78,7 +78,16 @@ export function IntegrationSettingsSection({
     setBusy(true);
     try {
       const result = await apiRequest<{ sent: string[]; failed: string[] }>(apiPaths.integrationAlertTest, {
-        method: 'POST'
+        method: 'POST',
+        body: JSON.stringify({
+          providers: enabledProviders,
+          templates: Object.fromEntries(
+            enabledProviders.map((provider) => [
+              provider,
+              settings.webhookProviderSettings[provider].template
+            ])
+          )
+        })
       });
       if (result.failed.length) toast.error(`Failed: ${result.failed.join(', ')}`);
       else toast.success(`Alert sent to ${result.sent.join(', ')}.`);
@@ -89,26 +98,46 @@ export function IntegrationSettingsSection({
     }
   };
 
-  const providers = status
-    ? Object.entries(status.webhooks)
-        .filter(([, configured]) => configured)
-        .map(([name]) => name[0].toUpperCase() + name.slice(1))
-    : [];
+  const providerKeys = ['discord', 'slack', 'telegram'] as const;
+  const configuredProviders = status ? providerKeys.filter((provider) => status.webhooks[provider]) : [];
+  const enabledProviders = configuredProviders.filter(
+    (provider) => settings.webhookProviderSettings[provider].enabled
+  );
+  const providerLabel = (provider: (typeof providerKeys)[number]) =>
+    provider[0].toUpperCase() + provider.slice(1);
+  const updateProvider = (
+    provider: (typeof providerKeys)[number],
+    updates: Partial<AppSettings['webhookProviderSettings'][typeof provider]>
+  ) =>
+    setSettings((previous) => {
+      const webhookProviderSettings = {
+        ...previous.webhookProviderSettings,
+        [provider]: { ...previous.webhookProviderSettings[provider], ...updates }
+      };
+      const hasEnabledProvider = configuredProviders.some(
+        (configured) => webhookProviderSettings[configured].enabled
+      );
+      return {
+        ...previous,
+        webhookAlertsEnabled: hasEnabledProvider ? previous.webhookAlertsEnabled : false,
+        webhookProviderSettings
+      };
+    });
   const calendarConfigured = Boolean(status && (status.calendar.subscriptions > 0 || status.calendar.calDav));
 
   return (
     <div className="space-y-3">
       {!isBackendAvailable && <p className="text-xs text-slate-500">Integrations require the backend.</p>}
       <div className="flex flex-wrap gap-1.5">
-        {providers.map((provider) => (
+        {configuredProviders.map((provider) => (
           <span
-            key={provider}
+            key={providerLabel(provider)}
             className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs text-emerald-700 dark:text-emerald-300"
           >
-            {provider}
+            {providerLabel(provider)}
           </span>
         ))}
-        {status && providers.length === 0 && (
+        {status && configuredProviders.length === 0 && (
           <span className="text-xs text-slate-500">No webhook providers configured.</span>
         )}
       </div>
@@ -118,12 +147,41 @@ export function IntegrationSettingsSection({
           aria-label="Automatic webhook alerts"
           type="checkbox"
           checked={settings.webhookAlertsEnabled}
-          disabled={providers.length === 0}
+          disabled={enabledProviders.length === 0}
           onChange={(event) =>
             setSettings((previous) => ({ ...previous, webhookAlertsEnabled: event.target.checked }))
           }
         />
       </label>
+      <div className="space-y-2">
+        {configuredProviders.map((provider) => (
+          <div key={provider} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+            <label className="flex items-center justify-between gap-3 text-sm font-medium">
+              <span>{providerLabel(provider)}</span>
+              <input
+                aria-label={`Enable ${providerLabel(provider)} alerts`}
+                type="checkbox"
+                checked={settings.webhookProviderSettings[provider].enabled}
+                onChange={(event) => updateProvider(provider, { enabled: event.target.checked })}
+              />
+            </label>
+            <label className="mt-2 block text-xs text-slate-500">
+              Message template
+              <textarea
+                aria-label={`${providerLabel(provider)} message template`}
+                value={settings.webhookProviderSettings[provider].template}
+                onChange={(event) => updateProvider(provider, { template: event.target.value })}
+                rows={3}
+                maxLength={4000}
+                className="mt-1 w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+              />
+            </label>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-slate-500">
+        Templates support {`{title}`} and {`{body}`}.
+      </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <button
           type="button"
@@ -143,7 +201,7 @@ export function IntegrationSettingsSection({
         </button>
         <button
           type="button"
-          disabled={busy || providers.length === 0}
+          disabled={busy || enabledProviders.length === 0}
           onClick={() => void testAlerts()}
           className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium disabled:opacity-40 dark:border-slate-700"
         >

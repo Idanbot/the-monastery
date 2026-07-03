@@ -15,7 +15,7 @@
 - **⏱️ Daily Timeline:** Scheduled blocks, drag-to-reschedule, current-time marker, and current-task controls.
 - **🧘 Monk Mode:** A simplified focus surface and minimap for lower-clutter execution.
 - **🎯 Role & Tag Goals:** Set and track daily, weekly, and monthly target hours.
-- **Projects and Learning Tracks:** Group tasks, milestones, tags, and outcomes per profile.
+- **Projects and Learning Tracks:** Track linked tasks, milestones, completion, time, and the next action in a dedicated dashboard.
 - **📊 Analytics:** Task status, tracked time, role balance, tag hours, radar view, and activity trends.
 - **🧠 Smart Task Creation:** Infer tags from task names and configured role/tag relationships.
 - **🎨 Theme Gallery:** Liquid Glass, terminal, dark, and light styles plus simple color customization.
@@ -144,7 +144,7 @@ Other request-hardening env vars:
 
 ### Calendar and webhook integrations
 
-Integrations are optional and configured only through server environment variables, so credentials are never stored in profile exports or browser storage. Open **Settings > Integrations** to pull calendar events into the import preview, push scheduled tasks to CalDAV, test alerts, or opt into automatic task alerts.
+Integrations are optional and configured only through server environment variables, so credentials are never stored in profile exports or browser storage. Open **Settings > Integrations** to pull calendar events into the import preview, push scheduled tasks to CalDAV, enable or disable each messaging provider, edit `{title}` and `{body}` templates, test alerts, or opt into automatic task alerts.
 
 | Variable                                                              | Purpose                                                |
 | --------------------------------------------------------------------- | ------------------------------------------------------ |
@@ -162,6 +162,8 @@ export THE_MONASTERY_ICS_SUBSCRIPTION_URLS="https://calendar.example/private.ics
 export THE_MONASTERY_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 docker compose up -d
 ```
+
+Automatic messaging alerts are scheduled by the server from persisted task data and stored in a SQLite outbox. Delivery is deduplicated per profile, event, and provider, retries transient failures with backoff, and does not require an open browser.
 
 Treat webhook URLs, bot tokens, and CalDAV passwords as secrets. CalDAV pushes overwrite matching task UID resources; calendar pulls always use the existing import preview before data is merged.
 

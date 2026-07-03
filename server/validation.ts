@@ -152,6 +152,11 @@ export const appSettingsSchema = z.object({
   timelineNowLineVisible: z.boolean(),
   notificationsEnabled: z.boolean(),
   webhookAlertsEnabled: z.boolean(),
+  webhookProviderSettings: z.object({
+    discord: z.object({ enabled: z.boolean(), template: z.string().max(4000) }),
+    slack: z.object({ enabled: z.boolean(), template: z.string().max(4000) }),
+    telegram: z.object({ enabled: z.boolean(), template: z.string().max(4000) })
+  }),
   columnWidths: z.object({
     backlog: z.number(),
     inProgress: z.number(),

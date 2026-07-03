@@ -152,6 +152,12 @@ export const getEffectiveTags = (task) => {
 
 export const defaultTasks: Task[] = [];
 
+export const defaultWebhookProviderSettings = {
+  discord: { enabled: true, template: '**{title}**\n{body}' },
+  slack: { enabled: true, template: '*{title}*\n{body}' },
+  telegram: { enabled: true, template: '{title}\n{body}' }
+};
+
 export const defaultSettings: AppSettings = {
   ...schemaSettingDefaults,
   theme: 'system',
@@ -176,6 +182,7 @@ export const defaultSettings: AppSettings = {
   tagInventory: [],
   tagAliases: {},
   projects: [],
+  webhookProviderSettings: defaultWebhookProviderSettings,
   mobileFocusMode: false,
   collapsedBoardLanes: [],
   resizeHandleColor: '#94a3b8',
@@ -238,6 +245,21 @@ const normalizeRoles = (roles) => {
     ...normalizeGoalCadence(role)
   }));
 };
+
+const normalizeWebhookProviderSettings = (saved) =>
+  Object.fromEntries(
+    Object.entries(defaultWebhookProviderSettings).map(([provider, defaults]) => [
+      provider,
+      {
+        enabled:
+          saved?.[provider]?.enabled === undefined ? defaults.enabled : Boolean(saved[provider].enabled),
+        template:
+          typeof saved?.[provider]?.template === 'string' && saved[provider].template.trim()
+            ? saved[provider].template.slice(0, 4000)
+            : defaults.template
+      }
+    ])
+  );
 
 const normalizeProjects = (projects) => {
   if (!Array.isArray(projects)) return [];
@@ -334,6 +356,7 @@ export const mergeSettings = (saved) => ({
   tagInventory: normalizeTagInventory(saved?.tagInventory),
   tagAliases: normalizeTagAliases(saved?.tagAliases),
   projects: normalizeProjects(saved?.projects),
+  webhookProviderSettings: normalizeWebhookProviderSettings(saved?.webhookProviderSettings),
   mobileFocusMode: Boolean(saved?.mobileFocusMode),
   collapsedBoardLanes: Array.from(
     new Set(

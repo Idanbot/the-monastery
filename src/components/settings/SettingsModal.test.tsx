@@ -173,7 +173,7 @@ describe('SettingsModal', () => {
     const user = userEvent.setup();
     const props = renderSettings({ initialSection: 'time' });
 
-    await user.click(screen.getByLabelText(/show seconds/i));
+    await user.click(await screen.findByLabelText(/show seconds/i));
     const secondsUpdate = props.setSettings.mock.lastCall?.[0];
     expect(secondsUpdate(props.settings)).toEqual({ ...props.settings, showSeconds: false });
 
@@ -202,7 +202,7 @@ describe('SettingsModal', () => {
     const user = userEvent.setup();
     const props = renderSettings({ initialSection: 'time' });
 
-    await user.click(screen.getByLabelText('Browser notifications'));
+    await user.click(await screen.findByLabelText('Browser notifications'));
 
     expect(requestPermission).toHaveBeenCalledOnce();
     const notificationUpdate = props.setSettings.mock.lastCall?.[0];
@@ -215,7 +215,7 @@ describe('SettingsModal', () => {
       initialSection: 'projects',
       tasks: [{ id: 'task-a', title: 'Migration lab' }]
     });
-    await user.click(screen.getByRole('button', { name: 'Add project' }));
+    await user.click(await screen.findByRole('button', { name: 'Add project' }));
     const addUpdate = props.setSettings.mock.lastCall?.[0];
     const added = addUpdate(props.settings);
     expect(added.projects[0]).toMatchObject({ name: 'New project', status: 'active', taskIds: [] });
@@ -233,7 +233,7 @@ describe('SettingsModal', () => {
       }
     });
 
-    await user.selectOptions(screen.getByLabelText(/manage tag/i), 'otel');
+    await user.selectOptions(await screen.findByLabelText(/manage tag/i), 'otel');
     await user.clear(screen.getByLabelText(/rename selected tag/i));
     await user.type(screen.getByLabelText(/rename selected tag/i), 'telemetry');
     await user.click(screen.getByRole('button', { name: /^rename tag$/i }));
@@ -267,7 +267,7 @@ describe('SettingsModal', () => {
       }
     });
 
-    await user.selectOptions(screen.getByLabelText(/manage tag/i), 'otel');
+    await user.selectOptions(await screen.findByLabelText(/manage tag/i), 'otel');
     await user.selectOptions(screen.getByLabelText(/merge selected tag into/i), 'observability');
     await user.click(screen.getByRole('button', { name: /^merge tags$/i }));
     await user.type(screen.getByLabelText(/new alias/i), 'open-telemetry');
@@ -285,10 +285,12 @@ describe('SettingsModal', () => {
     ]);
   });
 
-  it('updates board lane order controls', () => {
+  it('updates board lane order controls', async () => {
     const props = renderSettings({ initialSection: 'board' });
 
-    fireEvent.change(screen.getByLabelText(/compact active top lane/i), { target: { value: 'in-progress' } });
+    fireEvent.change(await screen.findByLabelText(/compact active top lane/i), {
+      target: { value: 'in-progress' }
+    });
     const compactUpdate = props.setSettings.mock.lastCall?.[0];
     expect(compactUpdate(props.settings)).toEqual({
       ...props.settings,
@@ -312,7 +314,7 @@ describe('SettingsModal', () => {
   it('updates board resize controls with bounded values', async () => {
     const props = renderSettings({ initialSection: 'board' });
 
-    fireEvent.change(screen.getByLabelText(/resize bar thickness/i), { target: { value: '0' } });
+    fireEvent.change(await screen.findByLabelText(/resize bar thickness/i), { target: { value: '0' } });
     const thicknessUpdate = props.setSettings.mock.lastCall?.[0];
     expect(thicknessUpdate(props.settings)).toEqual({ ...props.settings, resizeHandleThickness: 1 });
 
@@ -328,10 +330,10 @@ describe('SettingsModal', () => {
     const promoteUpdate = props.setSettings.mock.lastCall?.[0];
     expect(promoteUpdate(props.settings)).toEqual({ ...props.settings, autoPromoteNextTask: true });
   });
-  it('persists per-lane collapse settings', () => {
+  it('persists per-lane collapse settings', async () => {
     const props = renderSettings({ initialSection: 'board' });
 
-    fireEvent.click(screen.getByLabelText(/collapse done lane/i));
+    fireEvent.click(await screen.findByLabelText(/collapse done lane/i));
     const collapseUpdate = props.setSettings.mock.lastCall?.[0];
     expect(collapseUpdate(props.settings)).toEqual({
       ...props.settings,
