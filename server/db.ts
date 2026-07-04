@@ -3,6 +3,12 @@ import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { AlertOutboxRow, ProfileRow, SettingsRow, Task } from './types.js';
 import { runDatabaseMigrations } from './migrations.js';
+import {
+  settingsSearchDocuments,
+  taskSearchDocument,
+  toFtsQuery,
+  type SearchDocument
+} from './searchIndex.js';
 
 const nowIso = () => new Date().toISOString();
 const createId = () => Math.random().toString(36).slice(2, 11);
@@ -105,6 +111,51 @@ export const createDataStore = (dbPath: string) => {
     SET attempts = attempts + 1, next_attempt_at = ?
     WHERE id = ?
   `);
+  const deleteSearchEntityStmt = db.prepare(
+    'DELETE FROM profile_search WHERE profile_id = ? AND entity_type = ? AND entity_id = ?'
+  );
+  const deleteSearchTypeStmt = db.prepare(
+    'DELETE FROM profile_search WHERE profile_id = ? AND entity_type = ?'
+  );
+  const deleteSearchProfileStmt = db.prepare('DELETE FROM profile_search WHERE profile_id = ?');
+  const insertSearchDocumentStmt = db.prepare(`
+    INSERT INTO profile_search (profile_id, entity_type, entity_id, title, content)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  const searchProfileStmt = db.prepare(`
+    SELECT
+      entity_type AS entityType,
+      entity_id AS entityId,
+      title,
+      snippet(profile_search, 4, '', '', ' … ', 14) AS summary
+    FROM profile_search
+    WHERE profile_search MATCH ? AND profile_id = ?
+    ORDER BY bm25(profile_search, 0, 0, 0, 5, 1), entity_type, title
+    LIMIT ?
+  `);
+
+  const insertSearchDocument = (profileId: string, document: SearchDocument) => {
+    insertSearchDocumentStmt.run(
+      profileId,
+      document.entityType,
+      document.entityId,
+      document.title,
+      document.content
+    );
+  };
+
+  const indexTask = (profileId: string, task: Task) => {
+    const document = taskSearchDocument(task);
+    if (!document) return;
+    deleteSearchEntityStmt.run(profileId, 'task', document.entityId);
+    insertSearchDocument(profileId, document);
+  };
+
+  const indexSettings = (profileId: string, settings: unknown) => {
+    deleteSearchTypeStmt.run(profileId, 'role');
+    deleteSearchTypeStmt.run(profileId, 'project');
+    settingsSearchDocuments(settings).forEach((document) => insertSearchDocument(profileId, document));
+  };
 
   const ensureDefaultProfile = () => {
     const count = db.prepare('SELECT COUNT(*) AS count FROM profiles').get() as { count: number };
@@ -116,10 +167,13 @@ export const createDataStore = (dbPath: string) => {
   const replaceTasks = db.transaction((profileId: string, tasks: Task[]) => {
     const timestamp = nowIso();
     deleteTasksForProfileStmt.run(profileId);
+    deleteSearchTypeStmt.run(profileId, 'task');
 
     tasks.forEach((task, index) => {
       const taskId = typeof task.id === 'string' ? task.id : createId();
-      insertTaskStmt.run(profileId, taskId, JSON.stringify({ ...task, id: taskId }), index, timestamp);
+      const storedTask = { ...task, id: taskId };
+      insertTaskStmt.run(profileId, taskId, JSON.stringify(storedTask), index, timestamp);
+      indexTask(profileId, storedTask);
     });
 
     touchTasksRevisionStmt.run(timestamp, profileId);
@@ -149,6 +203,7 @@ export const createDataStore = (dbPath: string) => {
     if (existing && (position === undefined || position === existing.position)) {
       const timestamp = nowIso();
       upsertTaskStmt.run(profileId, taskId, serialized, existing.position, timestamp);
+      indexTask(profileId, { ...task, id: taskId });
       touchTasksRevisionStmt.run(timestamp, profileId);
       return;
     }
@@ -163,6 +218,7 @@ export const createDataStore = (dbPath: string) => {
         shiftPositionsStmt.run(1, profileId, newPos, oldPos - 1, taskId);
       }
       upsertTaskStmt.run(profileId, taskId, serialized, newPos, timestamp);
+      indexTask(profileId, { ...task, id: taskId });
       touchTasksRevisionStmt.run(timestamp, profileId);
       return;
     }
@@ -171,6 +227,7 @@ export const createDataStore = (dbPath: string) => {
     if (!existing && (position === undefined || position >= count)) {
       const timestamp = nowIso();
       insertTaskStmt.run(profileId, taskId, serialized, count, timestamp);
+      indexTask(profileId, { ...task, id: taskId });
       touchTasksRevisionStmt.run(timestamp, profileId);
       return;
     }
@@ -179,6 +236,7 @@ export const createDataStore = (dbPath: string) => {
       const timestamp = nowIso();
       shiftPositionsStmt.run(1, profileId, position, count - 1, taskId);
       insertTaskStmt.run(profileId, taskId, serialized, position, timestamp);
+      indexTask(profileId, { ...task, id: taskId });
       touchTasksRevisionStmt.run(timestamp, profileId);
       return;
     }
@@ -202,6 +260,7 @@ export const createDataStore = (dbPath: string) => {
   const deleteTask = db.transaction((profileId: string, taskId: string) => {
     const timestamp = nowIso();
     deleteTaskStmt.run(profileId, taskId);
+    deleteSearchEntityStmt.run(profileId, 'task', taskId);
     touchTasksRevisionStmt.run(timestamp, profileId);
   });
 
@@ -209,11 +268,24 @@ export const createDataStore = (dbPath: string) => {
     const timestamp = nowIso();
     resetProfileTasksStmt.run(profileId);
     resetProfileSettingsStmt.run(profileId);
+    deleteSearchProfileStmt.run(profileId);
     touchTasksRevisionStmt.run(timestamp, profileId);
     touchSettingsRevisionStmt.run(timestamp, profileId);
   });
 
   ensureDefaultProfile();
+
+  const rebuildSearchIndex = db.transaction(() => {
+    db.prepare('DELETE FROM profile_search').run();
+    for (const profile of listProfilesStmt.all() as ProfileRow[]) {
+      for (const row of listTasksStmt.all(profile.id) as { task_json: string }[]) {
+        indexTask(profile.id, JSON.parse(row.task_json) as Task);
+      }
+      const settingsRow = getSettingsStmt.get(profile.id) as SettingsRow | undefined;
+      if (settingsRow) indexSettings(profile.id, JSON.parse(settingsRow.settings_json));
+    }
+  });
+  rebuildSearchIndex();
 
   return {
     close: () => db.close(),
@@ -239,6 +311,7 @@ export const createDataStore = (dbPath: string) => {
       return { id, name, createdAt: timestamp, updatedAt: timestamp, taskCount: 0 };
     },
     deleteProfile: (id: string) => {
+      deleteSearchProfileStmt.run(id);
       deleteProfileStmt.run(id);
     },
     resetProfile: (id: string) => {
@@ -258,7 +331,13 @@ export const createDataStore = (dbPath: string) => {
     saveSettings: (profileId: string, settings: unknown) => {
       const timestamp = nowIso();
       upsertSettingsStmt.run(profileId, JSON.stringify(settings), timestamp);
+      indexSettings(profileId, settings);
       touchSettingsRevisionStmt.run(timestamp, profileId);
+    },
+    searchProfile: (profileId: string, query: string, limit = 20) => {
+      const ftsQuery = toFtsQuery(query);
+      if (!ftsQuery) return [];
+      return searchProfileStmt.all(ftsQuery, profileId, Math.max(1, Math.min(50, limit)));
     },
     enqueueAlert: (profileId: string, eventKey: string, title: string, body: string, dueAt: number) => {
       const timestamp = nowIso();

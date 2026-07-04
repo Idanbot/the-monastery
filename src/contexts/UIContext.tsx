@@ -7,6 +7,8 @@ import { parseQuickAddTask } from '../domain/quickAdd';
 import { formatDateInputValue } from '../domain/tasks';
 import { statusLabels, taskStatuses } from '../domain/tasks';
 import { visualThemeOptions, themeContracts } from '../domain/themes';
+import { useUnifiedSearch } from '../hooks/useUnifiedSearch';
+import type { UnifiedSearchResult } from '../components/TaskSearchInput';
 
 const MANTRAS = [
   'You have power over your mind - not outside events.',
@@ -44,6 +46,9 @@ interface UIContextType {
   startFocusTask: () => void;
   commandPaletteGroups: CommandGroup[];
   startFocusTaskAction: () => void;
+  unifiedSearchResults: UnifiedSearchResult[];
+  unifiedSearchLoading: boolean;
+  selectUnifiedSearchResult: (result: UnifiedSearchResult) => void;
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
@@ -69,11 +74,13 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     createRoleRoutineTasks,
     selectedTaskId,
     setSelectedTaskId,
+    searchQuery,
+    setSearchQuery,
     moveTask,
     updateTaskTimer
   } = useTaskContext();
 
-  const { profiles, selectProfile } = useProfileContext();
+  const { profiles, selectProfile, activeProfileId, isBackendAvailable } = useProfileContext();
 
   const [view, setView] = useState('board');
   const [now, setNow] = useState(Date.now());
@@ -87,6 +94,26 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [keyboardFocusedTaskId, setKeyboardFocusedTaskId] = useState<string | null>(null);
   const [quickAddText, setQuickAddText] = useState('');
   const [mantra] = useState(() => MANTRAS[Math.floor(Math.random() * MANTRAS.length)]);
+  const { results: unifiedSearchResults, loading: unifiedSearchLoading } = useUnifiedSearch(
+    searchQuery,
+    activeProfileId,
+    isBackendAvailable
+  );
+
+  const selectUnifiedSearchResult = useCallback(
+    (result: UnifiedSearchResult) => {
+      setSearchQuery('');
+      if (result.entityType === 'task') {
+        setView('board');
+        setSelectedTaskId(result.entityId);
+      } else if (result.entityType === 'role') {
+        openSettings('roles');
+      } else {
+        setView('projects');
+      }
+    },
+    [openSettings, setSearchQuery, setSelectedTaskId]
+  );
 
   useTaskNotifications({
     enabled: settings.notificationsEnabled,
@@ -368,7 +395,10 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       submitQuickAddTask,
       startFocusTask,
       commandPaletteGroups,
-      startFocusTaskAction: startFocusTask
+      startFocusTaskAction: startFocusTask,
+      unifiedSearchResults,
+      unifiedSearchLoading,
+      selectUnifiedSearchResult
     }),
     [
       view,
@@ -384,7 +414,10 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       setMonkMode,
       submitQuickAddTask,
       startFocusTask,
-      commandPaletteGroups
+      commandPaletteGroups,
+      unifiedSearchResults,
+      unifiedSearchLoading,
+      selectUnifiedSearchResult
     ]
   );
 

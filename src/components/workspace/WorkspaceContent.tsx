@@ -60,13 +60,23 @@ export function WorkspaceContent() {
     quickAddText,
     setQuickAddText,
     submitQuickAddTask,
-    keyboardFocusedTaskId
+    keyboardFocusedTaskId,
+    unifiedSearchResults,
+    unifiedSearchLoading,
+    selectUnifiedSearchResult
   } = useUIContext();
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
       {!settings.monkMode && view !== 'dashboard' && view !== 'calendar' && view !== 'projects' && (
-        <TaskSearchInput value={searchQuery} onChange={setSearchQuery} variant="inline" />
+        <TaskSearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          variant="inline"
+          results={unifiedSearchResults}
+          loading={unifiedSearchLoading}
+          onSelectResult={selectUnifiedSearchResult}
+        />
       )}
 
       {settings.monkMode && (

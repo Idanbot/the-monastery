@@ -96,7 +96,7 @@ test('persists task notes, goals, and deletions across reloads', async ({ page }
   await expectTaskVisible(page, title);
   await page.getByText(title).first().click();
   await page.getByRole('button', { name: /^activity$/i }).click();
-  await expect(page.getByText('Persistence note survives reload')).toBeVisible();
+  await expect(page.getByTestId('task-modal').getByText('Persistence note survives reload')).toBeVisible();
   await page.getByRole('button', { name: /save task/i }).click();
 
   await page.getByRole('button', { name: /list/i }).click();
@@ -229,6 +229,38 @@ test('plans day, suggests title tags, opens shortcuts, and records local backup 
   await expect(page.getByText(/2 tasks/i)).toBeVisible();
 });
 
+test('adds five task-context tags and finds the task by note text', async ({ page, request }) => {
+  await page.goto('/');
+  await page.getByLabel('Backlog task').click();
+  const taskModal = page.getByTestId('task-modal');
+  await taskModal.getByLabel('Title').fill('Design EKS Kubernetes cutover');
+  await taskModal.getByRole('button', { name: /^add$/i }).click();
+  await page.getByPlaceholder('Subtask title').fill('Validate BGP routes');
+  await taskModal.getByRole('button', { name: /^notes$/i }).click();
+  await page.getByPlaceholder('Add a note...').fill('Document rollback procedure before launch');
+  await taskModal.getByRole('button', { name: /^add note$/i }).click();
+  await taskModal.getByRole('button', { name: /add 5 relevant tags/i }).click();
+  await expect(page.getByPlaceholder(/backend, high priority/i)).toHaveValue(
+    'cutover, eks, kubernetes, bgp, rollback'
+  );
+  await taskModal.getByRole('button', { name: /save task/i }).click();
+
+  const profileId = await page.getByTestId('active-profile-control').getAttribute('data-active-profile-id');
+  if (!profileId) throw new Error('Missing active profile id');
+  await expect
+    .poll(async () => {
+      const response = await request.get(api(`/api/profiles/${profileId}/search?q=rollback`));
+      const body = await response.json();
+      return body.results?.[0]?.title;
+    })
+    .toBe('Design EKS Kubernetes cutover');
+
+  await searchTasks(page, 'rollback');
+  const results = page.locator('[data-testid="unified-search-results"]:visible');
+  await results.getByRole('button', { name: /design eks kubernetes cutover/i }).click();
+  await expect(page.getByLabel('Title')).toHaveValue('Design EKS Kubernetes cutover');
+});
+
 test('opens settings and exposes backup/import controls', async ({ page }) => {
   await page.goto('/');
 
@@ -270,7 +302,9 @@ test('imports calendar ICS tasks from the settings UI', async ({ page }) => {
   await expectTaskVisible(page, 'Course Deep Dive');
   await page.getByText('Course Deep Dive').first().click();
   await page.getByRole('button', { name: /^activity$/i }).click();
-  await expect(page.getByText(/Imported from calendar: Watch module and capture notes/)).toBeVisible();
+  await expect(
+    page.getByTestId('task-modal').getByText(/Imported from calendar: Watch module and capture notes/)
+  ).toBeVisible();
 });
 
 test('customizes clock, resize handles, and timeline guides from settings', async ({ page }) => {

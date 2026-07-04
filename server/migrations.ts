@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 
-export const currentDatabaseVersion = 4;
+export const currentDatabaseVersion = 5;
 
 const migrationOne = (db: Database.Database) => {
   db.exec(`
@@ -77,9 +77,22 @@ const migrationFour = (db: Database.Database) => {
   `);
 };
 
+const migrationFive = (db: Database.Database) => {
+  db.exec(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS profile_search USING fts5(
+      profile_id UNINDEXED,
+      entity_type UNINDEXED,
+      entity_id UNINDEXED,
+      title,
+      content,
+      tokenize = 'unicode61 remove_diacritics 2'
+    );
+  `);
+};
+
 export const runDatabaseMigrations = (db: Database.Database) => {
   const version = db.pragma('user_version', { simple: true }) as number;
-  const migrations = [migrationOne, migrationTwo, migrationThree, migrationFour];
+  const migrations = [migrationOne, migrationTwo, migrationThree, migrationFour, migrationFive];
 
   db.transaction(() => {
     for (let index = version; index < migrations.length; index += 1) migrations[index](db);

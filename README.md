@@ -11,13 +11,14 @@
 ## ✨ Highlights
 
 - **📋 Task Board:** Drag-and-drop, filters, recurring tasks, subtasks, notes, activity, and manual time logs.
+- **🔎 Unified Search:** SQLite FTS5 search across task content, notes, subtasks, tags, roles, and projects.
 - **📅 Full Calendar View:** Drag-and-drop scheduling capabilities with dedicated day columns for robust planning.
 - **⏱️ Daily Timeline:** Scheduled blocks, drag-to-reschedule, current-time marker, and current-task controls.
 - **🧘 Monk Mode:** A simplified focus surface and minimap for lower-clutter execution.
 - **🎯 Role & Tag Goals:** Set and track daily, weekly, and monthly target hours.
 - **Projects and Learning Tracks:** Track linked tasks, milestones, completion, time, and the next action in a dedicated dashboard.
 - **📊 Analytics:** Task status, tracked time, role balance, tag hours, radar view, and activity trends.
-- **🧠 Smart Task Creation:** Infer tags from task names and configured role/tag relationships.
+- **🧠 Smart Task Creation:** Rank and apply up to five tags from titles, subtasks, notes, and role relationships using a curated engineering catalog.
 - **🎨 Theme Gallery:** Liquid Glass, terminal, dark, and light styles plus simple color customization.
 - **🗃️ Robust Data Management:** Profiles, local backup history, JSON import/export, profile import/export, planning import, and ICS import.
 - **⌨️ Keyboard-First Workflow:** Command palette and intuitive shortcuts.

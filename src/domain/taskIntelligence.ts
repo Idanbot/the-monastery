@@ -79,24 +79,54 @@ export function inferTaskTags({
  */
 export function suggestTaskTags({
   title,
+  context = [],
   existingTags = [],
   tagPool = [],
   roles = [],
   maxTags = 5
 }: {
   title: string;
+  context?: string[];
   existingTags?: string[];
   tagPool?: string[];
   roles?: RoleDefinition[];
   maxTags?: number;
 }): string[] {
-  const inferred = inferTaskTags({
-    title,
-    existingTags,
-    tagPool,
-    roles,
-    maxTags: maxTags + existingTags.length
-  });
   const present = new Set((existingTags || []).map((tag) => tag.toLowerCase()));
-  return inferred.filter((tag) => !present.has(tag.toLowerCase())).slice(0, maxTags);
+  const candidates = Array.from(new Set([...tagPool, ...roles.flatMap((role) => role.tags || [])]));
+  const order = new Map(candidates.map((tag, index) => [tag.toLowerCase(), index]));
+  const scores = new Map<string, number>();
+  const addScore = (tag: string, score: number) => {
+    const key = tag.toLowerCase();
+    if (!tag || present.has(key)) return;
+    scores.set(tag, (scores.get(tag) || 0) + score);
+  };
+  const sources = [{ value: title, weight: 100 }, ...context.map((value) => ({ value, weight: 60 }))];
+
+  candidates.forEach((tag) => {
+    sources.forEach(({ value, weight }) => {
+      if (includesTerm(normalizeText(value), tag)) addScore(tag, weight);
+    });
+  });
+
+  roles.forEach((role) => {
+    const roleTags = role.tags || [];
+    const roleMatched = sources.some(({ value }) => includesTerm(normalizeText(value), role.name));
+    const relatedToEvidence = roleTags.some(
+      (tag) => (scores.get(tag) || 0) > 0 || present.has(tag.toLowerCase())
+    );
+    if (roleMatched || relatedToEvidence) roleTags.forEach((tag) => addScore(tag, 20));
+  });
+
+  return [...scores.entries()]
+    .filter(([, score]) => score > 0)
+    .sort(
+      ([leftTag, leftScore], [rightTag, rightScore]) =>
+        rightScore - leftScore ||
+        (order.get(leftTag.toLowerCase()) ?? Number.MAX_SAFE_INTEGER) -
+          (order.get(rightTag.toLowerCase()) ?? Number.MAX_SAFE_INTEGER) ||
+        leftTag.localeCompare(rightTag)
+    )
+    .map(([tag]) => tag)
+    .slice(0, maxTags);
 }

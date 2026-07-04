@@ -10,6 +10,7 @@ import { createDataStore } from './db.js';
 import { readIntegrationConfig, registerIntegrationRoutes } from './integrationRoutes.js';
 import { registerBackupRoutes } from './routes/backup.js';
 import { registerProfileRoutes } from './routes/profiles.js';
+import { registerSearchRoutes } from './routes/search.js';
 import { registerSettingsRoutes } from './routes/settings.js';
 import { registerTaskRoutes } from './routes/tasks.js';
 import type { ServerOptions } from './types.js';
@@ -86,6 +87,7 @@ export const createApp = (options: ServerOptions = {}): FastifyInstance => {
     }
 
     registerProfileRoutes(api, store);
+    registerSearchRoutes(api, store);
     registerTaskRoutes(api, store);
     registerSettingsRoutes(api, store);
     registerBackupRoutes(api, store);

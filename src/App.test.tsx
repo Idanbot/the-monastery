@@ -350,7 +350,9 @@ it('creates a task from smart quick add input', async () => {
   await user.click(screen.getByRole('button', { name: /^add$/i }));
 
   expect(screen.getByDisplayValue(/gke migration/i)).toBeInTheDocument();
-  expect(screen.getByPlaceholderText(/backend, high priority/i)).toHaveValue('cloud, gke, gcp, networking');
+  expect(screen.getByPlaceholderText(/backend, high priority/i)).toHaveValue(
+    'cloud, gke, migration, gcp, networking'
+  );
   expect(screen.getByLabelText(/start/i)).toHaveValue('09:00');
   expect(screen.getByLabelText(/end/i)).toHaveValue('10:00');
   await user.click(screen.getByRole('button', { name: /activity/i }));
@@ -773,7 +775,10 @@ it('searches tasks and supports the mobile list view', async () => {
   await user.click(screen.getByRole('button', { name: /save task/i }));
 
   await user.click(screen.getByRole('button', { name: /list/i }));
-  await user.type(screen.getAllByPlaceholderText(/search tasks/i).at(-1)!, 'frontend');
+  await user.type(
+    screen.getAllByRole('textbox', { name: /search tasks, notes, roles, and projects/i }).at(-1)!,
+    'frontend'
+  );
 
   const taskList = screen.getByRole('list', { name: /task list/i });
   expect(within(taskList).getByText(/frontend polish/i)).toBeInTheDocument();

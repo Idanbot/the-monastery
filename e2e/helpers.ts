@@ -76,7 +76,7 @@ export const chooseTheme = async (page, themeId: string) => {
 };
 
 export const searchTasks = async (page, query: string) => {
-  await page.locator('input[placeholder="Search tasks"]:visible').fill(query);
+  await page.getByRole('textbox', { name: /search tasks, notes, roles, and projects/i }).fill(query);
 };
 
 export const browserToday = async (page) =>

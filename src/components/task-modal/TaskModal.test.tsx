@@ -32,6 +32,7 @@ const mockSaveDraftTask = vi.fn();
 const mockCloseTaskModal = vi.fn();
 const mockDiscardDraftTask = vi.fn();
 const mockDeleteDraftTask = vi.fn();
+const mockRegisterTags = vi.fn();
 
 vi.mock('../../hooks/useTaskDraft', () => ({
   useTaskDraft: () => ({
@@ -55,7 +56,19 @@ vi.mock('../../hooks/useTaskDraft', () => ({
 
 vi.mock('../../contexts/SettingsContext', () => ({
   useSettingsContext: () => ({
-    settings: defaultSettings,
+    settings: {
+      ...defaultSettings,
+      roles: [
+        {
+          id: 'platform',
+          name: 'Platform Engineer',
+          tags: ['kubernetes', 'eks', 'networking'],
+          dailyTargetHours: 0,
+          weeklyTargetHours: 0,
+          monthlyTargetHours: 0
+        }
+      ]
+    },
     isDarkMode: false
   })
 }));
@@ -66,8 +79,8 @@ vi.mock('../../contexts/TaskContext', () => ({
     setTasks: vi.fn(),
     selectedTaskId: 'task-1',
     setSelectedTaskId: vi.fn(),
-    tagPool: ['import', 'backend'],
-    registerTags: vi.fn(),
+    tagPool: ['import', 'backend', 'eks', 'bgp', 'rollback', 'kubernetes', 'networking'],
+    registerTags: mockRegisterTags,
     resolveTaskTags: (t: any) => t
   })
 }));
@@ -95,6 +108,7 @@ const setupMockState = (overrides: any = {}) => {
   mockCloseTaskModal.mockClear();
   mockDiscardDraftTask.mockClear();
   mockDeleteDraftTask.mockClear();
+  mockRegisterTags.mockClear();
 };
 
 describe('TaskModal', () => {
@@ -138,6 +152,28 @@ describe('TaskModal', () => {
       ])
     });
     expect(mockSetDraftNote).toHaveBeenCalledWith('');
+  });
+
+  it('adds five relevant tags from the whole task and registers them in the inventory', async () => {
+    const user = userEvent.setup();
+    setupMockState({
+      draftTask: normalizeTask({
+        id: 'task-1',
+        title: 'Design EKS cutover',
+        tags: [],
+        subtasks: [{ id: 'sub-1', title: 'Validate BGP routes' }],
+        activity: [
+          { id: 'note-1', type: 'note', text: 'Document rollback plan', timestamp: '2026-06-23T08:00:00Z' }
+        ]
+      })
+    });
+
+    render(<TaskModal />);
+    await user.click(screen.getByRole('button', { name: /add 5 relevant tags/i }));
+
+    const expected = ['eks', 'bgp', 'rollback', 'kubernetes', 'networking'];
+    expect(mockUpdateDraftTask).toHaveBeenCalledWith({ tags: expected });
+    expect(mockRegisterTags).toHaveBeenCalledWith(expected);
   });
 
   it('routes close, dirty discard, and delete confirmations to their callbacks', async () => {

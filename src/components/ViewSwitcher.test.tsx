@@ -43,4 +43,27 @@ describe('TaskSearchInput', () => {
     await user.click(screen.getByTitle(/clear search/i));
     expect(onChange).toHaveBeenCalledWith('');
   });
+
+  it('shows unified results and opens the selected entity', async () => {
+    const user = userEvent.setup();
+    const onSelectResult = vi.fn();
+    const result = {
+      entityType: 'project' as const,
+      entityId: 'platform',
+      title: 'Platform Reliability',
+      summary: 'Disaster recovery and failover readiness'
+    };
+    render(
+      <TaskSearchInput
+        value="disaster"
+        onChange={() => {}}
+        variant="inline"
+        results={[result]}
+        onSelectResult={onSelectResult}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /platform reliability/i }));
+    expect(onSelectResult).toHaveBeenCalledWith(result);
+  });
 });

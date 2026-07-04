@@ -222,6 +222,102 @@ it('supports task action endpoints for create, update, and delete', async () => 
   expect(afterDelete.json().tasks).toHaveLength(0);
 });
 
+it('searches persisted tasks, notes, subtasks, roles, and projects', async () => {
+  const app = makeApp();
+  const task = makeTask({
+    id: 'search-task',
+    title: 'Migrate the payments API',
+    tags: ['backend'],
+    subtasks: [
+      {
+        id: 'sub-1',
+        title: 'Validate rollback procedure',
+        status: 'backlog',
+        tags: ['reliability'],
+        logs: [],
+        activeLogStart: null
+      }
+    ],
+    activity: [
+      {
+        id: 'note-1',
+        type: 'note',
+        text: 'Course notes about idempotency',
+        timestamp: new Date().toISOString()
+      }
+    ]
+  });
+  await app.inject({
+    method: 'PUT',
+    url: '/api/profiles/default/tasks',
+    payload: { tasks: [task] }
+  });
+  await app.inject({
+    method: 'PUT',
+    url: '/api/profiles/default/settings',
+    payload: {
+      settings: fullSettings({
+        roles: [
+          {
+            id: 'architect',
+            name: 'Cloud Architect',
+            tags: ['migration', 'networking'],
+            dailyTargetHours: 0,
+            weeklyTargetHours: 0,
+            monthlyTargetHours: 0
+          }
+        ],
+        projects: [
+          {
+            id: 'platform',
+            name: 'Platform Reliability',
+            description: 'Improve failover readiness',
+            status: 'active',
+            tags: ['sre'],
+            taskIds: ['search-task'],
+            milestones: [{ id: 'm1', title: 'Run disaster recovery drill', completed: false }]
+          }
+        ]
+      })
+    }
+  });
+
+  const noteResults = await app.inject({
+    method: 'GET',
+    url: '/api/profiles/default/search?q=idempotency'
+  });
+  const roleResults = await app.inject({
+    method: 'GET',
+    url: '/api/profiles/default/search?q=cloud%20architect'
+  });
+  const projectResults = await app.inject({
+    method: 'GET',
+    url: '/api/profiles/default/search?q=disaster%20recovery'
+  });
+  await app.inject({ method: 'DELETE', url: '/api/profiles/default/tasks/search-task' });
+  const deletedResults = await app.inject({
+    method: 'GET',
+    url: '/api/profiles/default/search?q=idempotency'
+  });
+  await app.close();
+
+  expect(noteResults.statusCode).toBe(200);
+  expect(noteResults.json().results).toEqual([
+    expect.objectContaining({
+      entityType: 'task',
+      entityId: 'search-task',
+      title: 'Migrate the payments API'
+    })
+  ]);
+  expect(roleResults.json().results).toEqual([
+    expect.objectContaining({ entityType: 'role', entityId: 'architect', title: 'Cloud Architect' })
+  ]);
+  expect(projectResults.json().results).toEqual([
+    expect.objectContaining({ entityType: 'project', entityId: 'platform', title: 'Platform Reliability' })
+  ]);
+  expect(deletedResults.json().results).toEqual([]);
+});
+
 it('shifts only the moved task and its siblings on reorder (no full rewrite)', async () => {
   const app = makeApp();
   const tasks = [0, 1, 2, 3].map((index) => makeTask({ id: `t${index}`, title: `Task ${index}` }));

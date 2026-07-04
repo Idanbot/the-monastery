@@ -2,6 +2,7 @@ import { formatDateInputValue, statusLabels, taskStatuses } from '../../domain/t
 import { parseTagString } from '../../domain/tags';
 import type { Task, TaskRecurrence, TaskStatus } from '../../domain/types';
 import { TagPicker } from '../tag-picker/TagPicker';
+import { Sparkles } from 'lucide-react';
 
 type Props = {
   draftTask: Task;
@@ -20,6 +21,12 @@ export function TaskDetailsFields({
   onRegisterTags,
   resolveTags
 }: Props) {
+  const addRelevantTags = () => {
+    const tags = resolveTags(Array.from(new Set([...(draftTask.tags || []), ...suggestedTags])));
+    onRegisterTags?.(suggestedTags);
+    updateDraftTask({ tags });
+  };
+
   const applyTemplate = (template: 'deep-work' | 'review') => {
     const deepWork = template === 'deep-work';
     updateDraftTask({
@@ -155,14 +162,24 @@ export function TaskDetailsFields({
           {suggestedTags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
               <span>Suggested</span>
+              <button
+                type="button"
+                onClick={addRelevantTags}
+                className="flex items-center gap-1 rounded-full bg-indigo-600 px-2.5 py-1 font-semibold text-white hover:bg-indigo-700"
+              >
+                <Sparkles size={12} /> Add {suggestedTags.length} relevant tags
+              </button>
               {suggestedTags.map((tag) => (
                 <button
                   key={tag}
                   type="button"
                   aria-label={`Add suggested tag ${tag}`}
-                  onClick={() =>
-                    updateDraftTask({ tags: Array.from(new Set([...(draftTask.tags || []), tag])) })
-                  }
+                  onClick={() => {
+                    onRegisterTags?.([tag]);
+                    updateDraftTask({
+                      tags: resolveTags(Array.from(new Set([...(draftTask.tags || []), tag])))
+                    });
+                  }}
                   className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200"
                 >
                   {tag}

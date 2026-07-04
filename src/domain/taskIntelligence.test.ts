@@ -105,6 +105,28 @@ describe('suggestTaskTags', () => {
 
     expect(suggested).toEqual([]);
   });
+
+  it('ranks five tags from title, subtasks, notes, and role relationships', () => {
+    const suggested = suggestTaskTags({
+      title: 'Design EKS cutover',
+      context: ['Validate BGP routes', 'Document rollback plan'],
+      existingTags: [],
+      tagPool: ['eks', 'bgp', 'rollback', 'kubernetes', 'networking', 'terraform'],
+      roles: [
+        {
+          id: 'platform',
+          name: 'Platform Engineer',
+          tags: ['kubernetes', 'eks', 'networking'],
+          dailyTargetHours: 0,
+          weeklyTargetHours: 0,
+          monthlyTargetHours: 0
+        }
+      ],
+      maxTags: 5
+    });
+
+    expect(suggested).toEqual(['eks', 'bgp', 'rollback', 'kubernetes', 'networking']);
+  });
 });
 
 describe('normalizeTask createdAt', () => {

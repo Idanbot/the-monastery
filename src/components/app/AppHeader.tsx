@@ -71,7 +71,10 @@ export function AppHeader() {
     setIsCommandOpen,
     commandPaletteGroups,
     setIsShortcutHelpOpen,
-    setMonkMode
+    setMonkMode,
+    unifiedSearchResults,
+    unifiedSearchLoading,
+    selectUnifiedSearchResult
   } = useUIContext();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -166,6 +169,9 @@ export function AppHeader() {
             onChange={setSearchQuery}
             variant="header"
             disabled={settings.monkMode}
+            results={unifiedSearchResults}
+            loading={unifiedSearchLoading}
+            onSelectResult={selectUnifiedSearchResult}
           />
           {isBackendAvailable && (
             <div className="relative hidden sm:block">

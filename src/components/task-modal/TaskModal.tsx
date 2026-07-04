@@ -118,11 +118,16 @@ export function TaskModal() {
     if (!draftTask) return [];
     return suggestTaskTags({
       title: draftTask.title,
+      context: [
+        ...(draftTask.subtasks || []).flatMap((subtask) => [subtask.title, ...(subtask.tags || [])]),
+        ...(draftTask.activity || []).map((entry) => entry.text),
+        draftNote
+      ],
       existingTags: draftTask.tags || [],
       roles,
       tagPool
     });
-  }, [draftTask, roles, tagPool]);
+  }, [draftNote, draftTask, roles, tagPool]);
 
   if (!selectedTaskId || !draftTask) return null;
 

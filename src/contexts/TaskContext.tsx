@@ -10,6 +10,7 @@ import { rolePresets } from '../domain/rolePresets';
 import { canonicalizeTags, applyTagTaxonomyCommand, type TagTaxonomyCommand } from '../domain/tagTaxonomy';
 import { generateId, normalizeTask, activeTaskStatuses, formatDateInputValue } from '../domain/tasks';
 import type { Task, TaskStatus } from '../domain/types';
+import { defaultTagInventory } from '../domain/defaultTagInventory';
 
 export type TaskOverrides = Partial<Task> & { activity?: Task['activity'] };
 
@@ -104,6 +105,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ...(settings.tagInventory || []),
           ...(settings.roles || []).flatMap((role) => role.tags || []),
           ...(settings.tagGoals || []).map((goal) => goal.tag),
+          ...defaultTagInventory,
           ...rolePresets.flatMap((preset) => preset.tags)
         ])
       )

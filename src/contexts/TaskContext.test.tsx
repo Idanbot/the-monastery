@@ -5,10 +5,11 @@ import { SettingsProvider } from './SettingsContext';
 import { TaskProvider, useTaskContext } from './TaskContext';
 
 const TestComponent = () => {
-  const { tasks, addTask } = useTaskContext();
+  const { tasks, addTask, tagPool } = useTaskContext();
   return (
     <div>
       <span data-testid="tasks-count">{tasks.length}</span>
+      <span data-testid="catalog-tags">{tagPool.includes('incident-response') ? 'loaded' : 'missing'}</span>
       <button onClick={() => addTask('backlog', { title: 'Test Task' })}>Add Task</button>
     </div>
   );
@@ -25,6 +26,7 @@ describe('TaskContext', () => {
     );
 
     expect(screen.getByTestId('tasks-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('catalog-tags')).toHaveTextContent('loaded');
 
     await act(async () => {
       screen.getByText('Add Task').click();
