@@ -11,6 +11,7 @@
 ## ✨ Highlights
 
 - **📋 Task Board:** Drag-and-drop, filters, recurring tasks, subtasks, notes, activity, and manual time logs.
+- **📱 Dedicated Mobile Shell:** Focus-first Today view, full Board and Calendar access, quick creation, and a compact More sheet.
 - **🔎 Unified Search:** SQLite FTS5 search across task content, notes, subtasks, tags, roles, and projects.
 - **📅 Full Calendar View:** Drag-and-drop scheduling capabilities with dedicated day columns for robust planning.
 - **⏱️ Daily Timeline:** Scheduled blocks, drag-to-reschedule, current-time marker, and current-task controls.

@@ -846,8 +846,9 @@ test('merges imported tasks into the active profile', async ({ page }) => {
   await expectTaskVisible(page, importedTitle);
   await page.getByText(importedTitle).first().click();
   await page.getByRole('button', { name: /^activity$/i }).click();
-  await expect(page.getByText('Youtube lesson: https://youtube.com/watch?v=monk123')).toBeVisible();
-  await expect(page.getByText(/https:\/\/course\.example\/monk-mode/)).toBeVisible();
+  const taskModal = page.getByTestId('task-modal');
+  await expect(taskModal.getByText('Youtube lesson: https://youtube.com/watch?v=monk123')).toBeVisible();
+  await expect(taskModal.getByText(/https:\/\/course\.example\/monk-mode/)).toBeVisible();
 });
 
 test('persists sidebar resizing through server-backed settings', async ({ page, request }) => {
@@ -1027,10 +1028,10 @@ test('supports mobile board layouts with backlog and in-progress lanes', async (
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
 
-  await expect(page.getByLabel('Current view')).toBeVisible();
+  await expect(page.locator('.app-header')).toBeHidden();
+  await expect(page.getByTestId('mobile-shell')).toBeVisible();
   await expect(page.getByLabel('Shortcuts & Guide')).toBeHidden();
-  await expect(page.getByLabel('Open settings')).toBeVisible();
-  await expect(page.getByLabel('Backlog task')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create task' })).toBeVisible();
 
   await createTask(page, mobileTitle);
   await page.getByText(mobileTitle).first().click();
@@ -1103,6 +1104,28 @@ test('supports mobile board layouts with backlog and in-progress lanes', async (
   await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'three-column');
 });
 
+test('uses dedicated mobile navigation and a compact more sheet', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  const shell = page.getByTestId('mobile-shell');
+  await shell.getByRole('button', { name: 'Today' }).click();
+  await expect(page.getByTestId('mobile-focus-view')).toBeVisible();
+  await shell.getByRole('button', { name: 'Board' }).click();
+  await expect(page.getByTestId('kanban-board')).toBeVisible();
+
+  await shell.getByRole('button', { name: 'More' }).click();
+  const more = page.getByRole('dialog', { name: 'More' });
+  await expect(more.getByRole('button', { name: 'Projects' })).toBeVisible();
+  await more.getByRole('button', { name: 'Filters' }).click();
+  await expect(more.getByRole('combobox', { name: /search known tags/i })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(more).toBeHidden();
+
+  await shell.getByRole('button', { name: 'Create task' }).click();
+  await expect(page.getByTestId('task-modal')).toBeVisible();
+});
+
 test('keeps a mobile-created task after reload', async ({ page, request }) => {
   const mobileTitle = `Mobile Sync ${Date.now()}`;
   await page.setViewportSize({ width: 390, height: 844 });
@@ -1128,14 +1151,17 @@ test('searches and selects known tag filters on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
 
-  await page.getByRole('button', { name: /filters/i }).click();
-  const tagSearch = page.getByRole('combobox', { name: /search known tags/i });
+  await page.getByTestId('mobile-shell').getByRole('button', { name: 'More' }).click();
+  const more = page.getByRole('dialog', { name: 'More' });
+  await more.getByRole('button', { name: 'Filters' }).click();
+  const tagSearch = more.getByRole('combobox', { name: /search known tags/i });
   await expect(tagSearch).toBeVisible();
   await tagSearch.fill('back');
-  await expect(page.getByRole('option', { name: 'backend' })).toBeVisible();
-  await page.getByRole('option', { name: 'backend' }).click();
+  const backendOption = more.getByRole('option', { name: 'backend' });
+  await expect(backendOption).toBeVisible();
+  await backendOption.click();
 
-  await expect(page.getByRole('button', { name: /filters/i })).toContainText('1');
+  await expect(backendOption).toHaveAttribute('aria-selected', 'true');
 });
 
 test('persists a learning project with milestones', async ({ page }) => {

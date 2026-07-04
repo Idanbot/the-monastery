@@ -282,6 +282,22 @@ it('shows mobile board controls that persist layout and compact lane order', asy
   expect(headings.slice(0, 2)).toEqual(['In-Progress', 'Backlog']);
 });
 
+it('uses the mobile shell for focused today, full board, and task creation', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  const shell = screen.getByTestId('mobile-shell');
+  await user.click(within(shell).getByRole('button', { name: 'Today' }));
+  expect(screen.getByTestId('mobile-focus-view')).toBeInTheDocument();
+
+  await user.click(within(shell).getByRole('button', { name: 'Board' }));
+  expect(screen.queryByTestId('mobile-focus-view')).not.toBeInTheDocument();
+  expect(screen.getByTestId('kanban-board')).toBeInTheDocument();
+
+  await user.click(within(shell).getByRole('button', { name: 'Create task' }));
+  expect(screen.getByTestId('task-modal')).toBeInTheDocument();
+});
+
 it('shows a recovery notice when backend sync is unavailable', async () => {
   render(<App />);
 
@@ -354,7 +370,7 @@ it('creates a task from smart quick add input', async () => {
     'cloud, gke, migration, gcp, networking'
   );
   expect(screen.getByLabelText(/start/i)).toHaveValue('09:00');
-  expect(screen.getByLabelText(/end/i)).toHaveValue('10:00');
+  expect(screen.getByLabelText(/^end$/i)).toHaveValue('10:00');
   await user.click(screen.getByRole('button', { name: /activity/i }));
   expect(screen.getByText('https://example.com/course')).toBeInTheDocument();
 });

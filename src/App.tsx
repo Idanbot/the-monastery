@@ -15,6 +15,7 @@ import { TaskModal } from './components/task-modal/TaskModal';
 import { ProfileImportDialog } from './components/app/ProfileImportDialog';
 import { PlanningImportDialog } from './components/app/PlanningImportDialog';
 import { ImportPreviewDialog } from './components/app/ImportPreviewDialog';
+import { MobileAppShell } from './components/app/MobileAppShell';
 
 export default function App({ authEnabled }: { authEnabled?: boolean } = {}) {
   return (
@@ -136,10 +137,12 @@ function AppShell() {
           </div>
         )}
 
-        <main className="app-main flex-1 min-h-0 flex flex-col md:flex-row relative bg-slate-100 dark:bg-slate-950 p-2 gap-2 sm:p-4 sm:gap-4 overflow-hidden">
+        <main className="app-main relative flex min-h-0 flex-1 flex-col gap-2 overflow-hidden bg-slate-100 p-2 pb-24 dark:bg-slate-950 sm:gap-4 sm:p-4 sm:pb-24 md:flex-row md:pb-4">
           <WorkspaceContent />
           <WorkspaceSidebar />
         </main>
+
+        <MobileAppShell />
 
         <ShortcutHelpDialog open={isShortcutHelpOpen} onClose={() => setIsShortcutHelpOpen(false)} />
 

@@ -126,7 +126,7 @@ export function AppHeader() {
     <>
       <header
         data-material="control"
-        className="app-header z-[70] flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:px-4 sm:py-3 md:px-6"
+        className="app-header z-[70] hidden shrink-0 items-center justify-between border-b border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:px-4 sm:py-3 md:flex md:px-6"
       >
         <div className="flex items-center gap-3">
           <button

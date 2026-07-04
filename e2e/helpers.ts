@@ -52,22 +52,32 @@ export const resetServerState = async (
 };
 
 export const createTask = async (page, title: string) => {
-  await page.getByLabel('Backlog task').click();
+  await page
+    .locator('button[aria-label="Backlog task"]:visible, button[aria-label="Create task"]:visible')
+    .click();
   await page.getByLabel('Title').fill(title);
   await page.getByRole('button', { name: /save task/i }).click();
 };
 
 export const createScheduledTask = async (page, title: string, date: string, start: string, end = '') => {
-  await page.getByLabel('Backlog task').click();
+  await page
+    .locator('button[aria-label="Backlog task"]:visible, button[aria-label="Create task"]:visible')
+    .click();
   await page.getByLabel('Title').fill(title);
-  await page.getByLabel('Date').fill(date);
-  await page.getByLabel('Start').fill(start);
-  if (end) await page.getByLabel('End').fill(end);
+  await page.getByLabel('Date', { exact: true }).fill(date);
+  await page.getByLabel('Start', { exact: true }).fill(start);
+  if (end) await page.getByLabel('End', { exact: true }).fill(end);
   await page.getByRole('button', { name: /save task/i }).click();
 };
 
 export const openSettingsSection = async (page, sectionName: string | RegExp) => {
-  await page.getByRole('button', { name: /open settings/i }).click();
+  const isMobile = (page.viewportSize()?.width ?? 1280) < 768;
+  if (isMobile) {
+    await page.getByTestId('mobile-shell').getByRole('button', { name: 'More' }).click();
+    await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Settings' }).click();
+  } else {
+    await page.getByRole('button', { name: /open settings/i }).click();
+  }
   await page.getByRole('button', { name: sectionName }).click();
 };
 
