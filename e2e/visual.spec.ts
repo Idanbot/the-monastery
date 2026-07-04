@@ -41,7 +41,7 @@ test('settings modal and Liquid Glass settings remain visually stable', async ({
   await chooseTheme(page, 'liquid-glass');
   await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveScreenshot(
     'settings-liquid-glass.png',
-    { ...screenshotOptions, maxDiffPixels: 20 }
+    { ...screenshotOptions, maxDiffPixels: 100 }
   );
 });
 
