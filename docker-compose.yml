@@ -10,6 +10,10 @@ services:
       PORT: 3000
       THE_MONASTERY_DATA_DIR: /data
       LOG_LEVEL: info
+      THE_MONASTERY_OWNER_TOKEN: ${THE_MONASTERY_OWNER_TOKEN:-}
+      THE_MONASTERY_BODY_LIMIT: ${THE_MONASTERY_BODY_LIMIT:-1048576}
+      THE_MONASTERY_API_RATE_LIMIT_MAX: ${THE_MONASTERY_API_RATE_LIMIT_MAX:-300}
+      THE_MONASTERY_API_RATE_LIMIT_WINDOW: ${THE_MONASTERY_API_RATE_LIMIT_WINDOW:-1 minute}
       THE_MONASTERY_DISCORD_WEBHOOK_URL: ${THE_MONASTERY_DISCORD_WEBHOOK_URL:-}
       THE_MONASTERY_SLACK_WEBHOOK_URL: ${THE_MONASTERY_SLACK_WEBHOOK_URL:-}
       THE_MONASTERY_TELEGRAM_BOT_TOKEN: ${THE_MONASTERY_TELEGRAM_BOT_TOKEN:-}
@@ -44,7 +48,7 @@ services:
       start_period: 10s
 
   watchtower:
-    image: containrrr/watchtower:latest
+    image: containrrr/watchtower:1.7.1@sha256:6dd50763bbd632a83cb154d5451700530d1e44200b268a4e9488fefdfcf2b038
     container_name: the-monastery-watchtower
     restart: unless-stopped
     command: --label-enable --scope the-monastery --cleanup --interval 300

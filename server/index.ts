@@ -4,6 +4,7 @@ import Fastify, { type FastifyError, type FastifyInstance, type FastifyRequest }
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import packageJson from '../package.json' with { type: 'json' };
+import { formatBuildVersion } from '../shared/buildInfo.js';
 import { createAlertScheduler } from './alertScheduler.js';
 import { createOwnerTokenGuard, readOwnerToken } from './auth.js';
 import { createDataStore } from './db.js';
@@ -19,7 +20,12 @@ const projectRoot = process.cwd();
 const defaultPublicDir = join(projectRoot, 'dist');
 const defaultDataDir = process.env.THE_MONASTERY_DATA_DIR || join(projectRoot, 'data');
 const defaultDbPath = process.env.THE_MONASTERY_DB_PATH || join(defaultDataDir, 'the-monastery.sqlite');
-const appVersion = process.env.THE_MONASTERY_VERSION || packageJson.version;
+const appVersion =
+  process.env.THE_MONASTERY_VERSION ||
+  formatBuildVersion(
+    packageJson.version,
+    process.env.THE_MONASTERY_BUILD_NUMBER || process.env.GITHUB_RUN_NUMBER
+  );
 const buildRef = process.env.THE_MONASTERY_BUILD_REF || process.env.GITHUB_SHA || 'local';
 const ownerToken = readOwnerToken();
 const defaultApiRateLimit = {

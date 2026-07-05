@@ -28,10 +28,7 @@ import { useProfileContext } from '../../contexts/ProfileContext';
 import { useUIContext } from '../../contexts/UIContext';
 
 const frontendVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
-const visibleVersion = (version: string) => {
-  const match = version.match(/^(\d+)\.(\d+)/);
-  return match ? `v${match[1]}.${match[2]}` : `v${version}`;
-};
+const visibleVersion = (version: string) => 'v' + version.replace(/^v/, '');
 
 export function AppHeader() {
   const { settings, isSidebarVisible, toggleSidebarVisible, toggleSidebarWidget, openSettings } =

@@ -345,7 +345,7 @@ describe('SettingsModal', () => {
     renderSettings({ initialSection: 'data' });
 
     const metadata = screen.getByTestId('settings-build-metadata');
-    expect(metadata).toHaveTextContent('Version: 1.0.0');
+    expect(metadata).toHaveTextContent('Version: ' + __APP_VERSION__);
     expect(metadata).toHaveTextContent(/Commit: /);
     expect(metadata).toHaveTextContent(/Built: /);
   });

@@ -1,163 +1,160 @@
-# ⛩️ TheMonastery
+# The Monastery
 
 [![CI](https://github.com/idanbot/the-monastery/actions/workflows/ci.yml/badge.svg)](https://github.com/idanbot/the-monastery/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-> **A focused planning workspace for deep work.**
-> TheMonastery combines a Kanban board, timeline planning, role and tag goals, analytics, profiles, imports, and a low-clutter Monk Mode in a single self-hosted app.
+The Monastery is a self-hosted planning workspace for focused work. It combines task management, day planning, goals, analytics, and a low-clutter focus mode in one responsive application.
 
----
+The project is designed primarily for a single owner. It runs as a React application and Fastify API on one origin, with SQLite providing durable local storage.
 
-## ✨ Highlights
+## Features
 
-- **📋 Task Board:** Drag-and-drop, filters, recurring tasks, subtasks, notes, activity, and manual time logs.
-- **📱 Dedicated Mobile Shell:** Focus-first Today view, full Board and Calendar access, quick creation, and a compact More sheet.
-- **🔎 Unified Search:** SQLite FTS5 search across task content, notes, subtasks, tags, roles, and projects.
-- **📅 Full Calendar View:** Drag-and-drop scheduling capabilities with dedicated day columns for robust planning.
-- **⏱️ Daily Timeline:** Scheduled blocks, drag-to-reschedule, current-time marker, and current-task controls.
-- **🧘 Monk Mode:** A simplified focus surface and minimap for lower-clutter execution.
-- **🎯 Role & Tag Goals:** Set and track daily, weekly, and monthly target hours.
-- **Projects and Learning Tracks:** Track linked tasks, milestones, completion, time, and the next action in a dedicated dashboard.
-- **📊 Analytics:** Task status, tracked time, role balance, tag hours, radar view, and activity trends.
-- **🧠 Smart Task Creation:** Rank and apply up to five tags from titles, subtasks, notes, and role relationships using a curated engineering catalog.
-- **🎨 Theme Gallery:** Liquid Glass, terminal, dark, and light styles plus simple color customization.
-- **🗃️ Robust Data Management:** Profiles, local backup history, JSON import/export, profile import/export, planning import, and ICS import.
-- **⌨️ Keyboard-First Workflow:** Command palette and intuitive shortcuts.
+- **Planning:** Kanban layouts, free task ordering, collapsible lanes, timeline scheduling, and day/week calendar views.
+- **Task detail:** Notes, subtasks, tags, recurring tasks, activity history, time logs, and smart tag suggestions.
+- **Focus:** Monk Mode, current and next task controls, daily planning, and role/tag targets.
+- **Mobile:** Dedicated Today, Board, Calendar, quick-create, and More navigation optimized for small screens.
+- **Organization:** Profiles, roles, projects, learning tracks, milestones, and daily, weekly, or monthly goals.
+- **Search and analytics:** SQLite FTS5 search across task content and dashboards for status, time, roles, tags, and trends.
+- **Themes:** Light, dark, terminal, and Liquid Glass themes with configurable colors and effects.
+- **Data portability:** Task, planning, profile, and ICS import; task and profile export; local backup history.
+- **Integrations:** Read-only ICS subscriptions, CalDAV publishing, and optional Discord, Slack, or Telegram alerts.
+- **Reliability:** Revision-aware synchronization, queued writes, local fallback persistence, health checks, and log rotation.
 
-## 🏗️ Architecture
+## Technology
 
-The application is built as a React frontend served by a Fastify API with SQLite persistence. The frontend utilizes a modern **Context-based architecture** (e.g., `TaskContext`, `SettingsContext`, `ProfileContext`, `UIContext`) for efficient global state management, avoiding heavy prop drilling.
+| Area            | Stack                                                                     |
+| --------------- | ------------------------------------------------------------------------- |
+| Frontend        | React 19, TypeScript, Vite, Tailwind CSS 4, Radix UI                      |
+| API             | Node.js 24, Fastify                                                       |
+| Storage         | SQLite via better-sqlite3, including FTS5 search                          |
+| UI and charts   | Lucide, Recharts, Sonner                                                  |
+| Validation      | Zod, React Hook Form                                                      |
+| Testing         | Vitest, Testing Library, Playwright, axe-core                             |
+| CI and security | GitHub Actions, CodeQL, Dependency Review, Trivy, Hadolint, Docker Buildx |
 
-| Layer             | Technology                                                                |
-| ----------------- | ------------------------------------------------------------------------- |
-| **Frontend**      | React 19, TypeScript, Vite, Tailwind CSS 4, Radix UI                      |
-| **Backend**       | Node.js 24, Fastify                                                       |
-| **Storage**       | SQLite via better-sqlite3                                                 |
-| **Charts / UI**   | Recharts, Lucide icons, Sonner notifications                              |
-| **Testing**       | Vitest, Testing Library, Playwright                                       |
-| **CI / Security** | GitHub Actions, CodeQL, Dependency Review, Trivy, Hadolint, Docker Buildx |
+The frontend calls relative `/api/*` routes. UI and API therefore remain on the same origin behind Docker, a reverse proxy, or Cloudflare Tunnel, without a separate public API hostname.
 
-> **Note:** The frontend and backend are served from the same origin. Browser actions call relative `/api/...` routes, meaning reverse-proxy and tunnel deployments do not require CORS or a separate API hostname.
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Requirements
 
-- **Node.js**: 24+
-- **npm**: 11+
-- **Docker & Docker Compose** (for container deployment)
+- Node.js 24 or newer
+- npm
+- Docker with Compose, for container deployment
 
-### Local Development
+### Development
 
-1. **Install dependencies:**
-
-   ```sh
-   npm install
-   ```
-
-2. **Run the frontend and API** (in separate terminals):
-
-   ```sh
-   npm run dev
-   npm run dev:api
-   ```
-
-3. **Build and run production locally:**
-   ```sh
-   npm run build:all
-   npm start
-   ```
-
-## 🐳 Docker Deployment
-
-The default Docker deployment is designed for a small personal server. The runtime compose file uses the CI-built GHCR image and exposes the app only on `localhost`.
-
-### Start the Runtime Stack
+Install dependencies:
 
 ```sh
+npm install
+```
+
+Run the API and frontend in separate terminals:
+
+```sh
+npm run dev:api
+```
+
+```sh
+npm run dev
+```
+
+Vite proxies `/api` requests to `http://127.0.0.1:3000` by default. Override this with `THE_MONASTERY_API_URL` when required.
+
+Build and run the production server locally:
+
+```sh
+npm run build:all
+npm start
+```
+
+### Docker
+
+The default Compose stack pulls the CI-built image, binds it to localhost, persists SQLite data, rotates logs, and runs Watchtower for labeled image updates.
+
+```sh
+docker compose pull
 docker compose up -d
 ```
 
-Access the app at: `http://127.0.0.1:8181`
+Open `http://127.0.0.1:8181`.
 
-### Configuration Details
-
-`docker-compose.yml` uses:
-
-- `ghcr.io/idanbot/the-monastery:latest` by default.
-- `127.0.0.1:8181:3000` to prevent direct exposure on all interfaces.
-- A persistent `the-monastery-data` volume mounted at `/data`.
-- **Watchtower** with label-based targeting for auto-updating the app container.
-
-> CI updates the `latest` image on the default branch. Watchtower checks every 5 minutes for a newer digest of that tag, pulls it, recreates the labeled app container, and removes old image layers.
-
-### Advanced Deployments
-
-**Pinned CI Image** (Deterministic Deploy):
+If the GHCR package is private, authenticate first with a GitHub token that has `read:packages`:
 
 ```sh
-THE_MONASTERY_IMAGE=ghcr.io/idanbot/the-monastery:sha-<commit> docker compose up -d
+echo "$GHCR_TOKEN" | docker login ghcr.io -u idanbot --password-stdin
 ```
 
-**Build Locally** (Instead of GHCR):
+Useful operational commands:
+
+```sh
+docker compose ps
+docker compose logs -f the-monastery
+docker compose pull
+docker compose up -d
+```
+
+To build the image locally instead of pulling from GHCR:
 
 ```sh
 docker compose -f compose.local.yml up -d --build
 ```
 
-_(Note: `compose.local.yml` builds `the-monastery:local` and intentionally omits Watchtower.)_
+The local stack builds `the-monastery:local` and intentionally omits Watchtower.
 
-**Smoke-test a Built Image:**
+To run a specific CI image:
 
 ```sh
-npm run docker:smoke -- the-monastery:local
+THE_MONASTERY_IMAGE=ghcr.io/idanbot/the-monastery:sha-<commit> docker compose up -d
 ```
 
-## 🌐 Remote Access
+## Configuration
 
-If Cloudflare Tunnel is running on the host, point your public hostname to `http://127.0.0.1:8181`.
+Compose reads variables from the shell or a local `.env` file. Start with the committed template, then keep secrets only in `.env`:
 
-**Recommended Production Posture:**
+```sh
+cp .env.example .env
+```
 
-- Keep the Docker port bound to `127.0.0.1` only.
-- Put Cloudflare Access (or another identity-aware proxy) in front of the hostname.
-- Use one hostname for both the UI and `/api/*`.
+Secret-bearing `.env` files are ignored by Git.
 
-_The app does not implement multi-user authentication. Your proxy acts as the authentication boundary._
+### Server and security
 
-### Optional owner token
+| Variable                              | Default                           | Purpose                                                            |
+| ------------------------------------- | --------------------------------- | ------------------------------------------------------------------ |
+| `THE_MONASTERY_DATA_DIR`              | `/data` in Docker                 | Directory containing the SQLite database                           |
+| `THE_MONASTERY_DB_PATH`               | `<data-dir>/the-monastery.sqlite` | Optional database file override outside the standard Compose setup |
+| `THE_MONASTERY_OWNER_TOKEN`           | unset                             | Enables the single-owner API token gate                            |
+| `THE_MONASTERY_BODY_LIMIT`            | `1048576`                         | Maximum request body size in bytes                                 |
+| `THE_MONASTERY_API_RATE_LIMIT_MAX`    | `300`                             | Requests permitted during each rate-limit window                   |
+| `THE_MONASTERY_API_RATE_LIMIT_WINDOW` | `1 minute`                        | Fastify rate-limit window                                          |
+| `LOG_LEVEL`                           | `info`                            | Fastify log level                                                  |
 
-For self-hosters who cannot put an identity-aware proxy in front, the server
-supports an opt-in single-owner token. Set `THE_MONASTERY_OWNER_TOKEN` in the
-environment and every `/api/*` route (except `/api/health`) will require a
-matching `Authorization: Bearer <token>` (or `X-Owner-Token`) header. When the
-token is configured the SPA shows a small unlock form on first load; the token
-is stored in `localStorage` and attached to subsequent requests. Leave the env
-var unset to keep the open-by-default behaviour.
+Generate and enable an owner token:
 
 ```sh
 THE_MONASTERY_OWNER_TOKEN=$(openssl rand -hex 32) docker compose up -d
 ```
 
-Other request-hardening env vars:
+When enabled, all `/api/*` routes except `/api/health` require the token. The browser presents an unlock form and stores the token in local storage for subsequent requests.
 
-- `THE_MONASTERY_BODY_LIMIT` — max request body size in bytes (default `1048576`, i.e. 1 MiB; oversized bodies return `413`).
-- `THE_MONASTERY_API_RATE_LIMIT_MAX` / `THE_MONASTERY_API_RATE_LIMIT_WINDOW` — rate-limit settings for `/api/*`.
+For internet access, keep port `8181` bound to `127.0.0.1` and put Cloudflare Access or another identity-aware proxy in front of it. The owner token is a useful additional gate, but it is not a multi-user account system.
 
-### Calendar and webhook integrations
+### Calendar and messaging integrations
 
-Integrations are optional and configured only through server environment variables, so credentials are never stored in profile exports or browser storage. Open **Settings > Integrations** to pull calendar events into the import preview, push scheduled tasks to CalDAV, enable or disable each messaging provider, edit `{title}` and `{body}` templates, test alerts, or opt into automatic task alerts.
+| Variable                              | Purpose                                                |
+| ------------------------------------- | ------------------------------------------------------ |
+| `THE_MONASTERY_ICS_SUBSCRIPTION_URLS` | Comma- or newline-separated read-only ICS feed URLs    |
+| `THE_MONASTERY_CALDAV_URL`            | CalDAV collection URL used for REPORT and PUT requests |
+| `THE_MONASTERY_CALDAV_USERNAME`       | Optional CalDAV basic-auth username                    |
+| `THE_MONASTERY_CALDAV_PASSWORD`       | Optional CalDAV basic-auth password                    |
+| `THE_MONASTERY_DISCORD_WEBHOOK_URL`   | Discord incoming webhook URL                           |
+| `THE_MONASTERY_SLACK_WEBHOOK_URL`     | Slack incoming webhook URL                             |
+| `THE_MONASTERY_TELEGRAM_BOT_TOKEN`    | Telegram bot token                                     |
+| `THE_MONASTERY_TELEGRAM_CHAT_ID`      | Telegram destination chat ID                           |
 
-| Variable                                                              | Purpose                                                |
-| --------------------------------------------------------------------- | ------------------------------------------------------ |
-| `THE_MONASTERY_ICS_SUBSCRIPTION_URLS`                                 | Comma- or newline-separated read-only ICS feed URLs    |
-| `THE_MONASTERY_CALDAV_URL`                                            | CalDAV calendar collection URL used for REPORT and PUT |
-| `THE_MONASTERY_CALDAV_USERNAME` / `THE_MONASTERY_CALDAV_PASSWORD`     | Optional CalDAV basic-auth credentials                 |
-| `THE_MONASTERY_DISCORD_WEBHOOK_URL`                                   | Discord incoming webhook URL                           |
-| `THE_MONASTERY_SLACK_WEBHOOK_URL`                                     | Slack incoming webhook URL                             |
-| `THE_MONASTERY_TELEGRAM_BOT_TOKEN` / `THE_MONASTERY_TELEGRAM_CHAT_ID` | Telegram Bot API destination                           |
-
-Example:
+Configure integrations through environment variables, then manage provider toggles, templates, tests, and automatic alerts under **Settings > Integrations**.
 
 ```sh
 export THE_MONASTERY_ICS_SUBSCRIPTION_URLS="https://calendar.example/private.ics"
@@ -165,82 +162,69 @@ export THE_MONASTERY_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 docker compose up -d
 ```
 
-Automatic messaging alerts are scheduled by the server from persisted task data and stored in a SQLite outbox. Delivery is deduplicated per profile, event, and provider, retries transient failures with backoff, and does not require an open browser.
+Credentials remain server-side and are not included in profile exports or browser storage. Treat webhook URLs, bot tokens, and CalDAV credentials as secrets.
 
-Treat webhook URLs, bot tokens, and CalDAV passwords as secrets. CalDAV pushes overwrite matching task UID resources; calendar pulls always use the existing import preview before data is merged.
+## Data and Backups
 
-## 💾 Data & Backups
+Docker stores application data in the `the-monastery-data` volume mounted at `/data`. Back up that volume, or at minimum the SQLite database, before upgrades or bulk imports.
 
-Server data resides in `THE_MONASTERY_DATA_DIR` (defaults to `/data` in Docker, backed by the `the-monastery-data` volume).
+The UI supports:
 
-**Backup & Import Capabilities:**
+- task JSON import and export;
+- full profile import and export;
+- planning import for tasks, roles, tags, and goals;
+- ICS calendar import through a preview step;
+- local backup history.
 
-- Local backup history via Settings.
-- Task JSON export/import.
-- Full profile export/import.
-- Planning import (Tasks, Roles, Tags, Goals).
-- ICS calendar import.
+Versioned schemas and safe example payloads live under [`import/`](import/). Personal import files placed there remain ignored unless they match the committed schema or example naming conventions.
 
-_Manual import schemas and examples can be found in `import/`._
+## Persistence Model
 
-## 🔄 Sync & Offline Architecture
+- Tasks and settings use independent revisions to prevent unrelated writes from invalidating each other.
+- Client writes are serialized and include their base revision; stale writes return `409` instead of silently overwriting newer data.
+- Pending mutations are retained locally and replayed after connectivity returns.
+- IndexedDB and local storage provide a local fallback when the API is unavailable.
+- Single-task changes use delta endpoints, while bulk operations fall back to full replacement.
 
-The client and server cooperate through a revision-based optimistic-sync
-protocol so the UI stays responsive while writes are debounced and serialised.
+The server remains the canonical state when connectivity is restored.
 
-- **Independent revisions.** Each profile keeps separate `tasks_revision` and
-  `settings_revision` counters. A settings save cannot invalidate a concurrent
-  task save's base revision (and vice versa). Mutations send `baseRevision`;
-  the server returns `409 { revision }` when it is stale, letting the client
-  offer "Keep local changes" or "Use server version".
-- **Serialised writes.** `src/domain/profileSyncQueue.ts` funnels every write
-  through one promise chain per resource so a second writer cannot race ahead;
-  the latest server revision is tracked and reused as the next base.
-- **Offline mutation queue.** When a write is about to leave the browser,
-  `src/domain/profileMutationQueue.ts` records it in `localStorage` first.
-  If the request fails (or the browser is offline) the mutation survives a
-  reload and is replayed against the freshly loaded profile on next boot.
-- **Local fallback.** `useLocalFallbackPersistence` mirrors tasks and settings
-  to IndexedDB (and a `localStorage` best-effort copy) so the app keeps working
-  with no backend. When the server is reachable again the canonical server
-  state wins; the IDB mirror is only consulted in offline/test mode to avoid
-  clobbering fresh server data with a stale snapshot.
-- **Delta writes.** `saveTasksDelta` diffs the previous baseline against the
-  next snapshot and emits a single-task `POST`/`PATCH`/`DELETE` when exactly
-  one task changed, falling back to a full `PUT` replace only for bulk changes.
+## Verification
 
-See `src/hooks/useProfilesSync.ts` for the orchestration.
-
-## 🧪 Verification & Testing
-
-The system boasts comprehensive test coverage with **31 E2E tests**, **115 unit tests**, and strict performance budget checks. Tests employ robust context hook mocking, and persistence mechanisms gracefully handle non-browser test environments (e.g., Vitest).
-
-Run the core CI checks locally:
+Run the main CI checks locally:
 
 ```sh
 npm run format:check
 npm run lint
 npm run typecheck
-npm test
+npm run test:coverage
 npm run test:e2e
 npm run build:all
 npm run dockerfile:lint
+npm run docker:smoke -- the-monastery:local
 ```
 
-Targeted test examples:
+Validate Compose configuration independently:
 
 ```sh
-npm run test:e2e -- -g "theme gallery readable"
-npm run test:e2e -- -g "drags scheduled"
 docker compose config
 docker compose -f compose.local.yml config
 ```
 
-## 🔄 CI Notes
+Git hooks run staged formatting and lint fixes before commit, then type checking, unit tests, and Dockerfile linting before push.
 
-- **Dependency Review**: Runs on pull requests, comparing dependency changes against the base branch.
-- **Docker Buildx**: Pushes GHCR images only outside pull requests.
-- **Docker Compose Profiles**:
-  - `docker-compose.yml`: Image-based runtime stack with Watchtower.
-  - `compose.local.yml`: Local-build stack.
-- **QEMU**: Image caching is disabled to avoid shared-cache reservation races for `tonistiigi/binfmt`.
+CI runs formatting, linting, type checking, unit coverage, Playwright, bundle budgets, npm audit, CodeQL, dependency review on pull requests, Trivy scans, Docker smoke tests, and multi-architecture image builds.
+
+## Deployment Notes
+
+- `docker-compose.yml` uses the remote GHCR image and Watchtower.
+- `compose.local.yml` builds from the local Dockerfile and does not auto-update.
+- Runtime ports are bound to `127.0.0.1` by default.
+- Application logs use the Docker `local` driver with bounded size and file count.
+- `/api/health` is available to container health checks and reports runtime health, version, build reference, uptime, and authentication state.
+- CI images use a short automatic version such as `v1.0.42`, where `42` is the GitHub Actions run number. Local builds use `v1.0.dev`.
+- Watchtower is pinned to the final upstream `1.7.1` multi-architecture digest.
+- Watchtower tracks the mutable `latest` tag. Use a `sha-*` image tag when deterministic deployments are more important than automatic updates.
+
+## License
+
+The Monastery is licensed under the [GNU General Public License v3.0](LICENSE).

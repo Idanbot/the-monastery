@@ -1,6 +1,15 @@
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 
 const image = process.argv[2];
+const expectedBuildNumber = process.env.THE_MONASTERY_EXPECTED_BUILD_NUMBER || '';
+const expectedBuildRef = process.env.THE_MONASTERY_EXPECTED_BUILD_REF || '';
+const packageVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+const [majorVersion, minorVersion] = packageVersion.split('.');
+const expectedVersion = expectedBuildNumber
+  ? majorVersion + '.' + minorVersion + '.' + expectedBuildNumber
+  : '';
 
 if (!image) {
   console.error('Usage: npm run docker:smoke -- <image>');
@@ -85,7 +94,16 @@ try {
   if (!port) throw new Error(`Could not resolve mapped port from: ${portLine}`);
 
   const baseUrl = `http://127.0.0.1:${port}`;
-  await waitForJson(`${baseUrl}/api/health`, (body) => body.ok === true && typeof body.version === 'string');
+  const health = await waitForJson(
+    `${baseUrl}/api/health`,
+    (body) => body.ok === true && typeof body.version === 'string'
+  );
+  if (expectedVersion && health.version !== expectedVersion) {
+    throw new Error('Expected image version ' + expectedVersion + ', received ' + health.version);
+  }
+  if (expectedBuildRef && health.buildRef !== expectedBuildRef) {
+    throw new Error('Expected build ref ' + expectedBuildRef + ', received ' + health.buildRef);
+  }
   await waitForJson(`${baseUrl}/api/profiles`, (body) => Array.isArray(body.profiles));
   await waitForText(baseUrl + '/', (body) => body.includes('<!doctype html>') && body.includes('id="root"'));
   console.log(`Docker smoke passed for ${image}`);

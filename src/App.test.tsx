@@ -41,7 +41,8 @@ beforeEach(() => {
 it('renders a tiny app version indicator', async () => {
   render(<App />);
 
-  expect(screen.getByTestId('app-version-chip')).toHaveTextContent(/^v1\.0$/);
+  expect(screen.getByTestId('app-version-chip')).toHaveTextContent('v' + __APP_VERSION__);
+  expect(__APP_VERSION__).toMatch(/^1\.0\.(?:dev|\d+)$/);
   expect(screen.getByTestId('app-version-chip')).not.toHaveTextContent(/fe|be|frontend|backend/i);
 });
 

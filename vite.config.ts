@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import packageJson from './package.json';
+import { formatBuildVersion } from './shared/buildInfo';
 
 const apiTarget = process.env.THE_MONASTERY_API_URL || 'http://127.0.0.1:3000';
 const readGitValue = (command: string, fallback: string) => {
@@ -17,10 +18,11 @@ const buildRef =
   process.env.GITHUB_SHA ||
   readGitValue('git rev-parse HEAD', 'local');
 const buildDate = process.env.THE_MONASTERY_BUILD_DATE || process.env.BUILD_DATE || new Date().toISOString();
+const buildNumber = process.env.THE_MONASTERY_BUILD_NUMBER || process.env.GITHUB_RUN_NUMBER;
 
 export default defineConfig({
   define: {
-    __APP_VERSION__: JSON.stringify(packageJson.version),
+    __APP_VERSION__: JSON.stringify(formatBuildVersion(packageJson.version, buildNumber)),
     __APP_BUILD_REF__: JSON.stringify(buildRef),
     __APP_BUILD_DATE__: JSON.stringify(buildDate)
   },

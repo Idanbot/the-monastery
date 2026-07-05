@@ -318,6 +318,10 @@ jobs:
         id: image
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare build metadata
+        id: build-info
+        run: echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Hadolint Dockerfile
         uses: hadolint/hadolint-action@v3.3.0
         with:
@@ -368,10 +372,17 @@ jobs:
           context: .
           load: true
           tags: the-monastery-smoke:${{ github.sha }}
+          build-args: |
+            THE_MONASTERY_BUILD_REF=${{ github.sha }}
+            THE_MONASTERY_BUILD_DATE=${{ steps.build-info.outputs.date }}
+            THE_MONASTERY_BUILD_NUMBER=${{ github.run_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Smoke test Docker image
+        env:
+          THE_MONASTERY_EXPECTED_BUILD_NUMBER: ${{ github.run_number }}
+          THE_MONASTERY_EXPECTED_BUILD_REF: ${{ github.sha }}
         run: node scripts/docker-smoke.mjs the-monastery-smoke:${{ github.sha }}
 
       - name: Login to GHCR
@@ -391,6 +402,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            THE_MONASTERY_BUILD_REF=${{ github.sha }}
+            THE_MONASTERY_BUILD_DATE=${{ steps.build-info.outputs.date }}
+            THE_MONASTERY_BUILD_NUMBER=${{ github.run_number }}
           cache-from: type=registry,ref=${{ steps.image.outputs.name }}:buildcache
           cache-to: type=registry,ref=${{ steps.image.outputs.name }}:buildcache,mode=max
 

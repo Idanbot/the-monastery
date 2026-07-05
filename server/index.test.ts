@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { formatBuildVersion } from '../shared/buildInfo.js';
 import { createApp } from './index.js';
 import type { ServerOptions } from './types.js';
 
@@ -117,7 +118,10 @@ it('reports health with version metadata', async () => {
   expect(response.statusCode).toBe(200);
   expect(response.json()).toMatchObject({
     ok: true,
-    version: expect.any(String),
+    version: formatBuildVersion(
+      '1.0.0',
+      process.env.THE_MONASTERY_BUILD_NUMBER || process.env.GITHUB_RUN_NUMBER
+    ),
     buildRef: expect.any(String),
     uptimeSeconds: expect.any(Number)
   });

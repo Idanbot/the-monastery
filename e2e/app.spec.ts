@@ -22,10 +22,10 @@ test.beforeEach(async ({ page, request }) => {
 
 test('shows the app version indicator without implementation labels', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByTestId('app-version-chip')).toHaveText('v1.0');
+  await expect(page.getByTestId('app-version-chip')).toHaveText(/^v1\.0\.(?:dev|\d+)$/);
   await expect(page.getByTestId('app-version-chip')).not.toContainText(/fe|be|frontend|backend/i);
   const health = await page.request.get('/api/health');
-  expect((await health.json()).version).toBe('1.0.0');
+  expect('v' + (await health.json()).version).toBe(await page.getByTestId('app-version-chip').textContent());
 });
 
 test('creates and finds a task in the browser app', async ({ page }) => {
