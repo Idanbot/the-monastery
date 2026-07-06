@@ -47,11 +47,14 @@ export function ViewSwitcher({
           return (
             <button
               key={option.id}
+              type="button"
+              aria-label={option.label}
+              title={option.label}
               onClick={() => onChange(option.id)}
-              className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-all ${active ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
+              className={`flex rounded-md p-2 text-sm font-medium transition-all ${active ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
               data-testid={`view-switch-${option.id}`}
             >
-              <Icon size={14} /> <span className="hidden md:inline">{option.label}</span>
+              <Icon size={15} />
             </button>
           );
         })}

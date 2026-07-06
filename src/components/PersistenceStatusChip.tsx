@@ -18,7 +18,9 @@ export function PersistenceStatusChip({
       data-persistence-state={status}
       aria-live="polite"
       title={title}
-      className={'hidden lg:block rounded-full px-2 py-1 text-[10px] font-semibold ' + presentation.className}
+      className={
+        'hidden 2xl:block rounded-full px-2 py-1 text-[10px] font-semibold ' + presentation.className
+      }
     >
       {status === 'error' && errorMessage ? 'Save failed: ' + errorMessage : presentation.label}
     </div>

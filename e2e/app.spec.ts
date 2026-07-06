@@ -28,6 +28,25 @@ test('shows the app version indicator without implementation labels', async ({ p
   expect('v' + (await health.json()).version).toBe(await page.getByTestId('app-version-chip').textContent());
 });
 
+test('keeps the desktop header within a compact viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await page.goto('/');
+
+  const header = page.locator('.app-header');
+  await expect(header).toBeVisible();
+  await expect(header.getByRole('button', { name: /open settings/i })).toBeVisible();
+  await expect(header.getByRole('button', { name: /backlog task/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /hide clock|show clock/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /shortcuts & guide/i })).toHaveCount(0);
+  expect(await header.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+
+  await page.setViewportSize({ width: 1080, height: 900 });
+  const createTaskButton = header.getByRole('button', { name: /backlog task/i });
+  await expect(createTaskButton).toContainText('Task');
+  await expect(header.getByRole('button', { name: /open settings/i })).toBeVisible();
+  expect(await header.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
 test('creates and finds a task in the browser app', async ({ page }) => {
   await page.goto('/');
 

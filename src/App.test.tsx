@@ -46,6 +46,19 @@ it('renders a tiny app version indicator', async () => {
   expect(screen.getByTestId('app-version-chip')).not.toHaveTextContent(/fe|be|frontend|backend/i);
 });
 
+it('keeps the desktop header focused on primary actions', () => {
+  render(<App />);
+
+  expect(screen.getByRole('button', { name: /open command palette/i })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /open settings/i })).toBeInTheDocument();
+  const createTaskButton = screen.getByLabelText('Backlog task', { selector: 'button' });
+  expect(createTaskButton).toHaveTextContent(/^Task$/);
+  expect(createTaskButton.querySelector('svg')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /hide clock|show clock/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /shortcuts & guide/i })).not.toBeInTheDocument();
+  expect(screen.queryByText('Online')).not.toBeInTheDocument();
+});
+
 it('renders TheMonastery board', () => {
   render(<App />);
 
@@ -693,16 +706,11 @@ it('offers readable theme gallery choices for default modes and custom themes', 
   ]);
 });
 
-it('toggles the right container and clock widget from the header', async () => {
+it('toggles the right container from the compact header', async () => {
   const user = userEvent.setup();
   render(<App />);
 
   expect(screen.getByTestId('app-sidebar')).toBeInTheDocument();
-  expect(screen.getByTestId('clock-time')).toBeInTheDocument();
-
-  await user.click(screen.getByTitle(/hide clock/i));
-  expect(screen.queryByTestId('clock-time')).not.toBeInTheDocument();
-
   await user.click(screen.getByRole('button', { name: /hide right container/i }));
   expect(screen.getByRole('button', { name: /show right container/i })).toBeInTheDocument();
 });

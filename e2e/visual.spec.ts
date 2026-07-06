@@ -30,6 +30,13 @@ test('theme gallery remains visually stable', async ({ page }) => {
   await expect(page.getByTestId('theme-gallery')).toHaveScreenshot('theme-gallery.png', screenshotOptions);
 });
 
+test('compact desktop header remains visually stable', async ({ page }) => {
+  await page.setViewportSize({ width: 1080, height: 900 });
+  await page.goto('/');
+  await stabilizePage(page);
+  await expect(page.locator('.app-header')).toHaveScreenshot('compact-header.png', screenshotOptions);
+});
+
 test('settings modal and Liquid Glass settings remain visually stable', async ({ page }) => {
   await page.goto('/');
   await stabilizePage(page);

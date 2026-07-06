@@ -32,7 +32,7 @@ export function TaskSearchInput({
   if (disabled) return null;
 
   const containerClass =
-    variant === 'header' ? 'relative hidden w-64 lg:block' : 'relative mb-2 lg:hidden sm:mb-3';
+    variant === 'header' ? 'relative hidden w-56 xl:block' : 'relative mb-2 xl:hidden sm:mb-3';
   const inputClass =
     'flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-slate-500 dark:border-slate-800 dark:bg-slate-900 ' +
     (variant === 'header' ? 'py-2 dark:border-slate-700 dark:bg-slate-800' : 'py-1.5 sm:py-2');

@@ -3,11 +3,8 @@ import { autoUpdate, flip, offset, shift, useFloating } from '@floating-ui/react
 import {
   Activity,
   ChevronDown,
-  Clock,
   Command,
   Filter,
-  HelpCircle,
-  Menu,
   PanelRightClose,
   PanelRightOpen,
   Plus,
@@ -31,8 +28,7 @@ const frontendVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 
 const visibleVersion = (version: string) => 'v' + version.replace(/^v/, '');
 
 export function AppHeader() {
-  const { settings, isSidebarVisible, toggleSidebarVisible, toggleSidebarWidget, openSettings } =
-    useSettingsContext();
+  const { settings, isSidebarVisible, toggleSidebarVisible, openSettings } = useSettingsContext();
 
   const {
     addTask,
@@ -62,12 +58,10 @@ export function AppHeader() {
     view,
     setView,
     isOnline,
-    sidebarOpen,
     setSidebarOpen,
     isCommandOpen,
     setIsCommandOpen,
     commandPaletteGroups,
-    setIsShortcutHelpOpen,
     setMonkMode,
     unifiedSearchResults,
     unifiedSearchLoading,
@@ -123,16 +117,9 @@ export function AppHeader() {
     <>
       <header
         data-material="control"
-        className="app-header z-[70] hidden shrink-0 items-center justify-between border-b border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:px-4 sm:py-3 md:flex md:px-6"
+        className="app-header z-[70] hidden shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:flex lg:px-4"
       >
-        <div className="flex items-center gap-3">
-          <button
-            aria-label="Toggle sidebar"
-            className="-ml-2 p-2 text-slate-500 md:hidden"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            <Menu size={20} />
-          </button>
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             aria-label="Go to board"
@@ -141,25 +128,25 @@ export function AppHeader() {
               setView('board');
               setSidebarOpen(false);
             }}
-            className="flex items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="flex items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
             <span className="rounded-lg bg-indigo-600 p-1.5 text-white shadow-sm">
               <Activity size={18} />
             </span>
-            <h1 className="hidden text-lg font-bold leading-none tracking-tight text-slate-800 dark:text-white sm:block md:text-xl">
+            <h1 className="hidden text-base font-bold leading-none text-slate-800 dark:text-white xl:block">
               TheMonastery
             </h1>
           </button>
           <div
             data-testid="app-version-chip"
             title={`Version ${visibleVersion(frontendVersion)}`}
-            className="hidden items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] text-slate-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-400 lg:flex"
+            className="hidden items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] text-slate-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-400 2xl:flex"
           >
             {visibleVersion(frontendVersion)}
           </div>
         </div>
 
-        <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-3">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-1 lg:gap-2">
           <ViewSwitcher view={view} onChange={setView} disabled={settings.monkMode} />
           <TaskSearchInput
             value={searchQuery}
@@ -171,7 +158,7 @@ export function AppHeader() {
             onSelectResult={selectUnifiedSearchResult}
           />
           {isBackendAvailable && (
-            <div className="relative hidden sm:block">
+            <div className="relative hidden 2xl:block">
               <ThemedSurface
                 as="button"
                 variant="menuTrigger"
@@ -181,7 +168,7 @@ export function AppHeader() {
                 data-active-profile-id={activeProfileId}
                 title="Active profile"
                 onClick={() => setIsProfileOpen((open) => !open)}
-                className="flex max-w-48 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm font-medium"
+                className="flex max-w-40 items-center gap-2 rounded-lg border px-2 py-1.5 text-sm font-medium"
               >
                 <Users size={15} className="shrink-0 text-slate-400" />
                 <span className="min-w-0 truncate">{activeProfile?.name || 'Profile'}</span>
@@ -225,7 +212,7 @@ export function AppHeader() {
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 className={`flex items-center gap-1 rounded-lg border p-2 text-sm font-medium ${activeFilters.length ? 'border-indigo-200 text-indigo-700 dark:border-indigo-700 dark:text-indigo-400' : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}
               >
-                <Filter size={16} /> <span className="sr-only lg:not-sr-only">Filters</span>
+                <Filter size={16} /> <span className="sr-only 2xl:not-sr-only">Filters</span>
                 {activeFilters.length > 0 && (
                   <span className="rounded-full bg-indigo-500 px-1.5 text-[10px] text-white">
                     {activeFilters.length}
@@ -253,61 +240,47 @@ export function AppHeader() {
               )}
             </div>
           )}
-          <div
-            data-testid="offline-status"
-            className={`hidden rounded-full px-2 py-1 text-[10px] font-semibold lg:block ${isOnline ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'}`}
-          >
-            {isOnline ? 'Online' : 'Offline ready'}
-          </div>
+          {!isOnline && (
+            <div
+              data-testid="offline-status"
+              className="hidden rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300 2xl:block"
+            >
+              Offline ready
+            </div>
+          )}
           <PersistenceStatusChip
             status={persistenceStatus as any}
             lastSavedAt={lastSavedAt ? new Date(lastSavedAt) : null}
             errorMessage={profileError}
           />
-          <div className="mx-1 hidden h-6 w-px bg-slate-200 dark:bg-slate-700 md:block" />
           <button
             aria-label={settings.monkMode ? 'Exit monk mode' : 'Enter monk mode'}
             onClick={() => setMonkMode(!settings.monkMode)}
-            className={`hidden items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium sm:flex ${settings.monkMode ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}
+            className={`hidden items-center gap-2 rounded-lg border p-2 text-sm font-medium xl:flex 2xl:px-3 ${settings.monkMode ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}
           >
-            <Target size={15} /> <span className="hidden md:inline">Monk</span>
+            <Target size={16} /> <span className="hidden 2xl:inline">Monk</span>
           </button>
           <button
             aria-label={isSidebarVisible ? 'Hide right container' : 'Show right container'}
             title={isSidebarVisible ? 'Hide right container' : 'Show right container'}
             onClick={toggleSidebarVisible}
-            className={`hidden rounded-lg border p-2 md:flex ${isSidebarVisible ? 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300' : 'border-indigo-600 bg-indigo-600 text-white'}`}
+            className={`hidden rounded-lg border p-2 xl:flex ${isSidebarVisible ? 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300' : 'border-indigo-600 bg-indigo-600 text-white'}`}
           >
             {isSidebarVisible ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-          </button>
-          <button
-            aria-label={settings.sidebarWidgets.includes('clock') ? 'Hide clock' : 'Show clock'}
-            title={settings.sidebarWidgets.includes('clock') ? 'Hide clock' : 'Show clock'}
-            onClick={() => toggleSidebarWidget('clock')}
-            className="hidden rounded-lg border border-slate-200 p-2 text-slate-600 dark:border-slate-700 dark:text-slate-300 md:flex"
-          >
-            <Clock size={16} />
           </button>
           <button
             aria-label="Open command palette"
             aria-expanded={isCommandOpen}
             title="Command palette (Ctrl+K)"
             onClick={() => setIsCommandOpen(true)}
-            className="hidden rounded-full p-2 text-slate-500 md:block"
+            className="hidden rounded-lg p-2 text-slate-500 2xl:block"
           >
             <Command size={18} />
           </button>
           <button
-            aria-label="Shortcuts & Guide"
-            onClick={() => setIsShortcutHelpOpen(true)}
-            className="hidden rounded-full p-2 text-slate-500 md:block"
-          >
-            <HelpCircle size={18} />
-          </button>
-          <button
             aria-label="Open settings"
             onClick={() => openSettings()}
-            className="rounded-full p-2 text-slate-500"
+            className="rounded-lg p-2 text-slate-500"
           >
             <Settings size={18} />
           </button>
@@ -316,9 +289,9 @@ export function AppHeader() {
             onClick={() => {
               addTask('backlog', {}, (newTask) => setSelectedTaskId(newTask.id));
             }}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm md:px-4 md:py-2"
+            className="flex shrink-0 items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm"
           >
-            <Plus size={16} /> <span className="hidden sm:inline">Backlog Task</span>
+            <Plus size={16} /> <span>Task</span>
           </button>
         </div>
       </header>
