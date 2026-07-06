@@ -529,9 +529,8 @@ test('searches tasks and applies scheduling, timer, status, and navigation comma
   await expect(page.getByTestId('board-column-backlog')).toContainText(title);
 
   const openPalette = async (query: string) => {
-    const trigger = page.getByRole('button', { name: 'Open command palette' });
-    await trigger.click();
-    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    await page.keyboard.press('Control+K');
+    await expect(page.getByRole('dialog', { name: /command palette/i })).toBeVisible();
     const input = page.locator('input[aria-label="Search commands"]');
     await expect(input).toBeVisible();
     await input.fill(query);
@@ -978,6 +977,7 @@ test('enables monk mode and switches visual theme', async ({ page }) => {
 });
 
 test('uses the shared themed dropdown surface for filters and profiles', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
   await page.goto('/');
 
   await page.getByTestId('active-profile-control').click();
