@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { KanbanBoard, MobileFocusView, TaskListView } from '../board/TaskBoard';
 import { MobileBoardControls } from '../board/MobileBoardControls';
 import { MonkModeView } from '../monk-mode/MonkModeView';
 import { TaskSearchInput } from '../TaskSearchInput';
 import { CalendarView } from '../calendar/CalendarView';
+import { FocusPlanningPanel } from '../planning/FocusPlanningPanel';
 
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
@@ -28,7 +29,7 @@ export function WorkspaceContent() {
     filteredTasks,
     currentTask,
     addTask,
-    planMyDay,
+    applyFocusPlan,
     updateTaskTimer,
     completeTask,
     rejectTask,
@@ -65,6 +66,7 @@ export function WorkspaceContent() {
     unifiedSearchLoading,
     selectUnifiedSearchResult
   } = useUIContext();
+  const [focusPlannerOpen, setFocusPlannerOpen] = useState(false);
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
@@ -189,7 +191,7 @@ export function WorkspaceContent() {
             </form>
             <div className="hidden justify-end gap-2 sm:flex">
               <button
-                onClick={() => planMyDay()}
+                onClick={() => setFocusPlannerOpen((open) => !open)}
                 className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 hover:border-emerald-400 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300"
               >
                 Plan day
@@ -202,6 +204,18 @@ export function WorkspaceContent() {
               </button>
             </div>
           </div>
+          {focusPlannerOpen && (
+            <FocusPlanningPanel
+              tasks={tasks}
+              settings={settings}
+              now={now}
+              onApply={(date, taskIds, startMinutes) => {
+                applyFocusPlan(date, taskIds, startMinutes);
+                setFocusPlannerOpen(false);
+              }}
+              onClose={() => setFocusPlannerOpen(false)}
+            />
+          )}
           <MobileBoardControls settings={settings} setSettings={setSettings} />
           {settings.mobileFocusMode && (
             <MobileFocusView

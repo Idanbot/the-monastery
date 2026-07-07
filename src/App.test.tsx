@@ -171,13 +171,35 @@ it('suggests tags from the task title and role graph as clickable chips', async 
   });
 }, 20_000);
 
-it('plans unscheduled tasks into today', async () => {
+it('opens a focus planning flow and applies selected work into today', async () => {
   const user = userEvent.setup();
+  seedSettings({
+    roles: [
+      {
+        id: 'role-backend',
+        name: 'Senior Backend',
+        tags: ['backend'],
+        dailyTargetHours: 0,
+        weeklyTargetHours: 4,
+        monthlyTargetHours: 0
+      }
+    ]
+  });
   seedTasks([
     makeTask({
       id: 'unscheduled',
       title: 'Unscheduled',
       status: 'in-progress',
+      tags: ['backend'],
+      scheduledDate: '',
+      scheduledStart: ''
+    }),
+    makeTask({
+      id: 'backlog-plan',
+      title: 'Backlog candidate',
+      status: 'backlog',
+      tags: ['backend'],
+      urgency: 9,
       scheduledDate: '',
       scheduledStart: ''
     })
@@ -185,9 +207,13 @@ it('plans unscheduled tasks into today', async () => {
   render(<App />);
 
   await user.click(screen.getByRole('button', { name: /plan day/i }));
+  expect(screen.getByRole('region', { name: /focus planning/i })).toBeInTheDocument();
+  expect(screen.getByText(/role balance: senior backend 2/i)).toBeInTheDocument();
 
+  await user.click(screen.getByRole('button', { name: /apply focus plan/i }));
   await waitFor(() => {
     expect(screen.getByTestId('timeline-task-Unscheduled')).toBeInTheDocument();
+    expect(screen.getByTestId('timeline-task-Backlog candidate')).toBeInTheDocument();
   });
 });
 

@@ -230,6 +230,9 @@ test('plans day, suggests title tags, opens shortcuts, and records local backup 
   await page.getByLabel('Status').selectOption('in-progress');
   await page.getByRole('button', { name: /save task/i }).click();
   await page.getByRole('button', { name: /plan day/i }).click();
+  await expect(page.getByRole('region', { name: /focus planning/i })).toBeVisible();
+  await expect(page.getByTestId('focus-plan-suggestions')).toContainText('Unscheduled day plan smoke');
+  await page.getByRole('button', { name: /apply focus plan/i }).click();
   await expect(page.getByTestId('timeline-task-Unscheduled day plan smoke')).toBeVisible();
 
   await page.keyboard.press('?');

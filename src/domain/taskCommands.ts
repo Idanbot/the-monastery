@@ -10,6 +10,7 @@ export type TaskCommand =
   | { type: 'move'; taskId: string; status: TaskStatus }
   | { type: 'complete'; taskId: string; promoteNext?: boolean }
   | { type: 'plan-day'; date: string; startMinutes: number }
+  | { type: 'apply-focus-plan'; date: string; taskIds: string[]; startMinutes: number; slotMinutes?: number }
   | { type: 'record-focus'; taskId: string; minutes: number };
 
 export type TaskCommandEffect = { type: 'task-promoted'; taskId: string };
@@ -128,6 +129,28 @@ export const executeTaskCommand = (
           scheduledStart: clockTime(start),
           scheduledEnd: clockTime(start + 45),
           activity: [...task.activity, activity('Planned into today', timestamp, ids)]
+        };
+      })
+    };
+  }
+
+  if (command.type === 'apply-focus-plan') {
+    let slot = command.startMinutes;
+    const slotMinutes = command.slotMinutes || 45;
+    const selected = new Set(command.taskIds);
+    return {
+      effects,
+      tasks: tasks.map((task) => {
+        if (!selected.has(task.id) || !['backlog', 'in-progress'].includes(task.status)) return task;
+        const start = Math.min(slot, 23 * 60);
+        slot = start + slotMinutes + 15;
+        return {
+          ...task,
+          status: 'in-progress',
+          scheduledDate: command.date,
+          scheduledStart: clockTime(start),
+          scheduledEnd: clockTime(start + slotMinutes),
+          activity: [...task.activity, activity('Added to focus plan', timestamp, ids)]
         };
       })
     };

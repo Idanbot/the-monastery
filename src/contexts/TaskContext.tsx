@@ -53,6 +53,7 @@ interface TaskContextType {
   rejectTask: (taskId: string) => void;
   createRoleRoutineTasks: () => void;
   planMyDay: (onComplete?: () => void) => void;
+  applyFocusPlan: (date: string, taskIds: string[], startMinutes: number) => void;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -268,6 +269,18 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [setTasks]
   );
 
+  const applyFocusPlan = useCallback((date: string, taskIds: string[], startMinutes: number) => {
+    setTasks(
+      (previous) =>
+        executeTaskCommand(previous, {
+          type: 'apply-focus-plan',
+          date,
+          taskIds,
+          startMinutes
+        }).tasks
+    );
+  }, []);
+
   const value = useMemo(
     () => ({
       tasks,
@@ -303,7 +316,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       completeTask,
       rejectTask,
       createRoleRoutineTasks,
-      planMyDay
+      planMyDay,
+      applyFocusPlan
     }),
     [
       tasks,
@@ -337,7 +351,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       completeTask,
       rejectTask,
       createRoleRoutineTasks,
-      planMyDay
+      planMyDay,
+      applyFocusPlan
     ]
   );
 

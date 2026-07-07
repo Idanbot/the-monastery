@@ -76,4 +76,34 @@ describe('executeTaskCommand', () => {
     });
     expect(result.tasks.find((item) => item.id === 'planned')?.scheduledStart).toBe('10:00');
   });
+
+  it('applies a focus plan by promoting selected backlog tasks into scheduled in-progress work', () => {
+    const result = executeTaskCommand(
+      [
+        task('first', { status: 'backlog' }),
+        task('second', { status: 'in-progress' }),
+        task('ignored', { status: 'backlog' })
+      ],
+      {
+        type: 'apply-focus-plan',
+        date: '2026-07-07',
+        taskIds: ['first', 'second'],
+        startMinutes: 10 * 60
+      },
+      { now, ids }
+    );
+
+    expect(result.tasks.find((item) => item.id === 'first')).toMatchObject({
+      status: 'in-progress',
+      scheduledDate: '2026-07-07',
+      scheduledStart: '10:00',
+      scheduledEnd: '10:45'
+    });
+    expect(result.tasks.find((item) => item.id === 'second')).toMatchObject({
+      status: 'in-progress',
+      scheduledStart: '11:00',
+      scheduledEnd: '11:45'
+    });
+    expect(result.tasks.find((item) => item.id === 'ignored')?.scheduledStart).toBe('');
+  });
 });
