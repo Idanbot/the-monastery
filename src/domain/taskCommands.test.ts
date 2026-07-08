@@ -47,6 +47,26 @@ describe('executeTaskCommand', () => {
     expect(result.effects).toEqual([{ type: 'task-promoted', taskId: 'high' }]);
   });
 
+  it('starts a backlog task by promoting it and closing any other active timer', () => {
+    const result = executeTaskCommand(
+      [
+        task('previous', { status: 'in-progress', activeLogStart: '2026-06-27T08:00:00.000Z' }),
+        task('next', { status: 'backlog' })
+      ],
+      { type: 'start', taskId: 'next' },
+      { now, ids }
+    );
+
+    expect(result.tasks.find((item) => item.id === 'previous')).toMatchObject({ activeLogStart: null });
+    expect(result.tasks.find((item) => item.id === 'previous')?.logs).toEqual([
+      { start: '2026-06-27T08:00:00.000Z', end: now }
+    ]);
+    expect(result.tasks.find((item) => item.id === 'next')).toMatchObject({
+      status: 'in-progress',
+      activeLogStart: now
+    });
+  });
+
   it('closes a running timer when moved to a terminal state', () => {
     const result = executeTaskCommand(
       [task('active', { status: 'in-progress', activeLogStart: '2026-06-27T08:00:00.000Z' })],

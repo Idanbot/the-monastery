@@ -31,6 +31,7 @@ export function WorkspaceContent() {
     addTask,
     applyFocusPlan,
     updateTaskTimer,
+    startTask,
     completeTask,
     rejectTask,
     columnSorts,
@@ -160,7 +161,14 @@ export function WorkspaceContent() {
 
       {!settings.monkMode && view === 'mobile' && (
         <div className="min-h-0 flex-1">
-          <TaskListView filteredTasks={filteredTasks} setSelectedTaskId={setSelectedTaskId} now={now} />
+          <TaskListView
+            filteredTasks={filteredTasks}
+            setSelectedTaskId={setSelectedTaskId}
+            now={now}
+            onStartTask={startTask}
+            onCompleteTask={completeTask}
+            onRejectTask={rejectTask}
+          />
         </div>
       )}
 
@@ -226,7 +234,7 @@ export function WorkspaceContent() {
               onStartTask={updateTaskTimer}
               onCompleteTask={completeTask}
               onRejectTask={rejectTask}
-              onNextTask={updateTaskTimer}
+              onNextTask={startTask}
             />
           )}
           <div className={`min-h-0 flex-1 ${settings.mobileFocusMode ? 'hidden sm:flex' : 'flex'}`}>

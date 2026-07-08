@@ -97,7 +97,14 @@ const observeListRect = (instance, callback) => {
   };
 };
 
-export function TaskListView({ filteredTasks, setSelectedTaskId, now }) {
+export function TaskListView({
+  filteredTasks,
+  setSelectedTaskId,
+  now,
+  onStartTask,
+  onCompleteTask,
+  onRejectTask
+}) {
   const parentRef = useRef(null);
   const rows = useMemo(
     () =>
@@ -117,7 +124,7 @@ export function TaskListView({ filteredTasks, setSelectedTaskId, now }) {
     count: rows.length,
     getScrollElement: () => parentRef.current,
     getItemKey: (index) => rows[index].key,
-    estimateSize: (index) => (rows[index].type === 'header' ? 44 : rows[index].type === 'empty' ? 64 : 92),
+    estimateSize: (index) => (rows[index].type === 'header' ? 44 : rows[index].type === 'empty' ? 64 : 132),
     observeElementRect: observeListRect,
     overscan: 6,
     initialRect: { width: 1024, height: 640 }
@@ -166,10 +173,13 @@ export function TaskListView({ filteredTasks, setSelectedTaskId, now }) {
                     calculateTotalDuration(task.logs || []) +
                     (task.activeLogStart ? Math.max(0, now - new Date(task.activeLogStart).getTime()) : 0);
                   return (
-                    <div role="listitem" className="h-full border-b border-slate-100 dark:border-slate-800">
+                    <div
+                      role="listitem"
+                      className="h-full border-b border-slate-100 px-3 py-3 dark:border-slate-800"
+                    >
                       <button
                         onClick={() => setSelectedTaskId(task.id)}
-                        className="h-full w-full px-3 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                        className="w-full rounded-lg text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -208,6 +218,34 @@ export function TaskListView({ filteredTasks, setSelectedTaskId, now }) {
                           )}
                         </div>
                       </button>
+                      {task.status !== 'done' && task.status !== 'rejected' && (
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            aria-label={`Start ${task.title || 'task'}`}
+                            onClick={() => onStartTask?.(task.id)}
+                            className="min-h-9 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-semibold text-white"
+                          >
+                            Start
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Complete ${task.title || 'task'}`}
+                            onClick={() => onCompleteTask?.(task.id)}
+                            className="min-h-9 rounded-lg bg-indigo-600 px-2 py-1 text-xs font-semibold text-white"
+                          >
+                            Done
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Reject ${task.title || 'task'}`}
+                            onClick={() => onRejectTask?.(task.id)}
+                            className="min-h-9 rounded-lg border border-rose-300 px-2 py-1 text-xs font-semibold text-rose-700 dark:border-rose-700 dark:text-rose-300"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}

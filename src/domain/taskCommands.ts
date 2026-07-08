@@ -6,6 +6,7 @@ type CommandOptions = { now?: string; ids?: () => string };
 export type TaskCommand =
   | { type: 'create'; task: Task }
   | { type: 'delete'; taskId: string }
+  | { type: 'start'; taskId: string }
   | { type: 'toggle-timer'; taskId: string }
   | { type: 'move'; taskId: string; status: TaskStatus }
   | { type: 'complete'; taskId: string; promoteNext?: boolean }
@@ -61,6 +62,25 @@ export const executeTaskCommand = (
           ...task,
           activeLogStart: timestamp,
           activity: [...task.activity, activity('Timer started', timestamp, ids)]
+        };
+      })
+    };
+  }
+
+  if (command.type === 'start') {
+    return {
+      effects,
+      tasks: tasks.map((task) => {
+        if (task.id !== command.taskId) return stopTimer(task, timestamp, ids);
+        if (task.status === 'done' || task.status === 'rejected') return task;
+        return {
+          ...task,
+          status: 'in-progress',
+          activeLogStart: task.activeLogStart || timestamp,
+          activity: [
+            ...task.activity,
+            activity(task.status === 'backlog' ? 'Started from Backlog' : 'Timer started', timestamp, ids)
+          ]
         };
       })
     };

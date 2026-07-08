@@ -12,7 +12,7 @@ The project is designed primarily for a single owner. It runs as a React applica
 - **Planning:** Kanban layouts, free task ordering, collapsible lanes, timeline scheduling, and day/week calendar views.
 - **Task detail:** Notes, subtasks, tags, recurring tasks, activity history, time logs, and smart tag suggestions.
 - **Focus:** Monk Mode, current and next task controls, daily planning, and role/tag targets.
-- **Mobile:** Dedicated Today, Board, Calendar, quick-create, and More navigation optimized for small screens.
+- **Mobile:** Dedicated Today, Board, Calendar, quick-create, More navigation, and card-level Start/Done/Reject actions optimized for small screens.
 - **Organization:** Profiles, roles, projects, learning tracks, milestones, and daily, weekly, or monthly goals.
 - **Search and analytics:** SQLite FTS5 search across task content and dashboards for status, time, roles, tags, and trends.
 - **Themes:** Light, dark, terminal, and Liquid Glass themes with configurable colors and effects.

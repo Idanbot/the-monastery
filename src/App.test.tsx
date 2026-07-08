@@ -834,6 +834,14 @@ it('searches tasks and supports the mobile list view', async () => {
   const taskList = screen.getByRole('list', { name: /task list/i });
   expect(within(taskList).getByText(/frontend polish/i)).toBeInTheDocument();
   expect(within(taskList).queryByText(/design database schema/i)).not.toBeInTheDocument();
+
+  await user.click(within(taskList).getByRole('button', { name: /start frontend polish/i }));
+  await waitFor(() => expect(screen.getByTestId('current-task-pin')).toHaveTextContent('Frontend polish'));
+
+  await user.click(within(taskList).getByRole('button', { name: /complete frontend polish/i }));
+  await waitFor(() =>
+    expect(screen.getByTestId('current-task-pin')).toHaveTextContent('No active task pinned')
+  );
 });
 
 it('creates the next instance when a recurring task is completed', async () => {

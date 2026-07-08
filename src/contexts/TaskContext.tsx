@@ -49,6 +49,7 @@ interface TaskContextType {
   reorderTask: (taskId: string, direction: 'earlier' | 'later') => void;
   addTask: (status?: TaskStatus, overrides?: TaskOverrides, onCreated?: (task: Task) => void) => void;
   updateTaskTimer: (taskId: string) => void;
+  startTask: (taskId: string) => void;
   completeTask: (taskId: string) => void;
   rejectTask: (taskId: string) => void;
   createRoleRoutineTasks: () => void;
@@ -170,6 +171,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateTaskTimer = useCallback((taskId: string) => {
     setTasks((previous) => executeTaskCommand(previous, { type: 'toggle-timer', taskId }).tasks);
+  }, []);
+
+  const startTask = useCallback((taskId: string) => {
+    setTasks((previous) => executeTaskCommand(previous, { type: 'start', taskId }).tasks);
   }, []);
 
   const rejectTask = useCallback((taskId: string) => {
@@ -313,6 +318,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       reorderTask,
       addTask,
       updateTaskTimer,
+      startTask,
       completeTask,
       rejectTask,
       createRoleRoutineTasks,
@@ -348,6 +354,7 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       reorderTask,
       addTask,
       updateTaskTimer,
+      startTask,
       completeTask,
       rejectTask,
       createRoleRoutineTasks,

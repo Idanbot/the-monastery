@@ -240,12 +240,49 @@ describe('MobileFocusView actions', () => {
   });
 });
 
+describe('TaskListView mobile quick actions', () => {
+  it('starts, completes, and rejects active task cards without opening the modal', () => {
+    const onStartTask = vi.fn();
+    const onCompleteTask = vi.fn();
+    const onRejectTask = vi.fn();
+    const setSelectedTaskId = vi.fn();
+    render(
+      <TaskListView
+        filteredTasks={[normalizeTask({ id: 'mobile-task', title: 'Mobile task', status: 'backlog' })]}
+        setSelectedTaskId={setSelectedTaskId}
+        now={Date.now()}
+        onStartTask={onStartTask}
+        onCompleteTask={onCompleteTask}
+        onRejectTask={onRejectTask}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /start mobile task/i }));
+    fireEvent.click(screen.getByRole('button', { name: /complete mobile task/i }));
+    fireEvent.click(screen.getByRole('button', { name: /reject mobile task/i }));
+
+    expect(onStartTask).toHaveBeenCalledWith('mobile-task');
+    expect(onCompleteTask).toHaveBeenCalledWith('mobile-task');
+    expect(onRejectTask).toHaveBeenCalledWith('mobile-task');
+    expect(setSelectedTaskId).not.toHaveBeenCalled();
+  });
+});
+
 describe('TaskListView virtualization', () => {
   it('mounts only the visible window for a large task list', () => {
     const tasks = Array.from({ length: 120 }, (_, index) =>
       normalizeTask({ id: `task-${index}`, title: `Task ${index}`, status: 'backlog' })
     );
-    render(<TaskListView filteredTasks={tasks} setSelectedTaskId={vi.fn()} now={Date.now()} />);
+    render(
+      <TaskListView
+        filteredTasks={tasks}
+        setSelectedTaskId={vi.fn()}
+        now={Date.now()}
+        onStartTask={vi.fn()}
+        onCompleteTask={vi.fn()}
+        onRejectTask={vi.fn()}
+      />
+    );
 
     const list = screen.getByTestId('virtualized-task-list');
     const totalItems = Number(list.getAttribute('data-total-items'));
