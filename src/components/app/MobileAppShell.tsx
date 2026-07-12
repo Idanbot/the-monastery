@@ -10,7 +10,7 @@ export function MobileAppShell() {
     useSettingsContext();
   const { addTask, setSelectedTaskId, tagPool, activeFilters, setActiveFilters } = useTaskContext();
   const { activeProfile } = useProfileContext();
-  const { view, setView, setSidebarOpen } = useUIContext();
+  const { view, setView, setSidebarOpen, openMediaPlayer } = useUIContext();
 
   const setFocusedBoard = (focused: boolean) => {
     setSettings((previous) => ({ ...previous, mobileFocusMode: focused }));
@@ -33,6 +33,7 @@ export function MobileAppShell() {
         if (!isSidebarVisible) toggleSidebarVisible();
         setSidebarOpen(true);
       }}
+      onOpenMedia={openMediaPlayer}
       filterContent={
         <TagFilterMenu
           knownTags={tagPool}

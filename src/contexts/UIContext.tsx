@@ -34,6 +34,11 @@ interface UIContextType {
   setIsCommandOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isShortcutHelpOpen: boolean;
   setIsShortcutHelpOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  isMediaPlayerActive: boolean;
+  isMediaPlayerExpanded: boolean;
+  openMediaPlayer: () => void;
+  minimizeMediaPlayer: () => void;
+  stopMediaPlayer: () => void;
   isEnteringMonkMode: boolean;
   setIsEnteringMonkMode: React.Dispatch<React.SetStateAction<boolean>>;
   keyboardFocusedTaskId: string | null;
@@ -90,6 +95,8 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isShortcutHelpOpen, setIsShortcutHelpOpen] = useState(false);
+  const [isMediaPlayerActive, setIsMediaPlayerActive] = useState(false);
+  const [isMediaPlayerExpanded, setIsMediaPlayerExpanded] = useState(false);
   const [isEnteringMonkMode, setIsEnteringMonkMode] = useState(false);
   const [keyboardFocusedTaskId, setKeyboardFocusedTaskId] = useState<string | null>(null);
   const [quickAddText, setQuickAddText] = useState('');
@@ -114,6 +121,16 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     },
     [openSettings, setSearchQuery, setSelectedTaskId]
   );
+
+  const openMediaPlayer = useCallback(() => {
+    setIsMediaPlayerActive(true);
+    setIsMediaPlayerExpanded(true);
+  }, []);
+  const minimizeMediaPlayer = useCallback(() => setIsMediaPlayerExpanded(false), []);
+  const stopMediaPlayer = useCallback(() => {
+    setIsMediaPlayerExpanded(false);
+    setIsMediaPlayerActive(false);
+  }, []);
 
   useTaskNotifications({
     enabled: settings.notificationsEnabled,
@@ -250,6 +267,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
             onSelect: () => setMonkMode(!settings.monkMode)
           },
           { value: 'open settings', label: 'Open settings', onSelect: () => openSettings() },
+          { value: 'focus music media youtube', label: 'Open focus media', onSelect: openMediaPlayer },
           {
             value: 'theme studio appearance',
             label: 'Theme Studio',
@@ -368,7 +386,8 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       setSelectedTaskId,
       updateTaskTimer,
       scheduleTaskToday,
-      moveTask
+      moveTask,
+      openMediaPlayer
     ]
   );
 
@@ -384,6 +403,11 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       setIsCommandOpen,
       isShortcutHelpOpen,
       setIsShortcutHelpOpen,
+      isMediaPlayerActive,
+      isMediaPlayerExpanded,
+      openMediaPlayer,
+      minimizeMediaPlayer,
+      stopMediaPlayer,
       isEnteringMonkMode,
       setIsEnteringMonkMode,
       keyboardFocusedTaskId,
@@ -407,6 +431,8 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       sidebarOpen,
       isCommandOpen,
       isShortcutHelpOpen,
+      isMediaPlayerActive,
+      isMediaPlayerExpanded,
       isEnteringMonkMode,
       keyboardFocusedTaskId,
       quickAddText,
@@ -417,7 +443,10 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       commandPaletteGroups,
       unifiedSearchResults,
       unifiedSearchLoading,
-      selectUnifiedSearchResult
+      selectUnifiedSearchResult,
+      openMediaPlayer,
+      minimizeMediaPlayer,
+      stopMediaPlayer
     ]
   );
 

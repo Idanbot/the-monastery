@@ -11,6 +11,7 @@ describe('MobileShell', () => {
     const onCalendar = vi.fn();
     const onAddTask = vi.fn();
     const onNavigate = vi.fn();
+    const onOpenMedia = vi.fn();
     render(
       <MobileShell
         view="board"
@@ -24,6 +25,7 @@ describe('MobileShell', () => {
         onOpenSettings={() => {}}
         onOpenProfiles={() => {}}
         onOpenSidebar={() => {}}
+        onOpenMedia={onOpenMedia}
       />
     );
 
@@ -41,5 +43,9 @@ describe('MobileShell', () => {
     expect(screen.getByRole('dialog', { name: 'More' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Projects' }));
     expect(onNavigate).toHaveBeenCalledWith('projects');
+
+    await user.click(screen.getByRole('button', { name: 'More' }));
+    await user.click(screen.getByRole('button', { name: 'Music' }));
+    expect(onOpenMedia).toHaveBeenCalledOnce();
   });
 });

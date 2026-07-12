@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import {
   browserToday,
   createScheduledTask,
@@ -43,7 +43,7 @@ test('settings dialog passes accessibility checks', async ({ page }) => {
 test('mobile controls pass accessibility checks', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await page.getByTestId('mobile-board-controls').getByText('Board layout').click();
+  await expect(page.getByTestId('mobile-lane-tabs')).toBeVisible();
   await expectNoSeriousViolations(page);
 });
 

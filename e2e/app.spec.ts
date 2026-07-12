@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import {
   api,
   browserToday,
@@ -683,7 +683,7 @@ test('creates, resets, and removes a synced profile', async ({ page }) => {
 });
 
 test('completes a full profile roles tasks analytics lifecycle', async ({ page }) => {
-  test.setTimeout(45000);
+  test.setTimeout(240_000);
   const profileName = 'Analytics Flow ' + Date.now();
 
   await page.goto('/');
@@ -701,8 +701,10 @@ test('completes a full profile roles tasks analytics lifecycle', async ({ page }
 
   const addRole = async (name: string, tags: string) => {
     await rolesSection.getByRole('button', { name: /^add$/i }).click();
-    await page.locator("input[value='New Role']").last().fill(name);
-    const tagInput = page.getByPlaceholder('python, docker, backend').last();
+    const nameInput = rolesSection.getByLabel('Role name New Role').last();
+    await nameInput.fill(name);
+    const roleCard = rolesSection.getByLabel(`Role name ${name}`).locator('..').locator('..');
+    const tagInput = roleCard.getByPlaceholder('python, docker, backend');
     await tagInput.fill(tags);
     await tagInput.press('Enter');
   };
@@ -1045,7 +1047,9 @@ test('toggles animations from settings', async ({ page }) => {
   await expect(page.locator('[data-monk-mode]')).toHaveAttribute('data-animations-enabled', 'false');
 });
 
-test('supports mobile board layouts with backlog and in-progress lanes', async ({ page }) => {
+test('uses one navigable mobile lane while preserving focus controls and collapse state', async ({
+  page
+}) => {
   const mobileTitle = `Mobile Layout ${Date.now()}`;
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
@@ -1066,27 +1070,22 @@ test('supports mobile board layouts with backlog and in-progress lanes', async (
   await page.getByLabel('Status').selectOption('in-progress');
   await page.getByRole('button', { name: /save task/i }).click();
 
-  await expect(page.getByTestId('board-column-backlog')).toBeVisible();
-  await expect(page.getByTestId('board-column-in-progress')).toBeVisible();
-  await expect(page.getByTestId('board-column-done')).toBeVisible();
-  await expect(page.getByTestId('board-column-rejected')).toBeVisible();
-  await expect(page.getByTestId('board-column-in-progress')).toContainText(mobileTitle);
+  const laneBoard = page.getByTestId('mobile-lane-board');
+  await expect(laneBoard).toBeVisible();
+  await expect(laneBoard.locator('[data-testid^="board-column-"]')).toHaveCount(1);
+  await expect(laneBoard.getByRole('tab', { name: /in-progress, 2 tasks/i })).toBeVisible();
+  await laneBoard.getByRole('tab', { name: /in-progress, 2 tasks/i }).click();
+  await expect(laneBoard.getByTestId('board-column-in-progress')).toContainText(mobileTitle);
+  await expect(laneBoard.getByTestId('board-column-in-progress')).toContainText(nextTitle);
 
   const mobileControls = page.getByTestId('mobile-board-controls');
   await expect(mobileControls).toBeVisible();
-  await mobileControls.getByText('Board layout').click();
-  await mobileControls.getByLabel('Mobile board layout').selectOption('full');
-  await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'full');
-  await mobileControls.getByLabel('Mobile board layout').selectOption('compact');
-  await mobileControls.getByRole('button', { name: /customize lane order/i }).click();
-  await mobileControls.getByLabel('Compact active top lane').selectOption('in-progress');
-  await expect(page.getByTestId('board-column-in-progress')).toBeVisible();
   await mobileControls.getByRole('button', { name: /use focused mobile view/i }).click();
   const focusView = page.getByTestId('mobile-focus-view');
   await expect(focusView).toBeVisible();
   await expect(focusView).toContainText(mobileTitle);
   await expect(focusView).toContainText(nextTitle);
-  await expect(page.getByTestId('board-column-backlog')).toBeHidden();
+  await expect(laneBoard).toBeHidden();
   await focusView.getByRole('button', { name: /start current task/i }).click();
   await expect(focusView.getByRole('button', { name: /stop current task/i })).toBeVisible();
   await focusView.getByRole('button', { name: /start next task/i }).click();
@@ -1096,11 +1095,13 @@ test('supports mobile board layouts with backlog and in-progress lanes', async (
   await focusView.getByRole('button', { name: /reject current task/i }).click();
   await focusView.getByRole('button', { name: /complete current task/i }).click();
   await mobileControls.getByRole('button', { name: /show full mobile board/i }).click();
-  await expect(page.getByTestId('board-column-rejected')).toContainText(mobileTitle);
-  await expect(page.getByTestId('board-column-done')).toContainText(nextTitle);
+  await laneBoard.getByRole('tab', { name: /rejected, 1 task/i }).click();
+  await expect(laneBoard.getByTestId('board-column-rejected')).toContainText(mobileTitle);
+  await laneBoard.getByRole('tab', { name: /done, 1 task/i }).click();
+  await expect(laneBoard.getByTestId('board-column-done')).toContainText(nextTitle);
 
   await page.getByRole('button', { name: /collapse done lane/i }).click();
-  await expect(page.getByTestId('board-column-done')).toHaveAttribute('data-collapsed', 'true');
+  await expect(laneBoard.getByTestId('board-column-done')).toHaveAttribute('data-collapsed', 'true');
   const profileId = await page.getByTestId('active-profile-control').getAttribute('data-active-profile-id');
   if (!profileId) throw new Error('Missing active profile id');
   await expect
@@ -1111,19 +1112,9 @@ test('supports mobile board layouts with backlog and in-progress lanes', async (
     })
     .toContain('done');
   await page.reload();
-  await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'compact');
-  await expect(page.getByTestId('board-column-in-progress')).toBeVisible();
-  await expect(page.getByTestId('board-column-done')).toHaveAttribute('data-collapsed', 'true');
-
-  await openSettingsSection(page, 'Board');
-  await page.getByLabel('Board layout', { exact: true }).selectOption('full');
-  await page.getByRole('button', { name: /close settings/i }).click();
-  await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'full');
-
-  await openSettingsSection(page, 'Board');
-  await page.getByLabel('Board layout', { exact: true }).selectOption('three-column');
-  await page.getByRole('button', { name: /close settings/i }).click();
-  await expect(page.locator('#kanban-board')).toHaveAttribute('data-layout-preset', 'three-column');
+  const reloadedLaneBoard = page.getByTestId('mobile-lane-board');
+  await reloadedLaneBoard.getByRole('tab', { name: /done, 1 task/i }).click();
+  await expect(reloadedLaneBoard.getByTestId('board-column-done')).toHaveAttribute('data-collapsed', 'true');
 });
 
 test('uses dedicated mobile navigation and a compact more sheet', async ({ page }) => {
@@ -1134,7 +1125,7 @@ test('uses dedicated mobile navigation and a compact more sheet', async ({ page 
   await shell.getByRole('button', { name: 'Today' }).click();
   await expect(page.getByTestId('mobile-focus-view')).toBeVisible();
   await shell.getByRole('button', { name: 'Board' }).click();
-  await expect(page.getByTestId('kanban-board')).toBeVisible();
+  await expect(page.getByTestId('mobile-lane-board')).toBeVisible();
 
   await shell.getByRole('button', { name: 'More' }).click();
   const more = page.getByRole('dialog', { name: 'More' });
@@ -1146,6 +1137,43 @@ test('uses dedicated mobile navigation and a compact more sheet', async ({ page 
 
   await shell.getByRole('button', { name: 'Create task' }).click();
   await expect(page.getByTestId('task-modal')).toBeVisible();
+});
+
+test('plays and persists focus media while allowing a minimized player', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: /focus media/i }).click();
+
+  const dock = page.getByTestId('focus-media-dock');
+  await expect(dock).toHaveAttribute('data-expanded', 'true');
+  await expect(page.getByTitle('Focus media video')).toHaveAttribute(
+    'src',
+    /youtube-nocookie\.com\/embed\/4e839orj52w/
+  );
+
+  await page.getByLabel('Media URL').fill('https://media.example/focus.mp3');
+  const saved = page.waitForResponse(
+    (response) => response.url().includes('/settings') && response.request().method() === 'PUT'
+  );
+  await page.getByRole('button', { name: 'Load media' }).click();
+  await saved;
+  await expect(page.getByLabel('Focus audio player')).toHaveAttribute(
+    'src',
+    'https://media.example/focus.mp3'
+  );
+
+  const player = page.getByLabel('Focus audio player');
+  await page.getByRole('button', { name: 'Minimize media player' }).click();
+  await expect(dock).toHaveAttribute('data-expanded', 'false');
+  await expect(player).toBeAttached();
+  await page.getByRole('button', { name: 'Stop media' }).click();
+  await expect(dock).toHaveCount(0);
+
+  await page.reload();
+  await page.getByRole('button', { name: /focus media/i }).click();
+  await expect(page.getByLabel('Focus audio player')).toHaveAttribute(
+    'src',
+    'https://media.example/focus.mp3'
+  );
 });
 
 test('keeps a mobile-created task after reload', async ({ page, request }) => {

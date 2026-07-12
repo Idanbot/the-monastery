@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { normalizeTask } from '../src/domain/tasks';
 import { api, expectStatus, resetServerState } from './helpers';
 

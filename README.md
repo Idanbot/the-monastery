@@ -11,8 +11,8 @@ The project is designed primarily for a single owner. It runs as a React applica
 
 - **Planning:** Kanban layouts, free task ordering, collapsible lanes, timeline scheduling, and day/week calendar views.
 - **Task detail:** Notes, subtasks, tags, recurring tasks, activity history, time logs, and smart tag suggestions.
-- **Focus:** Monk Mode, current and next task controls, daily planning, and role/tag targets.
-- **Mobile:** Dedicated Today, Board, Calendar, quick-create, More navigation, and card-level Start/Done/Reject actions optimized for small screens.
+- **Focus:** Monk Mode, current and next task controls, daily planning, role/tag targets, and a persistent YouTube or direct-audio player.
+- **Mobile:** Dedicated Today, Calendar, quick-create, and More navigation, plus a single-lane board with task-count tabs and card-level Start/Done/Reject actions.
 - **Organization:** Profiles, roles, projects, learning tracks, milestones, and daily, weekly, or monthly goals.
 - **Search and analytics:** SQLite FTS5 search across task content and dashboards for status, time, roles, tags, and trends.
 - **Themes:** Light, dark, terminal, and Liquid Glass themes with configurable colors and effects.
@@ -33,6 +33,10 @@ The project is designed primarily for a single owner. It runs as a React applica
 | CI and security | GitHub Actions, CodeQL, Dependency Review, Trivy, Hadolint, Docker Buildx |
 
 The frontend calls relative `/api/*` routes. UI and API therefore remain on the same origin behind Docker, a reverse proxy, or Cloudflare Tunnel, without a separate public API hostname.
+
+### Focus media
+
+Open **Focus media** from the desktop sidebar, the mobile **More** menu, or the command palette. Paste a YouTube URL or a direct audio-file URL, then minimize the player to keep it mounted while working. The selected source is saved with the active profile. YouTube playback is embedded through the privacy-enhanced `youtube-nocookie.com` domain.
 
 ## Quick Start
 
@@ -212,7 +216,7 @@ docker compose -f compose.local.yml config
 
 Git hooks run staged formatting and lint fixes before commit, then type checking, unit tests, and Dockerfile linting before push.
 
-CI runs formatting, linting, type checking, unit coverage, Playwright, bundle budgets, npm audit, CodeQL, dependency review on pull requests, Trivy scans, Docker smoke tests, and multi-architecture image builds.
+CI runs formatting, linting, type checking, unit coverage, Playwright, bundle budgets, npm audit, CodeQL, dependency review on pull requests, Trivy scans, Docker smoke tests, and multi-architecture image builds. Each Playwright worker starts an isolated frontend, API, and temporary SQLite database, allowing the suite to run fully in parallel without sharing profile state.
 
 ## Deployment Notes
 

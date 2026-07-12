@@ -113,6 +113,7 @@ export type AppSettings = {
   clockFormat: '12h' | '24h';
   showSeconds: boolean;
   sidebarWidgets: string[];
+  focusMediaUrl: string;
   sidebarWidth: number;
   clockHeight: number;
   clockTextScale: number;

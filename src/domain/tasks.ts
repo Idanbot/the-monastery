@@ -170,7 +170,8 @@ export const defaultSettings: AppSettings = {
   monkMode: false,
   dailyGoal: '',
   shutdownChecklist: { review: false, plan: false, clear: false },
-  sidebarWidgets: ['now', 'clock', 'agenda'],
+  sidebarWidgets: ['now', 'clock', 'media', 'agenda'],
+  focusMediaUrl: 'https://youtu.be/4e839orj52w',
   sidebarWidth: 320,
   clockHeight: 160,
   clockTextScale: 1,
@@ -333,6 +334,10 @@ export const mergeSettings = (saved) => ({
       : Boolean(saved.animationsEnabled),
   sidebarVisible:
     saved?.sidebarVisible === undefined ? defaultSettings.sidebarVisible : Boolean(saved.sidebarVisible),
+  focusMediaUrl:
+    typeof saved?.focusMediaUrl === 'string' && saved.focusMediaUrl.trim()
+      ? saved.focusMediaUrl.trim().slice(0, 2048)
+      : defaultSettings.focusMediaUrl,
   sidebarWidth: Math.min(560, Math.max(240, Number(saved?.sidebarWidth) || defaultSettings.sidebarWidth)),
   clockHeight: Math.min(360, Math.max(96, Number(saved?.clockHeight) || defaultSettings.clockHeight)),
   clockTextScale: Math.min(

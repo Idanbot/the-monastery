@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { KanbanBoard, MobileFocusView, TaskListView } from '../board/TaskBoard';
 import { MobileBoardControls } from '../board/MobileBoardControls';
+import { MobileLaneBoard } from '../board/MobileLaneBoard';
 import { MonkModeView } from '../monk-mode/MonkModeView';
 import { TaskSearchInput } from '../TaskSearchInput';
 import { CalendarView } from '../calendar/CalendarView';
@@ -12,6 +13,7 @@ import { useTaskContext } from '../../contexts/TaskContext';
 import { useProfileContext } from '../../contexts/ProfileContext';
 import { useUIContext } from '../../contexts/UIContext';
 import { sendBrowserNotification } from '../../domain/notifications';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const ProjectsView = lazy(() =>
   import('../projects/ProjectsView').then((module) => ({ default: module.ProjectsView }))
@@ -68,6 +70,7 @@ export function WorkspaceContent() {
     selectUnifiedSearchResult
   } = useUIContext();
   const [focusPlannerOpen, setFocusPlannerOpen] = useState(false);
+  const isPhoneLayout = useMediaQuery('(max-width: 639px)');
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
@@ -238,26 +241,48 @@ export function WorkspaceContent() {
             />
           )}
           <div className={`min-h-0 flex-1 ${settings.mobileFocusMode ? 'hidden sm:flex' : 'flex'}`}>
-            <KanbanBoard
-              filteredTasks={filteredTasks}
-              settings={settings}
-              columnSorts={columnSorts}
-              cycleSort={cycleSort}
-              draggedTaskId={draggedTaskId}
-              dragOverInfo={dragOverInfo}
-              setDraggedTaskId={setDraggedTaskId}
-              setDragOverInfo={setDragOverInfo}
-              handleDragOver={handleDragOver}
-              handleDrop={handleDrop}
-              handleDragStart={handleDragStart}
-              onMoveTask={moveTask}
-              onReorderTask={reorderTask}
-              setSelectedTaskId={setSelectedTaskId}
-              keyboardFocusedTaskId={keyboardFocusedTaskId}
-              now={now}
-              startResize={startResize}
-              onToggleLane={toggleBoardLane}
-            />
+            {isPhoneLayout ? (
+              <MobileLaneBoard
+                filteredTasks={filteredTasks}
+                settings={settings}
+                columnSorts={columnSorts}
+                cycleSort={cycleSort}
+                draggedTaskId={draggedTaskId}
+                dragOverInfo={dragOverInfo}
+                setDraggedTaskId={setDraggedTaskId}
+                setDragOverInfo={setDragOverInfo}
+                handleDragOver={handleDragOver}
+                handleDrop={handleDrop}
+                handleDragStart={handleDragStart}
+                onMoveTask={moveTask}
+                onReorderTask={reorderTask}
+                setSelectedTaskId={setSelectedTaskId}
+                keyboardFocusedTaskId={keyboardFocusedTaskId}
+                now={now}
+                onToggleLane={toggleBoardLane}
+              />
+            ) : (
+              <KanbanBoard
+                filteredTasks={filteredTasks}
+                settings={settings}
+                columnSorts={columnSorts}
+                cycleSort={cycleSort}
+                draggedTaskId={draggedTaskId}
+                dragOverInfo={dragOverInfo}
+                setDraggedTaskId={setDraggedTaskId}
+                setDragOverInfo={setDragOverInfo}
+                handleDragOver={handleDragOver}
+                handleDrop={handleDrop}
+                handleDragStart={handleDragStart}
+                onMoveTask={moveTask}
+                onReorderTask={reorderTask}
+                setSelectedTaskId={setSelectedTaskId}
+                keyboardFocusedTaskId={keyboardFocusedTaskId}
+                now={now}
+                startResize={startResize}
+                onToggleLane={toggleBoardLane}
+              />
+            )}
           </div>
         </>
       )}

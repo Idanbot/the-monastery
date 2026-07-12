@@ -16,6 +16,7 @@ import { ProfileImportDialog } from './components/app/ProfileImportDialog';
 import { PlanningImportDialog } from './components/app/PlanningImportDialog';
 import { ImportPreviewDialog } from './components/app/ImportPreviewDialog';
 import { MobileAppShell } from './components/app/MobileAppShell';
+import { FocusMediaDock } from './components/media/FocusMediaDock';
 
 export default function App({ authEnabled }: { authEnabled?: boolean } = {}) {
   return (
@@ -36,6 +37,7 @@ export default function App({ authEnabled }: { authEnabled?: boolean } = {}) {
 function AppShell() {
   const {
     settings,
+    setSettings,
     isDarkMode,
     themeStyle,
     modalEffectStyle,
@@ -59,7 +61,15 @@ function AppShell() {
     removeActiveProfile
   } = useProfileContext();
 
-  const { isShortcutHelpOpen, setIsShortcutHelpOpen } = useUIContext();
+  const {
+    isShortcutHelpOpen,
+    setIsShortcutHelpOpen,
+    isMediaPlayerActive,
+    isMediaPlayerExpanded,
+    openMediaPlayer,
+    minimizeMediaPlayer,
+    stopMediaPlayer
+  } = useUIContext();
 
   return (
     <div
@@ -143,6 +153,16 @@ function AppShell() {
         </main>
 
         <MobileAppShell />
+
+        <FocusMediaDock
+          active={isMediaPlayerActive}
+          expanded={isMediaPlayerExpanded}
+          url={settings.focusMediaUrl}
+          onChangeUrl={(focusMediaUrl) => setSettings((previous) => ({ ...previous, focusMediaUrl }))}
+          onExpand={openMediaPlayer}
+          onMinimize={minimizeMediaPlayer}
+          onStop={stopMediaPlayer}
+        />
 
         <ShortcutHelpDialog open={isShortcutHelpOpen} onClose={() => setIsShortcutHelpOpen(false)} />
 

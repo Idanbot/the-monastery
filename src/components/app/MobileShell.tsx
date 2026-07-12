@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ListChecks,
   MoreHorizontal,
+  Music2,
   PanelRightOpen,
   Plus,
   Settings,
@@ -28,6 +29,7 @@ type Props = {
   onOpenSettings: () => void;
   onOpenProfiles: () => void;
   onOpenSidebar: () => void;
+  onOpenMedia: () => void;
   filterContent?: ReactNode;
 };
 
@@ -43,6 +45,7 @@ export function MobileShell({
   onOpenSettings,
   onOpenProfiles,
   onOpenSidebar,
+  onOpenMedia,
   filterContent
 }: Props) {
   const [moreOpen, setMoreOpen] = useState(false);
@@ -138,6 +141,7 @@ export function MobileShell({
                 icon={PanelRightOpen}
                 onClick={() => runAndClose(onOpenSidebar)}
               />
+              <MoreAction label="Music" icon={Music2} onClick={() => runAndClose(onOpenMedia)} />
               <MoreAction label="Profiles" icon={Users} onClick={() => runAndClose(onOpenProfiles)} />
               <MoreAction label="Settings" icon={Settings} onClick={() => runAndClose(onOpenSettings)} />
               {filterContent && (

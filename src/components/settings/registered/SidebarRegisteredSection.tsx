@@ -4,6 +4,7 @@ import type { RegisteredSectionProps } from './types';
 const widgets = [
   ['now', 'Now task'],
   ['clock', 'Clock'],
+  ['media', 'Focus media'],
   ['agenda', 'Timeline']
 ] as const;
 export default function SidebarRegisteredSection(props: RegisteredSectionProps) {

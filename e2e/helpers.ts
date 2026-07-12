@@ -1,7 +1,8 @@
 import { expect } from '@playwright/test';
 import { mergeSettings } from '../src/domain/tasks';
 
-export const api = (path: string) => 'http://127.0.0.1:3100' + path;
+export const api = (path: string) =>
+  (process.env.THE_MONASTERY_E2E_API_URL || 'http://127.0.0.1:3100') + path;
 
 export const expectStatus = async (response, expectedStatus: number) => {
   if (response.status() !== expectedStatus) {
@@ -32,7 +33,7 @@ export const resetServerState = async (
       showSeconds: false,
       layoutPreset: 'compact',
       collapseTasks: false,
-      sidebarWidgets: ['now', 'clock', 'agenda'],
+      sidebarWidgets: ['now', 'clock', 'media', 'agenda'],
       sidebarVisible: true,
       sidebarWidth: 320,
       clockHeight: 160,

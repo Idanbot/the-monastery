@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import {
   chooseTheme,
   completeBreathingIntro,
@@ -107,12 +107,13 @@ test('keyboard task movement remains visually stable', async ({ page }) => {
   });
 });
 
-test('expanded mobile board controls remain visually stable', async ({ page }) => {
+test('mobile lane tabs remain visually stable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await stabilizePage(page);
-  const controls = page.getByTestId('mobile-board-controls');
-  await controls.getByText('Board layout').click();
-  await controls.getByRole('button', { name: /customize lane order/i }).click();
-  await expect(controls).toHaveScreenshot('mobile-board-controls.png', screenshotOptions);
+  await createTask(page, 'Lane tab visual task');
+  await expect(page.getByTestId('mobile-lane-tabs')).toHaveScreenshot(
+    'mobile-lane-tabs.png',
+    screenshotOptions
+  );
 });

@@ -124,6 +124,7 @@ export const appSettingsSchema = z.object({
   clockFormat: z.enum(['12h', '24h']),
   showSeconds: z.boolean(),
   sidebarWidgets: z.array(z.string()),
+  focusMediaUrl: z.string().max(2048),
   sidebarWidth: z.number(),
   clockHeight: z.number(),
   clockTextScale: z.number(),

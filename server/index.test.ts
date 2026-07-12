@@ -56,6 +56,7 @@ const fullSettings = (overrides: Record<string, unknown> = {}) => ({
   clockFormat: '24h',
   showSeconds: true,
   sidebarWidgets: ['clock', 'agenda'],
+  focusMediaUrl: 'https://youtu.be/4e839orj52w',
   sidebarWidth: 320,
   clockHeight: 160,
   clockTextScale: 1,

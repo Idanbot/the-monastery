@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "tsx watch server/index.ts",
-    "typecheck": "tsc -b && tsc -p tsconfig.strict.json",
+    "typecheck": "tsc -b && tsc -p tsconfig.strict.json && tsc -p tsconfig.e2e.json",
     "build": "tsc -p tsconfig.app.json --noEmit && vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "build:all": "npm run build && npm run build:server",

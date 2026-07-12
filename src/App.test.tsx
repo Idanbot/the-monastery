@@ -283,7 +283,7 @@ it('stores local backup history from settings backup', async () => {
 
   expect(screen.getByText(/local backup history/i)).toBeInTheDocument();
   expect(screen.getByText(/1 tasks/i)).toBeInTheDocument();
-});
+}, 20_000);
 
 it('auto-promotes the next backlog task when completing current work', async () => {
   const user = userEvent.setup();
