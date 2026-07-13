@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { FocusReactPlayer as ReactPlayer } from './FocusReactPlayer';
 import { ChevronDown, ExternalLink, Maximize2, Music2, Square, Upload } from 'lucide-react';
 import { parseFocusMediaUrl } from '../../domain/focusMedia';
 
@@ -14,20 +15,29 @@ type Props = {
 
 export function FocusMediaDock({ active, expanded, url, onChangeUrl, onExpand, onMinimize, onStop }: Props) {
   const [draftUrl, setDraftUrl] = useState(url);
-  const [error, setError] = useState('');
+  const [validationError, setValidationError] = useState('');
+  const [playbackError, setPlaybackError] = useState('');
   const media = parseFocusMediaUrl(url);
+  const playbackUrl =
+    media.kind === 'youtube' ? media.embedUrl : media.kind === 'audio' ? media.sourceUrl : '';
+  const playerLabel = media.kind === 'audio' ? 'Focus audio player' : 'Focus media video';
 
-  useEffect(() => setDraftUrl(url), [url]);
+  useEffect(() => {
+    setDraftUrl(url);
+    setValidationError('');
+    setPlaybackError('');
+  }, [url]);
 
   if (!active) return null;
 
   const loadMedia = () => {
     const next = parseFocusMediaUrl(draftUrl);
     if (next.kind === 'unsupported') {
-      setError('Use a YouTube link or a direct audio file URL.');
+      setValidationError('Use a YouTube link or a direct audio file URL.');
       return;
     }
-    setError('');
+    setValidationError('');
+    setPlaybackError('');
     onChangeUrl(next.sourceUrl);
   };
 
@@ -80,28 +90,41 @@ export function FocusMediaDock({ active, expanded, url, onChangeUrl, onExpand, o
 
       <div className={expanded ? 'block' : 'hidden'}>
         <div className="bg-black">
-          {media.kind === 'youtube' && (
-            <iframe
-              title="Focus media video"
-              src={media.embedUrl}
-              className="aspect-video w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              referrerPolicy="strict-origin-when-cross-origin"
-            />
-          )}
-          {media.kind === 'audio' && (
-            <div className="p-4">
-              <audio
-                aria-label="Focus audio player"
-                src={media.sourceUrl}
+          {media.kind !== 'unsupported' ? (
+            <div
+              data-testid="focus-media-player"
+              data-source={playbackUrl}
+              title={playerLabel}
+              aria-label={playerLabel}
+              className={media.kind === 'youtube' ? 'aspect-video w-full' : 'p-4'}
+            >
+              <ReactPlayer
+                src={playbackUrl}
                 controls
+                playsInline
                 preload="metadata"
-                className="w-full"
+                width="100%"
+                height={media.kind === 'youtube' ? '100%' : 54}
+                config={{
+                  youtube: { rel: 0, referrerpolicy: 'strict-origin-when-cross-origin' }
+                }}
+                fallback={
+                  <div
+                    role="status"
+                    className="grid h-full min-h-14 place-items-center text-sm text-slate-300"
+                  >
+                    Loading media...
+                  </div>
+                }
+                onReady={() => setPlaybackError('')}
+                onError={() =>
+                  setPlaybackError(
+                    'This media could not be played here. Try another URL or open it at the source.'
+                  )
+                }
               />
             </div>
-          )}
-          {media.kind === 'unsupported' && (
+          ) : (
             <div className="grid aspect-video place-items-center px-6 text-center text-sm text-slate-300">
               Load a YouTube link or direct audio file.
             </div>
@@ -140,9 +163,9 @@ export function FocusMediaDock({ active, expanded, url, onChangeUrl, onExpand, o
               <Upload size={16} />
             </button>
           </div>
-          {error && (
+          {(validationError || playbackError) && (
             <p role="alert" className="text-xs text-rose-600">
-              {error}
+              {validationError || playbackError}
             </p>
           )}
           {media.kind === 'youtube' && (

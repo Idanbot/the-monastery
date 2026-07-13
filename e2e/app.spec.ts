@@ -1146,7 +1146,7 @@ test('plays and persists focus media while allowing a minimized player', async (
   const dock = page.getByTestId('focus-media-dock');
   await expect(dock).toHaveAttribute('data-expanded', 'true');
   await expect(page.getByTitle('Focus media video')).toHaveAttribute(
-    'src',
+    'data-source',
     /youtube-nocookie\.com\/embed\/4e839orj52w/
   );
 
@@ -1157,7 +1157,7 @@ test('plays and persists focus media while allowing a minimized player', async (
   await page.getByRole('button', { name: 'Load media' }).click();
   await saved;
   await expect(page.getByLabel('Focus audio player')).toHaveAttribute(
-    'src',
+    'data-source',
     'https://media.example/focus.mp3'
   );
 
@@ -1171,7 +1171,7 @@ test('plays and persists focus media while allowing a minimized player', async (
   await page.reload();
   await page.getByRole('button', { name: /focus media/i }).click();
   await expect(page.getByLabel('Focus audio player')).toHaveAttribute(
-    'src',
+    'data-source',
     'https://media.example/focus.mp3'
   );
 });

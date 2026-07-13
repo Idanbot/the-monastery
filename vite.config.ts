@@ -32,9 +32,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        // Analytics is loaded on demand. Keep its chart-heavy chunks out of the
-        // install precache, then cache them after the first analytics visit.
-        globIgnores: ['**/charts-*.js', '**/AnalyticsView-*.js'],
+        // Analytics and the YouTube provider are loaded on demand, then cached
+        // after first use instead of inflating the install precache.
+        globIgnores: ['**/charts-*.js', '**/AnalyticsView-*.js', '**/media-player-youtube-*.js'],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.destination === 'script',
@@ -61,6 +61,10 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
+          if (id.includes('/react-player/')) return 'media-player';
+          if (id.includes('/youtube-video-element/') || id.includes('/media-played-ranges-mixin/')) {
+            return 'media-player-youtube';
+          }
           if (id.includes('/react/') || id.includes('/react-dom/')) return 'react';
           if (id.includes('@react-three') || id.includes('/three/')) return 'three';
           if (id.includes('/recharts/') || id.includes('/d3-') || id.includes('/d3/')) return 'charts';
