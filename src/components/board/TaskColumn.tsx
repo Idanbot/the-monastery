@@ -51,14 +51,15 @@ export function TaskColumn({
     <div
       data-testid={`board-column-${status}`}
       data-collapsed={collapsed ? 'true' : 'false'}
-      className={`flex ${collapsed ? 'h-auto min-h-0 self-start' : 'h-full min-h-[14rem] sm:min-h-0'} flex-col overflow-hidden rounded-xl border border-slate-200 bg-slate-200/50 dark:border-slate-800/60 dark:bg-slate-800/40`}
+      data-task-status={status}
+      className={`task-lane flex ${collapsed ? 'h-auto min-h-0 self-start' : 'h-full min-h-[14rem] sm:min-h-0'} flex-col overflow-hidden rounded-xl border`}
       onDragOver={(e) => handleDragOver(e, status)}
       onDrop={(e) => handleDrop(e, status)}
     >
-      <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/50 px-3 py-2 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/80">
+      <div className="task-lane-header flex shrink-0 items-center justify-between border-b px-3 py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
-            <div className={`h-2 w-2 shrink-0 rounded-full ${statusColorClass(status)}`}></div>
+            <div className={`task-status-dot h-2 w-2 shrink-0 rounded-full ${statusColorClass(status)}`} />
             <span className="truncate">{statusLabels[status]}</span>
           </h2>
           <button
@@ -72,9 +73,7 @@ export function TaskColumn({
           </button>
         </div>
         <div className="flex items-center gap-1">
-          <span
-            className={`rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300 ${collapsed ? 'hidden' : ''}`}
-          >
+          <span className={`ui-muted-chip text-xs font-medium ${collapsed ? 'hidden' : ''}`}>
             {filtered.length}
           </span>
           <button
@@ -91,7 +90,7 @@ export function TaskColumn({
       </div>
 
       {!collapsed && (
-        <div className="custom-scrollbar relative flex-1 space-y-2 overflow-y-auto p-2">
+        <div className="custom-scrollbar relative flex-1 space-y-2 overflow-y-auto p-2.5">
           {filtered.map((task) => {
             const isActive = task.activeLogStart || task.subtasks.some((subtask) => subtask.activeLogStart);
             const isDragOverTop = dragOverInfo?.id === task.id && dragOverInfo?.position === 'top';
@@ -143,8 +142,9 @@ export function TaskColumn({
                       setSelectedTaskId(task.id);
                     }
                   }}
-                  className={`group cursor-pointer overflow-hidden rounded-lg border bg-white shadow-sm transition-all dark:bg-slate-900 ${settings.collapseTasks ? 'p-2' : 'p-3'} ${isDragging ? 'opacity-50 grayscale' : ''} ${isKeyboardFocused ? 'border-amber-300 ring-2 ring-amber-400' : ''}
-                  ${isActive ? 'border-indigo-400 ring-1 ring-indigo-400/30' : 'border-slate-200 hover:border-indigo-300 dark:border-slate-700/80 dark:hover:border-indigo-600'}
+                  data-task-card="true"
+                  data-active={isActive ? 'true' : 'false'}
+                  className={`task-card group cursor-pointer overflow-hidden rounded-xl border ${settings.collapseTasks ? 'p-2.5' : 'p-3'} ${isDragging ? 'opacity-50 grayscale' : ''} ${isKeyboardFocused ? 'ring-2 ring-[var(--ui-warning)]' : ''}
                 `}
                 >
                   {isActive && (
@@ -157,7 +157,7 @@ export function TaskColumn({
                     <div className="flex min-w-0 items-center gap-1.5 pr-2">
                       <GripHorizontal
                         size={14}
-                        className="shrink-0 cursor-grab text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-slate-600"
+                        className="hidden shrink-0 cursor-grab text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-slate-600 md:block"
                       />
                       <h3
                         className={`truncate text-sm font-semibold leading-tight ${task.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-slate-200'}`}
@@ -166,7 +166,7 @@ export function TaskColumn({
                       </h3>
                     </div>
                     <div
-                      className="flex shrink-0 items-center gap-0.5"
+                      className="task-card-actions hidden shrink-0 items-center gap-0.5 md:flex md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
                       onClick={(event) => event.stopPropagation()}
                     >
                       <button
@@ -215,7 +215,7 @@ export function TaskColumn({
                   </div>
 
                   {!settings.collapseTasks && isActive && (
-                    <div className="mb-2 mt-2 flex items-center justify-between rounded border border-indigo-100 bg-indigo-50 p-1.5 text-indigo-700 shadow-inner dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400">
+                    <div className="task-active-strip mb-2 mt-2 flex items-center justify-between rounded-lg border p-1.5">
                       <div className="flex items-center gap-1 text-xs font-medium">
                         <Play size={10} className="animate-pulse" fill="currentColor" /> Active
                       </div>
@@ -229,12 +229,12 @@ export function TaskColumn({
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <UrgencyBadge urgency={task.urgency} />
                       {task.scheduledStart && (
-                        <div className="rounded bg-slate-100 px-1.5 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                        <div className="task-meta rounded-md px-1.5 py-0.5 text-[10px]">
                           {task.scheduledStart}
                         </div>
                       )}
                       {task.subtasks?.length > 0 && (
-                        <div className="flex items-center gap-0.5 rounded bg-slate-100 px-1.5 text-[10px] text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                        <div className="task-meta flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px]">
                           <CheckSquare size={10} />{' '}
                           {task.subtasks.filter((subtask) => subtask.status === 'done').length}/
                           {task.subtasks.length}
@@ -245,16 +245,18 @@ export function TaskColumn({
 
                   {!settings.collapseTasks && taskTags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
-                      {taskTags.slice(0, 3).map((tag) => (
+                      {taskTags.slice(0, 2).map((tag) => (
                         <span
                           key={tag}
-                          className="max-w-[60px] truncate rounded bg-slate-100 px-1 text-[9px] text-slate-500 dark:bg-slate-800"
+                          className="task-tag max-w-24 truncate rounded-md px-1.5 py-0.5 text-[10px]"
                         >
                           {tag}
                         </span>
                       ))}
-                      {taskTags.length > 3 && (
-                        <span className="text-[9px] text-slate-400">+{taskTags.length - 3}</span>
+                      {taskTags.length > 2 && (
+                        <span className="text-[10px] text-[var(--ui-text-secondary)]">
+                          +{taskTags.length - 2}
+                        </span>
                       )}
                     </div>
                   )}
@@ -267,8 +269,8 @@ export function TaskColumn({
             );
           })}
           {filtered.length === 0 && !dragOverInfo && (
-            <div className="mx-2 flex h-20 flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 text-xs italic text-slate-400 opacity-50 dark:border-slate-700">
-              No tasks found
+            <div className="mx-2 flex h-20 flex-col items-center justify-center rounded-xl border border-dashed border-[var(--ui-border-strong)] text-xs text-[var(--ui-text-secondary)] opacity-70">
+              No tasks
             </div>
           )}
         </div>

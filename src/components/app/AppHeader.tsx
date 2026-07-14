@@ -32,6 +32,7 @@ export function AppHeader() {
 
   const {
     addTask,
+    currentTask,
     setSelectedTaskId,
     tagPool,
     activeFilters,
@@ -117,36 +118,92 @@ export function AppHeader() {
     <>
       <header
         data-material="control"
-        className="app-header z-[70] hidden shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:flex lg:px-4"
+        className="app-header relative z-[70] hidden shrink-0 flex-col border-b md:flex"
       >
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            aria-label="Go to board"
-            onClick={() => {
-              setMonkMode(false);
-              setView('board');
-              setSidebarOpen(false);
-            }}
-            className="flex items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          >
-            <span className="rounded-lg bg-indigo-600 p-1.5 text-white shadow-sm">
-              <Activity size={18} />
-            </span>
-            <h1 className="hidden text-base font-bold leading-none text-slate-800 dark:text-white xl:block">
-              TheMonastery
-            </h1>
-          </button>
-          <div
-            data-testid="app-version-chip"
-            title={`Version ${visibleVersion(frontendVersion)}`}
-            className="hidden items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] text-slate-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-400 2xl:flex"
-          >
-            {visibleVersion(frontendVersion)}
+        <div data-testid="app-primary-bar" className="flex min-h-14 items-center gap-3 px-3 lg:px-4">
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
+            <button
+              type="button"
+              aria-label="Go to board"
+              onClick={() => {
+                setMonkMode(false);
+                setView('board');
+                setSidebarOpen(false);
+              }}
+              className="ui-focus-ring flex items-center gap-2 rounded-xl text-left"
+            >
+              <span className="ui-accent-button flex h-9 w-9 items-center justify-center rounded-xl">
+                <Activity size={18} />
+              </span>
+              <h1 className="hidden text-[15px] font-semibold leading-none lg:block">TheMonastery</h1>
+            </button>
+            <div
+              data-testid="app-version-chip"
+              title={`Version ${visibleVersion(frontendVersion)}`}
+              className="ui-muted-chip hidden font-mono text-[10px] xl:inline-flex"
+            >
+              {visibleVersion(frontendVersion)}
+            </div>
+          </div>
+
+          <div className="flex min-w-0 flex-1 justify-center px-2">
+            {currentTask ? (
+              <button
+                type="button"
+                aria-label={`Open current work ${currentTask.title || 'Untitled task'}`}
+                onClick={() => setSelectedTaskId(currentTask.id)}
+                className="ui-current-work ui-focus-ring flex min-w-0 max-w-md items-center gap-2 rounded-full px-3 py-1.5 text-left"
+              >
+                <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--ui-success)]" />
+                <span className="truncate text-xs font-semibold">{currentTask.title || 'Untitled task'}</span>
+                <span className="hidden shrink-0 text-[10px] text-[var(--ui-text-secondary)] xl:inline">
+                  Current work
+                </span>
+              </button>
+            ) : (
+              <span className="hidden text-xs text-[var(--ui-text-secondary)] xl:block">
+                Choose one task. Give it your full attention.
+              </span>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              aria-label={settings.monkMode ? 'Exit monk mode' : 'Enter monk mode'}
+              title={settings.monkMode ? 'Exit monk mode' : 'Enter monk mode'}
+              onClick={() => setMonkMode(!settings.monkMode)}
+              className={`ui-icon-button ${settings.monkMode ? 'ui-icon-button-active' : ''}`}
+            >
+              <Target size={17} />
+            </button>
+            <button
+              aria-label="Open command palette"
+              aria-expanded={isCommandOpen}
+              title="Command palette (Ctrl+K)"
+              onClick={() => setIsCommandOpen(true)}
+              className="ui-icon-button"
+            >
+              <Command size={18} />
+            </button>
+            <button aria-label="Open settings" onClick={() => openSettings()} className="ui-icon-button">
+              <Settings size={18} />
+            </button>
+            <button
+              aria-label="Backlog task"
+              onClick={() => addTask('backlog', {}, (newTask) => setSelectedTaskId(newTask.id))}
+              className="ui-accent-button flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-semibold"
+            >
+              <Plus size={16} /> <span>Task</span>
+            </button>
           </div>
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-1 lg:gap-2">
+        <div
+          data-testid="workspace-toolbar"
+          role="toolbar"
+          aria-label="Workspace controls"
+          className="workspace-toolbar flex min-h-12 items-center gap-2 border-t px-3 py-1.5 lg:px-4"
+        >
           <ViewSwitcher view={view} onChange={setView} disabled={settings.monkMode} />
           <TaskSearchInput
             value={searchQuery}
@@ -157,142 +214,120 @@ export function AppHeader() {
             loading={unifiedSearchLoading}
             onSelectResult={selectUnifiedSearchResult}
           />
-          {isBackendAvailable && (
-            <div className="relative hidden 2xl:block">
-              <ThemedSurface
-                as="button"
-                variant="menuTrigger"
-                ref={setProfileReference}
-                type="button"
-                data-testid="active-profile-control"
-                data-active-profile-id={activeProfileId}
-                title="Active profile"
-                onClick={() => setIsProfileOpen((open) => !open)}
-                className="flex max-w-40 items-center gap-2 rounded-lg border px-2 py-1.5 text-sm font-medium"
-              >
-                <Users size={15} className="shrink-0 text-slate-400" />
-                <span className="min-w-0 truncate">{activeProfile?.name || 'Profile'}</span>
-                <ChevronDown size={14} className="shrink-0 text-slate-400" />
-                {!isProfileReady && <span className="text-[10px] text-slate-400">syncing</span>}
-              </ThemedSurface>
-              {isProfileOpen && (
+
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            {!settings.monkMode && (
+              <div>
                 <ThemedSurface
-                  variant="menu"
-                  ref={setProfileFloating}
-                  style={profileFloatingStyles}
-                  className="z-[90] flex w-64 flex-col gap-1 rounded-xl border p-2 shadow-2xl"
+                  as="button"
+                  variant="menuTrigger"
+                  ref={setFilterReference}
+                  aria-label="Filters"
+                  title="Filter tasks"
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className={`ui-icon-button relative ${activeFilters.length ? 'ui-icon-button-active' : ''}`}
                 >
-                  <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Profiles
-                  </div>
-                  {profiles.map((profile: any) => (
-                    <button
-                      key={profile.id}
-                      type="button"
-                      onClick={() => {
-                        selectProfile(profile.id);
-                        setIsProfileOpen(false);
-                      }}
-                      className={`w-full rounded-lg px-2.5 py-2 text-left text-sm ${profile.id === activeProfileId ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}
-                    >
-                      <span className="block truncate font-medium">{profile.name}</span>
-                      <span className="block text-[10px] text-slate-400">{profile.taskCount ?? 0} tasks</span>
-                    </button>
-                  ))}
+                  <Filter size={16} />
+                  {activeFilters.length > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--ui-info)] px-1 text-[9px] text-white">
+                      {activeFilters.length}
+                    </span>
+                  )}
                 </ThemedSurface>
-              )}
-            </div>
-          )}
-          {!settings.monkMode && (
-            <div className="block">
-              <ThemedSurface
-                as="button"
-                variant="menuTrigger"
-                ref={setFilterReference}
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className={`flex items-center gap-1 rounded-lg border p-2 text-sm font-medium ${activeFilters.length ? 'border-indigo-200 text-indigo-700 dark:border-indigo-700 dark:text-indigo-400' : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}
-              >
-                <Filter size={16} /> <span className="sr-only 2xl:not-sr-only">Filters</span>
-                {activeFilters.length > 0 && (
-                  <span className="rounded-full bg-indigo-500 px-1.5 text-[10px] text-white">
-                    {activeFilters.length}
-                  </span>
+                {isFilterOpen && (
+                  <ThemedSurface
+                    variant="menu"
+                    ref={setFilterFloating}
+                    style={filterFloatingStyles}
+                    className="z-[90] flex w-72 flex-col gap-2 rounded-2xl border p-3"
+                  >
+                    <TagFilterMenu
+                      knownTags={tagPool}
+                      activeFilters={activeFilters}
+                      onToggleTag={(tag) =>
+                        setActiveFilters((previous) =>
+                          previous.includes(tag)
+                            ? previous.filter((item) => item !== tag)
+                            : [...previous, tag]
+                        )
+                      }
+                      onClear={() => setActiveFilters([])}
+                    />
+                  </ThemedSurface>
                 )}
-              </ThemedSurface>
-              {isFilterOpen && (
-                <ThemedSurface
-                  variant="menu"
-                  ref={setFilterFloating}
-                  style={filterFloatingStyles}
-                  className="z-[90] flex w-64 flex-col gap-2 rounded-xl border p-3 shadow-2xl"
-                >
-                  <TagFilterMenu
-                    knownTags={tagPool}
-                    activeFilters={activeFilters}
-                    onToggleTag={(tag) =>
-                      setActiveFilters((previous) =>
-                        previous.includes(tag) ? previous.filter((item) => item !== tag) : [...previous, tag]
-                      )
-                    }
-                    onClear={() => setActiveFilters([])}
-                  />
-                </ThemedSurface>
-              )}
-            </div>
-          )}
-          {!isOnline && (
-            <div
-              data-testid="offline-status"
-              className="hidden rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300 2xl:block"
+              </div>
+            )}
+
+            <button
+              aria-label={isSidebarVisible ? 'Hide right container' : 'Show right container'}
+              title={isSidebarVisible ? 'Hide right container' : 'Show right container'}
+              onClick={toggleSidebarVisible}
+              className={`ui-icon-button ${isSidebarVisible ? '' : 'ui-icon-button-active'}`}
             >
-              Offline ready
-            </div>
-          )}
-          <PersistenceStatusChip
-            status={persistenceStatus as any}
-            lastSavedAt={lastSavedAt ? new Date(lastSavedAt) : null}
-            errorMessage={profileError}
-          />
-          <button
-            aria-label={settings.monkMode ? 'Exit monk mode' : 'Enter monk mode'}
-            onClick={() => setMonkMode(!settings.monkMode)}
-            className={`hidden items-center gap-2 rounded-lg border p-2 text-sm font-medium xl:flex 2xl:px-3 ${settings.monkMode ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}
-          >
-            <Target size={16} /> <span className="hidden 2xl:inline">Monk</span>
-          </button>
-          <button
-            aria-label={isSidebarVisible ? 'Hide right container' : 'Show right container'}
-            title={isSidebarVisible ? 'Hide right container' : 'Show right container'}
-            onClick={toggleSidebarVisible}
-            className={`hidden rounded-lg border p-2 xl:flex ${isSidebarVisible ? 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300' : 'border-indigo-600 bg-indigo-600 text-white'}`}
-          >
-            {isSidebarVisible ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-          </button>
-          <button
-            aria-label="Open command palette"
-            aria-expanded={isCommandOpen}
-            title="Command palette (Ctrl+K)"
-            onClick={() => setIsCommandOpen(true)}
-            className="hidden rounded-lg p-2 text-slate-500 2xl:block"
-          >
-            <Command size={18} />
-          </button>
-          <button
-            aria-label="Open settings"
-            onClick={() => openSettings()}
-            className="rounded-lg p-2 text-slate-500"
-          >
-            <Settings size={18} />
-          </button>
-          <button
-            aria-label="Backlog task"
-            onClick={() => {
-              addTask('backlog', {}, (newTask) => setSelectedTaskId(newTask.id));
-            }}
-            className="flex shrink-0 items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm"
-          >
-            <Plus size={16} /> <span>Task</span>
-          </button>
+              {isSidebarVisible ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+            </button>
+
+            {isBackendAvailable && (
+              <div className="relative hidden lg:block">
+                <ThemedSurface
+                  as="button"
+                  variant="menuTrigger"
+                  ref={setProfileReference}
+                  type="button"
+                  data-testid="active-profile-control"
+                  data-active-profile-id={activeProfileId}
+                  title="Active profile"
+                  onClick={() => setIsProfileOpen((open) => !open)}
+                  className="ui-control flex h-9 max-w-44 items-center gap-2 rounded-xl px-2.5 text-xs font-semibold"
+                >
+                  <Users size={15} className="shrink-0" />
+                  <span className="min-w-0 truncate">{activeProfile?.name || 'Profile'}</span>
+                  <ChevronDown size={14} className="shrink-0" />
+                  {!isProfileReady && <span className="sr-only">syncing</span>}
+                </ThemedSurface>
+                {isProfileOpen && (
+                  <ThemedSurface
+                    variant="menu"
+                    ref={setProfileFloating}
+                    style={profileFloatingStyles}
+                    className="z-[90] flex w-64 flex-col gap-1 rounded-2xl border p-2"
+                  >
+                    <div className="ui-eyebrow px-2 py-1">Profiles</div>
+                    {profiles.map((profile: any) => (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        onClick={() => {
+                          selectProfile(profile.id);
+                          setIsProfileOpen(false);
+                        }}
+                        className={`ui-menu-item w-full rounded-xl px-2.5 py-2 text-left text-sm ${profile.id === activeProfileId ? 'ui-menu-item-active' : ''}`}
+                      >
+                        <span className="block truncate font-medium">{profile.name}</span>
+                        <span className="block text-[10px] text-[var(--ui-text-secondary)]">
+                          {profile.taskCount ?? 0} tasks
+                        </span>
+                      </button>
+                    ))}
+                  </ThemedSurface>
+                )}
+              </div>
+            )}
+
+            {!isOnline && (
+              <div
+                data-testid="offline-status"
+                className="ui-muted-chip hidden text-xs font-semibold text-[var(--ui-warning)] xl:flex"
+              >
+                Offline ready
+              </div>
+            )}
+            <PersistenceStatusChip
+              status={persistenceStatus as any}
+              lastSavedAt={lastSavedAt ? new Date(lastSavedAt) : null}
+              errorMessage={profileError}
+            />
+          </div>
         </div>
       </header>
       <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} groups={commandPaletteGroups} />

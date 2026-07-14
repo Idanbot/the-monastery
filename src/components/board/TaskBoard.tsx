@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Repeat } from 'lucide-react';
+import { CalendarDays, Check, CirclePlay, Repeat, SkipForward, X } from 'lucide-react';
 import { UrgencyBadge } from '../UrgencyBadge';
 import { cssVars } from '../../lib/cssVars';
 import {
@@ -139,7 +139,7 @@ export function TaskListView({
       data-testid="virtualized-task-list"
       data-total-items={rows.length}
       data-virtual-items={virtualRows.length}
-      className="custom-scrollbar h-full overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+      className="ui-surface custom-scrollbar h-full overflow-y-auto rounded-xl border"
     >
       <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
         {virtualRows.map((virtualRow) => {
@@ -152,16 +152,16 @@ export function TaskListView({
               style={{ height: `${virtualRow.size}px`, transform: `translateY(${virtualRow.start}px)` }}
             >
               {row.type === 'header' && (
-                <div className="flex h-full items-center justify-between border-b border-slate-200 bg-slate-50 px-3 dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex h-full items-center justify-between border-b border-[var(--ui-border-subtle)] bg-[var(--ui-surface-muted)] px-3">
                   <h2 className="flex items-center gap-2 text-sm font-bold">
                     <span className={`h-2 w-2 rounded-full ${statusColorClass(row.status)}`}></span>
                     {statusLabels[row.status]}
                   </h2>
-                  <span className="text-xs font-medium text-slate-500">{row.count}</span>
+                  <span className="text-xs font-medium text-[var(--ui-text-secondary)]">{row.count}</span>
                 </div>
               )}
               {row.type === 'empty' && (
-                <div className="flex h-full items-center justify-center border-b border-slate-100 text-xs text-slate-400 dark:border-slate-800">
+                <div className="flex h-full items-center justify-center border-b border-[var(--ui-border-subtle)] text-xs text-[var(--ui-text-secondary)]">
                   No tasks found
                 </div>
               )}
@@ -175,11 +175,11 @@ export function TaskListView({
                   return (
                     <div
                       role="listitem"
-                      className="h-full border-b border-slate-100 px-3 py-3 dark:border-slate-800"
+                      className="h-full border-b border-[var(--ui-border-subtle)] px-3 py-3"
                     >
                       <button
                         onClick={() => setSelectedTaskId(task.id)}
-                        className="w-full rounded-lg text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                        className="ui-focus-ring w-full rounded-lg text-left transition-colors hover:bg-[var(--ui-control)]"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -190,10 +190,7 @@ export function TaskListView({
                             </div>
                             <div className="mt-1 flex flex-wrap gap-1.5">
                               {taskTags.slice(0, 4).map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500 dark:bg-slate-800"
-                                >
+                                <span key={tag} className="task-tag rounded-md px-1.5 py-0.5 text-[10px]">
                                   {tag}
                                 </span>
                               ))}
@@ -270,22 +267,44 @@ export function MobileFocusView({
   const inProgress = filteredTasks.filter((task) => task.status === 'in-progress');
   const queued = inProgress.filter((task) => task.id !== currentTask?.id);
   const nextTask = queued[0];
+  const visibleQueued = queued.slice(0, 3);
+  const hiddenQueuedCount = Math.max(0, queued.length - visibleQueued.length);
+  const todayLabel = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric'
+  }).format(new Date(now));
 
   return (
     <div data-testid="mobile-focus-view" className="custom-scrollbar h-full overflow-y-auto pb-4 sm:hidden">
-      <section className="mb-3 rounded-xl border border-indigo-200 bg-white p-4 shadow-sm dark:border-indigo-800 dark:bg-slate-900">
-        <div className="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-500">Current</div>
+      <header className="mb-3 flex items-end justify-between px-1 pt-1">
+        <div>
+          <div className="ui-eyebrow">Focus workspace</div>
+          <h1 className="mt-0.5 text-2xl font-semibold text-[var(--ui-text-primary)]">Today</h1>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs text-[var(--ui-text-secondary)]">
+          <CalendarDays size={14} /> {todayLabel}
+        </div>
+      </header>
+
+      <section className="mobile-current-card ui-surface mb-3 rounded-2xl border p-4 shadow-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <div className="ui-eyebrow text-[var(--ui-info)]">Current focus</div>
+          <span className="ui-muted-chip text-[10px]">{queued.length} up next</span>
+        </div>
         {currentTask ? (
           <>
             <button
               type="button"
               aria-label={`Open current task ${currentTask.title}`}
               onClick={() => setSelectedTaskId(currentTask.id)}
-              className="min-h-16 w-full rounded-xl bg-indigo-600 px-4 py-3 text-left text-lg font-semibold text-white"
+              className="ui-focus-ring w-full rounded-xl py-2 text-left"
             >
-              <span className="block">{currentTask.title || 'Untitled Task'}</span>
+              <span className="block text-xl font-semibold leading-snug text-[var(--ui-text-primary)]">
+                {currentTask.title || 'Untitled Task'}
+              </span>
               {currentTask.activeLogStart && (
-                <span className="mt-1 block font-mono text-sm text-indigo-100">
+                <span className="mt-1 block font-mono text-sm tabular-nums text-[var(--ui-success)]">
                   {formatLiveTimer(currentTask.activeLogStart, now)}
                 </span>
               )}
@@ -295,62 +314,90 @@ export function MobileFocusView({
                 type="button"
                 aria-label={currentTask.activeLogStart ? 'Stop current task' : 'Start current task'}
                 onClick={() => onStartTask(currentTask.id)}
-                className="min-h-12 rounded-xl bg-emerald-600 px-3 py-2 text-base font-semibold text-white"
+                className="mobile-action mobile-action-primary"
               >
+                {currentTask.activeLogStart ? <X size={18} /> : <CirclePlay size={18} />}
                 {currentTask.activeLogStart ? 'Stop' : 'Start'}
               </button>
               <button
                 type="button"
                 aria-label="Complete current task"
                 onClick={() => onCompleteTask(currentTask.id)}
-                className="min-h-12 rounded-xl bg-indigo-600 px-3 py-2 text-base font-semibold text-white"
+                className="mobile-action mobile-action-primary"
               >
-                Done
+                <Check size={18} /> Done
               </button>
               <button
                 type="button"
                 aria-label="Reject current task"
                 onClick={() => onRejectTask(currentTask.id)}
-                className="min-h-12 rounded-xl border border-rose-300 px-3 py-2 text-base font-semibold text-rose-700 dark:border-rose-700 dark:text-rose-300"
+                className="mobile-action mobile-action-secondary text-[var(--ui-danger)]"
               >
-                Reject
+                <X size={18} /> Reject
               </button>
               <button
                 type="button"
                 aria-label="Start next task"
                 disabled={!nextTask}
                 onClick={() => nextTask && onNextTask(nextTask.id)}
-                className="min-h-12 rounded-xl border border-slate-300 px-3 py-2 text-base font-semibold text-slate-700 disabled:opacity-40 dark:border-slate-700 dark:text-slate-200"
+                className="mobile-action mobile-action-secondary disabled:opacity-40"
               >
-                Next
+                <SkipForward size={18} /> Next
               </button>
             </div>
           </>
         ) : (
-          <div className="py-3 text-base text-slate-500">No current task</div>
+          <div className="py-4">
+            <div className="text-lg font-semibold text-[var(--ui-text-primary)]">No current task</div>
+            <div className="mt-1 text-sm text-[var(--ui-text-secondary)]">
+              Start one item and keep the rest out of sight.
+            </div>
+            {nextTask && (
+              <button
+                type="button"
+                onClick={() => onNextTask(nextTask.id)}
+                className="mobile-action mobile-action-primary mt-4 w-full"
+              >
+                <CirclePlay size={18} /> Start first task
+              </button>
+            )}
+          </div>
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <section className="ui-surface rounded-2xl border p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">In-Progress</h2>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            {queued.length}
-          </span>
+          <div>
+            <div className="ui-eyebrow">Queue</div>
+            <h2 className="text-base font-semibold text-[var(--ui-text-primary)]">Up next</h2>
+          </div>
+          <span className="ui-muted-chip text-sm font-semibold">{queued.length}</span>
         </div>
         <div className="space-y-2">
-          {queued.map((task) => (
+          {visibleQueued.map((task, index) => (
             <button
               key={task.id}
               type="button"
               onClick={() => setSelectedTaskId(task.id)}
-              className="min-h-14 w-full rounded-xl border border-slate-200 px-4 py-3 text-left text-base font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-100"
+              className="ui-control ui-focus-ring flex min-h-14 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left"
             >
-              {task.title || 'Untitled Task'}
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--ui-surface-raised)] text-xs font-semibold text-[var(--ui-text-secondary)]">
+                {index + 1}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-base font-semibold">
+                {task.title || 'Untitled Task'}
+              </span>
             </button>
           ))}
+          {hiddenQueuedCount > 0 && (
+            <div className="pt-1 text-center text-xs font-medium text-[var(--ui-text-secondary)]">
+              {hiddenQueuedCount} more in Board
+            </div>
+          )}
           {queued.length === 0 && (
-            <div className="py-4 text-center text-base text-slate-400">No tasks up next</div>
+            <div className="py-4 text-center text-sm text-[var(--ui-text-secondary)]">
+              Your focus queue is clear.
+            </div>
           )}
         </div>
       </section>

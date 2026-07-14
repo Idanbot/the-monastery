@@ -20,18 +20,18 @@ export function MobileBoardControls({ settings, setSettings }: Props) {
     }));
 
   return (
-    <div data-testid="mobile-board-controls" className="mb-2 space-y-2 lg:hidden">
+    <div data-testid="mobile-board-controls" className="mb-2 flex flex-col items-end gap-2 lg:hidden">
       <button
         type="button"
         aria-label={settings.mobileFocusMode ? 'Show full mobile board' : 'Use focused mobile view'}
         onClick={() =>
           setSettings((previous) => ({ ...previous, mobileFocusMode: !previous.mobileFocusMode }))
         }
-        className="flex min-h-11 w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-base font-semibold text-white shadow-sm"
+        className="ui-control ui-focus-ring flex min-h-9 w-fit items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold"
       >
         {settings.mobileFocusMode ? 'Full board' : 'Focus view'}
       </button>
-      <details className="hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:block">
+      <details className="ui-surface hidden w-full rounded-xl border px-3 py-2 text-sm shadow-sm sm:block">
         <summary className="cursor-pointer select-none text-xs font-semibold text-slate-600 dark:text-slate-300">
           Board layout
         </summary>

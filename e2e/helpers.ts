@@ -12,10 +12,10 @@ export const expectStatus = async (response, expectedStatus: number) => {
 
 export const resetServerState = async (
   request,
-  options: { profilePrefix?: string; animationsEnabled?: boolean } = {}
+  options: { profilePrefix?: string; profileName?: string; animationsEnabled?: boolean } = {}
 ) => {
   const createdResponse = await request.post(api('/api/profiles'), {
-    data: { name: (options.profilePrefix || 'E2E') + ' ' + Date.now() }
+    data: { name: options.profileName || (options.profilePrefix || 'E2E') + ' ' + Date.now() }
   });
   await expectStatus(createdResponse, 201);
   const created = await createdResponse.json();
@@ -79,11 +79,21 @@ export const openSettingsSection = async (page, sectionName: string | RegExp) =>
   } else {
     await page.getByRole('button', { name: /open settings/i }).click();
   }
-  await page.getByRole('button', { name: sectionName }).click();
+  await page.getByTestId('settings-content').getByRole('button', { name: sectionName, exact: true }).click();
 };
 
 export const chooseTheme = async (page, themeId: string) => {
-  await page.locator('[data-theme-card="' + themeId + '"]').click();
+  const themeCard = page.locator('[data-theme-card="' + themeId + '"]');
+  if ((await themeCard.count()) === 0) {
+    const groupName = ['terminal', 'terminal-white'].includes(themeId)
+      ? 'Terminal Themes'
+      : ['zen', 'liquid-glass', 'github-light'].includes(themeId)
+        ? 'Light Themes'
+        : 'Dark Themes';
+    const groupTrigger = page.getByRole('button', { name: groupName, exact: true });
+    if ((await groupTrigger.getAttribute('aria-expanded')) === 'false') await groupTrigger.click();
+  }
+  await themeCard.click();
 };
 
 export const searchTasks = async (page, query: string) => {
@@ -114,6 +124,7 @@ export const completeBreathingIntro = async (page) => {
 };
 
 export const installStableVisualState = async (page) => {
+  await page.clock.setFixedTime(new Date('2026-07-14T09:41:00.000Z'));
   await page.addInitScript(() => {
     Math.random = () => 0.5;
   });

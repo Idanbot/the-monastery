@@ -33,7 +33,21 @@ const requiredStyleVariables = [
   '--theme-radius-control',
   '--theme-radius-panel',
   '--theme-motion-ease',
-  '--theme-font-ui'
+  '--theme-font-ui',
+  '--ui-canvas',
+  '--ui-surface',
+  '--ui-surface-muted',
+  '--ui-surface-raised',
+  '--ui-control',
+  '--ui-text-primary',
+  '--ui-text-secondary',
+  '--ui-border-subtle',
+  '--ui-border-strong',
+  '--ui-focus-ring',
+  '--ui-success',
+  '--ui-warning',
+  '--ui-danger',
+  '--ui-info'
 ];
 
 describe('theme contracts', () => {

@@ -71,8 +71,9 @@ export function MobileShell({
     <>
       <nav
         data-testid="mobile-shell"
+        data-material="control"
         aria-label="Mobile navigation"
-        className="fixed inset-x-0 bottom-0 z-[75] grid grid-cols-5 border-t border-slate-200 bg-white/95 px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_rgb(15_23_42/0.12)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 md:hidden"
+        className="mobile-navigation fixed inset-x-0 bottom-0 z-[75] grid grid-cols-5 border-t px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
       >
         <NavButton label="Today" active={todayActive} icon={ListChecks} onClick={onToday} />
         <NavButton label="Board" active={boardActive} icon={LayoutDashboard} onClick={onBoard} />
@@ -89,7 +90,7 @@ export function MobileShell({
           aria-label="Create task"
           title="Create backlog task"
           onClick={onAddTask}
-          className="absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-1/3 items-center justify-center rounded-full border-4 border-slate-100 bg-indigo-600 text-white shadow-lg transition-transform active:scale-95 dark:border-slate-950"
+          className="ui-accent-button absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 -translate-y-1/3 items-center justify-center rounded-full border-4 border-[var(--ui-canvas)] shadow-lg"
         >
           <Plus size={25} />
         </button>
@@ -108,18 +109,18 @@ export function MobileShell({
             role="dialog"
             aria-modal="true"
             aria-label="More"
-            className="max-h-[78vh] w-full overflow-y-auto rounded-t-2xl border border-b-0 border-slate-200 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl dark:border-slate-700"
+            className="max-h-[78vh] w-full overflow-y-auto rounded-t-2xl border border-b-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl"
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-base font-bold text-slate-900 dark:text-white">More</div>
-                <div className="truncate text-xs text-slate-500">{activeProfileName}</div>
+                <div className="text-base font-semibold text-[var(--ui-text-primary)]">More</div>
+                <div className="truncate text-xs text-[var(--ui-text-secondary)]">{activeProfileName}</div>
               </div>
               <button
                 type="button"
                 aria-label="Close more menu"
                 onClick={() => setMoreOpen(false)}
-                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="ui-icon-button"
               >
                 <X size={20} />
               </button>
@@ -150,9 +151,7 @@ export function MobileShell({
             </div>
 
             {filtersOpen && filterContent && (
-              <div className="mt-3 rounded-xl border border-slate-200 bg-white/70 p-3 dark:border-slate-700 dark:bg-slate-950/50">
-                {filterContent}
-              </div>
+              <div className="ui-surface mt-3 rounded-xl border p-3">{filterContent}</div>
             )}
           </ThemedSurface>
         </ThemedSurface>
@@ -174,7 +173,7 @@ function NavButton({ label, active, icon: Icon, onClick }: ActionProps & { activ
       aria-label={label}
       aria-current={active ? 'page' : undefined}
       onClick={onClick}
-      className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg text-[11px] font-semibold ${active ? 'text-indigo-600 dark:text-indigo-300' : 'text-slate-500 dark:text-slate-400'}`}
+      className={`ui-focus-ring flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-lg text-[11px] font-semibold ${active ? 'text-[var(--ui-info)]' : 'text-[var(--ui-text-secondary)]'}`}
     >
       <Icon size={20} />
       <span>{label}</span>
@@ -187,9 +186,9 @@ function MoreAction({ label, icon: Icon, onClick }: ActionProps) {
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-14 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-semibold text-slate-700 active:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+      className="ui-surface ui-focus-ring flex min-h-14 items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold active:brightness-95"
     >
-      <Icon size={18} className="shrink-0 text-indigo-500" />
+      <Icon size={18} className="shrink-0 text-[var(--ui-info)]" />
       {label}
     </button>
   );

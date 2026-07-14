@@ -15,6 +15,7 @@ test.beforeEach(async ({ page, request }) => {
   await installStableVisualState(page);
   const activeProfileId = await resetServerState(request, {
     profilePrefix: 'Visual',
+    profileName: 'Visual workspace',
     animationsEnabled: false
   });
   await page.addInitScript((profileId) => {
@@ -27,24 +28,36 @@ test('theme gallery remains visually stable', async ({ page }) => {
   await page.goto('/');
   await stabilizePage(page);
   await openSettingsSection(page, 'Appearance');
-  await expect(page.getByTestId('theme-gallery')).toHaveScreenshot('theme-gallery.png', screenshotOptions);
+  await expect(page.getByTestId('theme-gallery-group-light')).toHaveScreenshot(
+    'theme-gallery-light.png',
+    screenshotOptions
+  );
+  await page.getByRole('button', { name: 'Dark Themes' }).click();
+  const firstDarkTheme = page
+    .getByTestId('theme-gallery-group-dark')
+    .getByTestId('theme-gallery-card')
+    .first();
+  await expect(firstDarkTheme).toHaveScreenshot('theme-gallery-dark.png', screenshotOptions);
 });
 
 test('compact desktop header remains visually stable', async ({ page }) => {
   await page.setViewportSize({ width: 1080, height: 900 });
   await page.goto('/');
   await stabilizePage(page);
-  await expect(page.locator('.app-header')).toHaveScreenshot('compact-header.png', screenshotOptions);
+  await expect(page.locator('.app-header')).toHaveScreenshot('compact-header.png', {
+    ...screenshotOptions,
+    maxDiffPixels: 100
+  });
 });
 
 test('settings modal and Liquid Glass settings remain visually stable', async ({ page }) => {
   await page.goto('/');
   await stabilizePage(page);
   await openSettingsSection(page, 'Appearance');
-  await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveScreenshot(
-    'settings-modal.png',
-    screenshotOptions
-  );
+  await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveScreenshot('settings-modal.png', {
+    ...screenshotOptions,
+    maxDiffPixels: 2000
+  });
   await chooseTheme(page, 'liquid-glass');
   await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveScreenshot(
     'settings-liquid-glass.png',

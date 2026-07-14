@@ -40,7 +40,11 @@ export function ViewSwitcher({
           </option>
         ))}
       </select>
-      <div className="hidden sm:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+      <div
+        role="group"
+        aria-label="Workspace views"
+        className="ui-control hidden shrink-0 rounded-xl p-1 sm:flex"
+      >
         {VIEWS.map((option) => {
           const Icon = option.icon;
           const active = view === option.id;
@@ -48,13 +52,15 @@ export function ViewSwitcher({
             <button
               key={option.id}
               type="button"
+              aria-pressed={active}
               aria-label={option.label}
               title={option.label}
               onClick={() => onChange(option.id)}
-              className={`flex rounded-md p-2 text-sm font-medium transition-all ${active ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
+              className={`ui-focus-ring flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold ${active ? 'bg-[var(--ui-surface-raised)] text-[var(--ui-info)] shadow-sm' : 'text-[var(--ui-text-secondary)] hover:text-[var(--ui-text-primary)]'}`}
               data-testid={`view-switch-${option.id}`}
             >
               <Icon size={15} />
+              <span className={active ? 'hidden xl:inline' : 'sr-only'}>{option.label}</span>
             </button>
           );
         })}

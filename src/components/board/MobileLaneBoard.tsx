@@ -28,7 +28,7 @@ export function MobileLaneBoard({ filteredTasks, onMoveTask, ...columnProps }: M
         role="tablist"
         aria-label="Board lanes"
         data-testid="mobile-lane-tabs"
-        className="mb-2 grid shrink-0 grid-cols-4 gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        className="ui-control mb-2 grid shrink-0 grid-cols-4 gap-1 rounded-xl p-1"
       >
         {taskStatuses.map((status) => (
           <button
@@ -40,10 +40,10 @@ export function MobileLaneBoard({ filteredTasks, onMoveTask, ...columnProps }: M
             aria-selected={activeStatus === status}
             aria-label={`${statusLabels[status]}, ${counts[status]} ${counts[status] === 1 ? 'task' : 'tasks'}`}
             onClick={() => setActiveStatus(status)}
-            className={`min-w-0 rounded-lg px-1 py-2 text-[11px] font-semibold ${
+            className={`ui-focus-ring min-w-0 rounded-lg px-1 py-2 text-[11px] font-semibold ${
               activeStatus === status
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                ? 'bg-[var(--ui-surface-raised)] text-[var(--ui-info)] shadow-sm'
+                : 'text-[var(--ui-text-secondary)] hover:text-[var(--ui-text-primary)]'
             }`}
           >
             <span className="block truncate">{compactStatusLabel[status]}</span>

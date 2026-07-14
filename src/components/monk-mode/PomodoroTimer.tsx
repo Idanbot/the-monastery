@@ -48,24 +48,24 @@ export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) =
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-      <div className="flex gap-2 mb-6 bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-full">
+    <div className="flex flex-col items-center justify-center">
+      <div className="ui-control mb-5 flex gap-1 rounded-full p-1">
         <button
           onClick={() => switchMode('work')}
-          className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${
+          className={`ui-focus-ring rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
             mode === 'work'
-              ? 'bg-white text-indigo-600 shadow-sm dark:bg-slate-700 dark:text-indigo-300'
-              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              ? 'bg-[var(--ui-surface-raised)] text-[var(--ui-info)] shadow-sm'
+              : 'text-[var(--ui-text-secondary)] hover:text-[var(--ui-text-primary)]'
           }`}
         >
           Focus
         </button>
         <button
           onClick={() => switchMode('break')}
-          className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${
+          className={`ui-focus-ring rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
             mode === 'break'
-              ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-300'
-              : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              ? 'bg-[var(--ui-surface-raised)] text-[var(--ui-success)] shadow-sm'
+              : 'text-[var(--ui-text-secondary)] hover:text-[var(--ui-text-primary)]'
           }`}
         >
           Break
@@ -73,7 +73,7 @@ export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) =
       </div>
 
       <div
-        className="text-7xl md:text-8xl font-mono font-bold text-slate-800 dark:text-slate-100 mb-8 tabular-nums tracking-tighter"
+        className="mb-6 font-mono text-6xl font-semibold tabular-nums text-[var(--ui-text-primary)] sm:text-7xl"
         style={{ fontVariantNumeric: 'tabular-nums' }}
       >
         {formatTime(timeLeft)}
@@ -81,12 +81,9 @@ export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) =
 
       <div className="flex items-center gap-4">
         <button
+          aria-label={isActive ? 'Pause focus timer' : 'Start focus timer'}
           onClick={toggleTimer}
-          className={`flex items-center justify-center w-14 h-14 rounded-full text-white shadow-lg transition-transform hover:scale-105 active:scale-95 ${
-            mode === 'work'
-              ? 'bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/25'
-              : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25'
-          }`}
+          className="ui-accent-button ui-focus-ring flex h-14 w-14 items-center justify-center rounded-full"
         >
           {isActive ? (
             <Pause size={24} fill="currentColor" />
@@ -96,8 +93,9 @@ export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) =
         </button>
 
         <button
+          aria-label="Reset focus timer"
           onClick={resetTimer}
-          className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 shadow-sm transition-colors"
+          className="ui-icon-button ui-control"
           title="Reset Timer"
         >
           <RotateCcw size={18} />

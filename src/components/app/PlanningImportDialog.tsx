@@ -10,7 +10,7 @@ export const PlanningImportDialog: React.FC = () => {
   return (
     <ThemedSurface
       variant="overlay"
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[110] flex items-center justify-center p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) setPlanningImportPreview(null);
       }}

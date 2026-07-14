@@ -59,6 +59,27 @@ it('keeps the desktop header focused on primary actions', () => {
   expect(screen.queryByText('Online')).not.toBeInTheDocument();
 });
 
+it('separates global actions from workspace controls and anchors current work', async () => {
+  const user = userEvent.setup();
+  seedTasks([
+    makeTask({
+      id: 'active-header-task',
+      title: 'Design migration boundary',
+      status: 'in-progress',
+      activeLogStart: '2026-07-14T08:00:00.000Z'
+    })
+  ]);
+  render(<App />);
+
+  expect(screen.getByTestId('app-primary-bar')).toBeInTheDocument();
+  expect(screen.getByTestId('workspace-toolbar')).toBeInTheDocument();
+  const currentWork = screen.getByRole('button', { name: /open current work design migration boundary/i });
+  expect(currentWork).toBeInTheDocument();
+
+  await user.click(currentWork);
+  expect(screen.getByTestId('task-modal')).toBeInTheDocument();
+});
+
 it('renders TheMonastery board', () => {
   render(<App />);
 
@@ -709,6 +730,8 @@ it('offers readable theme gallery choices for default modes and custom themes', 
 
   await user.click(screen.getByRole('button', { name: /open settings/i }));
   await user.click(screen.getByRole('button', { name: /^appearance$/i }));
+  await user.click(screen.getByRole('button', { name: 'Terminal Themes' }));
+  await user.click(screen.getByRole('button', { name: 'Dark Themes' }));
 
   const optionLabels = screen.getAllByTestId('theme-gallery-label').map((option) => option.textContent);
 

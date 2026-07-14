@@ -135,7 +135,7 @@ export function TaskModal() {
     <ThemedSurface
       variant="overlay"
       data-testid="task-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
+      className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) closeTaskModal({ promptToSave: true });
       }}
@@ -146,7 +146,7 @@ export function TaskModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="task-modal-title"
-        className="flex h-full max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl border border-slate-200 shadow-2xl dark:border-slate-800"
+        className="task-modal-surface flex h-[min(92dvh,52rem)] max-h-[92dvh] w-full max-w-2xl flex-col rounded-t-2xl border shadow-2xl sm:h-full sm:max-h-[85vh] sm:rounded-2xl"
       >
         {/* Modal Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800 sm:px-6">

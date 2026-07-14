@@ -1,7 +1,6 @@
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { AnimatePresence, motion } from 'motion/react';
 import { ChevronDown } from 'lucide-react';
-import { themedSurfaceClassName } from '../ui/themedSurfaceStyles';
 
 export function SettingSection({
   id,
@@ -16,17 +15,12 @@ export function SettingSection({
 
   return (
     <Collapsible.Root open={isOpen} onOpenChange={() => toggleSection(id)} asChild>
-      <section
-        className={themedSurfaceClassName(
-          'panel',
-          'rounded-xl border border-slate-200 dark:border-slate-700 bg-white/35 dark:bg-slate-900/30 overflow-hidden'
-        )}
-      >
-        <Collapsible.Trigger className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left">
-          <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">{title}</span>
+      <section className="settings-section overflow-hidden border-b border-[var(--ui-border-subtle)] text-[var(--ui-text-primary)]">
+        <Collapsible.Trigger className="ui-focus-ring flex w-full items-center justify-between gap-3 rounded-lg px-1 py-3 text-left">
+          <span className="text-base font-semibold text-[var(--ui-text-primary)]">{title}</span>
           <ChevronDown
             size={16}
-            className={`text-slate-400 transition-transform ${isOpen ? '' : '-rotate-90'}`}
+            className={`text-[var(--ui-text-secondary)] transition-transform ${isOpen ? '' : '-rotate-90'}`}
           />
         </Collapsible.Trigger>
         <AnimatePresence initial={false}>
@@ -39,7 +33,7 @@ export function SettingSection({
                 transition={{ duration: motionDuration, ease: motionEase }}
                 className="overflow-hidden"
               >
-                <div className="px-4 pb-4 space-y-3">{children}</div>
+                <div className="space-y-3 pb-6 pt-1">{children}</div>
               </motion.div>
             </Collapsible.Content>
           )}

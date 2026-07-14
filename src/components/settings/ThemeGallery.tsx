@@ -1,5 +1,5 @@
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { ChevronDown } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 import { resolveThemeGalleryTokens } from '../../domain/themeGallery';
 
 function ThemeGalleryCard({ themeOption, isSelected, setThemeChoice }) {
@@ -9,37 +9,60 @@ function ThemeGalleryCard({ themeOption, isSelected, setThemeChoice }) {
     <button
       key={themeOption.value}
       type="button"
+      aria-label={`Select ${themeOption.label} theme`}
       aria-pressed={isSelected}
       data-testid="theme-gallery-card"
       data-theme-card={themeOption.visualTheme}
       onClick={() => setThemeChoice(themeOption.value)}
-      className={`flex min-h-12 items-center gap-3 overflow-visible rounded-xl border p-2 px-3 text-left transition-[border-color,box-shadow,transform,background-color] duration-150 ease-out hover:-translate-y-[1px] ${
+      className={`group relative min-h-28 overflow-hidden rounded-2xl border p-0 text-left transition-[border-color,box-shadow,transform] duration-150 ease-out hover:-translate-y-[1px] ${
         isSelected
-          ? 'border-indigo-500 shadow-sm ring-1 ring-indigo-500 bg-slate-50 dark:bg-slate-800/50'
-          : 'border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600'
+          ? 'border-[var(--ui-info)] shadow-md ring-1 ring-[var(--ui-info)]'
+          : 'border-[var(--ui-border-subtle)] hover:border-[var(--ui-border-strong)]'
       }`}
     >
       <div
-        className={`h-5 w-5 shrink-0 border border-black/10 shadow-inner dark:border-white/10 overflow-hidden relative ${
-          themeOption.group === 'terminal' ? 'rounded-sm' : 'rounded-full'
-        }`}
+        data-testid="theme-card-preview"
+        className="relative h-20 overflow-hidden p-3"
+        style={{ background: tokens.swatchStart }}
       >
-        <div className="absolute inset-0" style={{ background: tokens.swatchStart }}></div>
-        <div className="absolute inset-y-0 right-0 w-1/2" style={{ background: tokens.swatchEnd }}></div>
-        {tokens.hasGlass && (
-          <div className="absolute inset-0 bg-white/20 dark:bg-black/20 backdrop-blur-[2px]"></div>
-        )}
+        <div
+          className={`mb-2 flex h-4 items-center gap-1 border px-1.5 ${themeOption.group === 'terminal' ? 'rounded-sm' : 'rounded-md'} ${tokens.hasGlass ? 'backdrop-blur-sm' : ''}`}
+          style={{ background: tokens.surface, borderColor: tokens.border }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: tokens.accent }} />
+          <span className="h-1 w-8 rounded-full opacity-60" style={{ background: tokens.mutedText }} />
+        </div>
+        <div className="grid grid-cols-[1fr_0.55fr] gap-2">
+          <div className="space-y-1.5">
+            <div className="h-2 w-3/4 rounded-full" style={{ background: tokens.labelText }} />
+            <div className="h-1.5 w-full rounded-full opacity-55" style={{ background: tokens.mutedText }} />
+            <div className="h-1.5 w-4/5 rounded-full opacity-55" style={{ background: tokens.mutedText }} />
+          </div>
+          <div
+            className={`h-9 border ${themeOption.group === 'terminal' ? 'rounded-sm' : 'rounded-lg'}`}
+            style={{ background: tokens.mutedSurface, borderColor: tokens.border }}
+          />
+        </div>
       </div>
-      <span
-        data-testid="theme-gallery-label"
+      <div
         style={{
           backgroundColor: tokens.labelBackground,
           color: tokens.labelText
         }}
-        className="min-w-0 flex-1 whitespace-normal break-words rounded-md px-2 py-0.5 text-sm font-medium leading-tight shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+        className="flex min-h-10 items-center justify-between gap-2 border-t px-3 py-2"
       >
-        {themeOption.label}
-      </span>
+        <span data-testid="theme-gallery-label" className="min-w-0 truncate text-sm font-semibold">
+          {themeOption.label}
+        </span>
+        {isSelected && (
+          <span
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+            style={{ background: tokens.accent, color: tokens.labelBackground }}
+          >
+            <Check size={12} strokeWidth={3} />
+          </span>
+        )}
+      </div>
     </button>
   );
 }
@@ -53,8 +76,11 @@ function ThemeGalleryGroup({
   collapsible = true
 }) {
   const groupOptions = options.filter((themeOption) => themeOption.group === group);
+  const containsSelectedTheme = groupOptions.some(
+    (themeOption) => normalizedThemeChoice === themeOption.value
+  );
   const cards = (
-    <div className="grid grid-cols-1 gap-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {groupOptions.map((themeOption) => (
         <ThemeGalleryCard
           key={themeOption.value}
@@ -69,15 +95,15 @@ function ThemeGalleryGroup({
   if (!collapsible) {
     return (
       <div data-testid={`theme-gallery-group-${group}`}>
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</h4>
+        <h4 className="ui-eyebrow mb-2">{title}</h4>
         {cards}
       </div>
     );
   }
 
   return (
-    <Collapsible.Root defaultOpen data-testid={`theme-gallery-group-${group}`}>
-      <Collapsible.Trigger className="mb-2 flex w-full items-center justify-between rounded-lg px-1 py-1 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+    <Collapsible.Root defaultOpen={containsSelectedTheme} data-testid={`theme-gallery-group-${group}`}>
+      <Collapsible.Trigger className="ui-eyebrow ui-focus-ring mb-2 flex w-full items-center justify-between rounded-lg px-1 py-1 text-left hover:bg-[var(--ui-control)]">
         <span>{title}</span>
         <ChevronDown
           size={14}

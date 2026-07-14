@@ -73,7 +73,7 @@ export const CalendarView: React.FC = () => {
 
   return (
     <div
-      className="flex-1 min-h-0 flex flex-col md:flex-row rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shadow-sm overflow-hidden"
+      className="ui-surface flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border shadow-sm md:flex-row"
       data-testid="calendar-view"
     >
       {/* Left Main View (Header + Calendar Grid) */}
@@ -90,10 +90,10 @@ export const CalendarView: React.FC = () => {
           data-testid="calendar-scroll-area"
           role="region"
           aria-label="Calendar schedule"
-          className="flex-1 overflow-auto relative flex border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 custom-scrollbar"
+          className="ui-surface custom-scrollbar relative flex flex-1 overflow-auto rounded-xl border"
         >
           {/* Side Time Ruler */}
-          <div className="sticky left-0 z-30 w-16 shrink-0 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 select-none">
+          <div className="sticky left-0 z-30 w-16 shrink-0 select-none border-r border-[var(--ui-border-subtle)] bg-[var(--ui-surface-muted)]">
             <div className="h-14 border-b border-slate-200 dark:border-slate-800" aria-hidden="true" />
             <div data-testid="calendar-time-ruler" className="relative h-[1440px] shrink-0">
               {Array.from({ length: 24 }).map((_, i) => (

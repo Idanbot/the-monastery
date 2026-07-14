@@ -59,7 +59,7 @@ export function CommandPalette({
       data-testid="command-palette-overlay"
       aria-hidden={!open}
       variant="overlay"
-      className={`fixed inset-0 z-[100] items-start justify-center p-4 pt-24 ${open ? 'flex' : 'hidden'}`}
+      className={`fixed inset-0 z-[120] items-start justify-center p-4 pt-24 ${open ? 'flex' : 'hidden'}`}
       onKeyDownCapture={(event) => {
         if (event.key !== 'Escape') return;
         event.preventDefault();

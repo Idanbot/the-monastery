@@ -38,6 +38,10 @@ The frontend calls relative `/api/*` routes. UI and API therefore remain on the 
 
 Open **Focus media** from the desktop sidebar, the mobile **More** menu, or the command palette. Paste a YouTube URL or a direct audio-file URL, then minimize the player to keep it mounted while working. The selected source is saved with the active profile. YouTube playback is embedded through the privacy-enhanced `youtube-nocookie.com` domain.
 
+### Visual system
+
+The interface uses semantic canvas, surface, control, text, border, focus, and status tokens. Theme contracts supply those values, while shared UI primitives keep task cards, settings, mobile controls, and focus surfaces consistent. Liquid Glass is limited to navigation and interactive chrome so content remains readable. See [`docs/visual-system.md`](docs/visual-system.md) before adding a theme or component style.
+
 ## Quick Start
 
 ### Requirements

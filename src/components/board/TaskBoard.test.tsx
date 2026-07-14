@@ -196,6 +196,26 @@ describe('KanbanBoard layout controls', () => {
     fireEvent.change(laneSelect, { target: { value: 'done' } });
     expect(onMoveTask).toHaveBeenCalledWith('backlog', 'done');
   });
+
+  it('keeps task cards scannable by limiting visible tags', () => {
+    const props = baseProps();
+    props.filteredTasks = [
+      normalizeTask({
+        id: 'tagged-task',
+        title: 'Review platform architecture',
+        status: 'backlog',
+        tags: ['architecture', 'platform', 'kubernetes', 'security']
+      })
+    ];
+
+    render(<KanbanBoard {...props} />);
+
+    const card = screen.getByLabelText(/review platform architecture, backlog/i);
+    expect(within(card).getByText('architecture')).toBeInTheDocument();
+    expect(within(card).getByText('platform')).toBeInTheDocument();
+    expect(within(card).queryByText('kubernetes')).not.toBeInTheDocument();
+    expect(within(card).getByText('+2')).toBeInTheDocument();
+  });
 });
 
 describe('MobileFocusView actions', () => {
@@ -237,6 +257,31 @@ describe('MobileFocusView actions', () => {
     expect(onCompleteTask).toHaveBeenCalledWith('current');
     expect(onRejectTask).toHaveBeenCalledWith('current');
     expect(onNextTask).toHaveBeenCalledWith('next');
+  });
+
+  it('presents a concise Today queue instead of an unbounded board', () => {
+    const current = normalizeTask({ id: 'current', title: 'Current task', status: 'in-progress' });
+    const queued = Array.from({ length: 5 }, (_, index) =>
+      normalizeTask({ id: `next-${index}`, title: `Next task ${index + 1}`, status: 'in-progress' })
+    );
+
+    render(
+      <MobileFocusView
+        filteredTasks={[current, ...queued]}
+        currentTask={current}
+        setSelectedTaskId={vi.fn()}
+        now={Date.now()}
+        onStartTask={vi.fn()}
+        onCompleteTask={vi.fn()}
+        onRejectTask={vi.fn()}
+        onNextTask={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: 'Today' })).toBeInTheDocument();
+    expect(screen.getByText('Next task 3')).toBeInTheDocument();
+    expect(screen.queryByText('Next task 4')).not.toBeInTheDocument();
+    expect(screen.getByText('2 more in Board')).toBeInTheDocument();
   });
 });
 

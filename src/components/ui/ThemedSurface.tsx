@@ -13,14 +13,25 @@ type ThemedSurfaceProps = HTMLAttributes<HTMLElement> & {
 };
 
 export const ThemedSurface = forwardRef<HTMLElement, ThemedSurfaceProps>(
-  ({ as: Component = 'div', variant, material, className, ...props }, ref) => (
-    <Component
-      ref={ref}
-      data-material={material}
-      className={themedSurfaceClassName(variant, className)}
-      {...props}
-    />
-  )
+  ({ as: Component = 'div', variant = 'panel', material, className, ...props }, ref) => {
+    const resolvedMaterial =
+      material ??
+      (variant === 'modal'
+        ? 'modal'
+        : variant === 'menu' || variant === 'menuTrigger'
+          ? 'control'
+          : undefined);
+
+    return (
+      <Component
+        ref={ref}
+        data-material={resolvedMaterial}
+        data-surface={variant}
+        className={themedSurfaceClassName(variant, className)}
+        {...props}
+      />
+    );
+  }
 );
 
 ThemedSurface.displayName = 'ThemedSurface';

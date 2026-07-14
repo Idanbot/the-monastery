@@ -74,16 +74,20 @@ export function WorkspaceContent() {
 
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-      {!settings.monkMode && view !== 'dashboard' && view !== 'calendar' && view !== 'projects' && (
-        <TaskSearchInput
-          value={searchQuery}
-          onChange={setSearchQuery}
-          variant="inline"
-          results={unifiedSearchResults}
-          loading={unifiedSearchLoading}
-          onSelectResult={selectUnifiedSearchResult}
-        />
-      )}
+      {!settings.monkMode &&
+        view !== 'dashboard' &&
+        view !== 'calendar' &&
+        view !== 'projects' &&
+        !(view === 'board' && settings.mobileFocusMode) && (
+          <TaskSearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            variant="inline"
+            results={unifiedSearchResults}
+            loading={unifiedSearchLoading}
+            onSelectResult={selectUnifiedSearchResult}
+          />
+        )}
 
       {settings.monkMode && (
         <MonkModeView
@@ -128,7 +132,7 @@ export function WorkspaceContent() {
       {!settings.monkMode && view === 'dashboard' && (
         <Suspense
           fallback={
-            <div className="flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">
+            <div className="ui-surface flex flex-1 items-center justify-center rounded-2xl border text-sm text-[var(--ui-text-secondary)]">
               Loading analytics…
             </div>
           }
@@ -182,19 +186,19 @@ export function WorkspaceContent() {
           <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <form
               onSubmit={submitQuickAddTask}
-              className="hidden min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex"
+              className="ui-toolbar hidden min-w-0 flex-1 items-center gap-2 rounded-xl border px-2 py-1.5 sm:flex"
               aria-label="Quick add task"
             >
-              <Plus size={15} className="shrink-0 text-indigo-500" />
+              <Plus size={15} className="shrink-0 text-[var(--ui-info)]" />
               <input
                 value={quickAddText}
                 onChange={(event) => setQuickAddText(event.target.value)}
                 placeholder="Quick add: GKE migration tomorrow 9-10 #cloud !7"
-                className="min-w-0 flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-200"
+                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--ui-text-primary)] outline-none placeholder:text-[var(--ui-text-secondary)]"
               />
               <button
                 type="submit"
-                className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="ui-accent-button ui-focus-ring rounded-lg px-3 py-1.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!quickAddText.trim()}
               >
                 Add
@@ -203,13 +207,13 @@ export function WorkspaceContent() {
             <div className="hidden justify-end gap-2 sm:flex">
               <button
                 onClick={() => setFocusPlannerOpen((open) => !open)}
-                className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-emerald-700 hover:border-emerald-400 dark:border-emerald-800 dark:bg-slate-900 dark:text-emerald-300"
+                className="ui-control ui-focus-ring rounded-xl px-3 py-2 text-sm font-semibold text-[var(--ui-success)]"
               >
                 Plan day
               </button>
               <button
                 onClick={() => openSettings('board')}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                className="ui-control ui-focus-ring rounded-xl px-3 py-2 text-sm font-semibold"
               >
                 Board settings
               </button>

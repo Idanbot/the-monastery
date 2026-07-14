@@ -7,7 +7,7 @@ export function ShortcutHelpDialog({ open, onClose }) {
   return (
     <ThemedSurface
       variant="overlay"
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[110] flex items-center justify-center p-4"
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <ThemedSurface
@@ -52,7 +52,7 @@ export function ProfileActionDialog({ action, profileName, onCancel, onConfirm }
   return (
     <ThemedSurface
       variant="overlay"
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[110] flex items-center justify-center p-4"
       onMouseDown={(event) => event.target === event.currentTarget && onCancel()}
     >
       <ThemedSurface

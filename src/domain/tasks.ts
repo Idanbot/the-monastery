@@ -163,8 +163,9 @@ export const defaultSettings: AppSettings = {
   theme: 'system',
   visualTheme: 'liquid-glass',
   colorScheme: { main: '#4f46e5', secondary: '#64748b', text: '#1e293b' },
-  fontMain: "Inter, 'Space Grotesk', system-ui, sans-serif",
-  fontSecondary: "'Space Grotesk', system-ui, sans-serif",
+  fontMain: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter, system-ui, sans-serif",
+  fontSecondary:
+    "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, system-ui, sans-serif",
   fontUI: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace",
   customThemeName: 'Custom Liquid Glass',
   monkMode: false,

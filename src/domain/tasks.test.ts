@@ -195,6 +195,8 @@ describe('task domain helpers', () => {
     expect(defaultSettings.visualTheme).toBe('liquid-glass');
     expect(defaultSettings.modalBlur).toBe(1);
     expect(defaultSettings.modalTransparency).toBe(35);
+    expect(defaultSettings.fontMain.startsWith('-apple-system')).toBe(true);
+    expect(defaultSettings.fontSecondary.startsWith('-apple-system')).toBe(true);
   });
 
   it('normalizes visual control settings with safe defaults and bounds', () => {

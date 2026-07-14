@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defaultSettings } from '../../domain/tasks';
@@ -348,5 +348,18 @@ describe('SettingsModal', () => {
     expect(metadata).toHaveTextContent('Version: ' + __APP_VERSION__);
     expect(metadata).toHaveTextContent(/Commit: /);
     expect(metadata).toHaveTextContent(/Built: /);
+  });
+
+  it('uses category navigation to keep the full preferences workspace scannable', async () => {
+    const user = userEvent.setup();
+    renderSettings({ initialSection: null });
+
+    const categories = screen.getByRole('navigation', { name: 'Settings categories' });
+    await user.click(within(categories).getByRole('button', { name: 'Open Appearance settings' }));
+    expect(screen.getByText(/modal transparency/i)).toBeInTheDocument();
+
+    await user.click(within(categories).getByRole('button', { name: 'Open Board settings' }));
+    expect(await screen.findByLabelText('Board layout')).toBeInTheDocument();
+    expect(screen.queryByText(/modal transparency/i)).not.toBeInTheDocument();
   });
 });

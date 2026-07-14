@@ -449,13 +449,13 @@ const resolveThemeTokens = (tokens: ThemeTokens, colorOverrides: ThemeColorOverr
     fontMain:
       fontMain ||
       tokens.fontMain ||
-      "Inter, ui-rounded, 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter, ui-rounded, sans-serif",
     fontSecondary:
       fontSecondary ||
       tokens.fontSecondary ||
       fontMain ||
       tokens.fontMain ||
-      "Inter, ui-rounded, 'SF Pro Display', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+      "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, ui-rounded, sans-serif"
   };
 };
 
@@ -466,6 +466,17 @@ export const getThemeStyle = (
   colorOverrides: ThemeColorOverrides = {}
 ): CSSProperties => {
   const tokens = resolveThemeTokens(getThemeContract(visualTheme, isDarkMode), colorOverrides);
+  const isGlassTheme = Boolean(themeContracts[visualTheme]?.features?.glass);
+  const contentSurface = isGlassTheme
+    ? visualTheme === 'obsidian-glass'
+      ? 'rgb(18 18 24 / 0.94)'
+      : 'rgb(251 253 255 / 0.94)'
+    : tokens.surface;
+  const contentMutedSurface = isGlassTheme
+    ? visualTheme === 'obsidian-glass'
+      ? 'rgb(28 28 36 / 0.9)'
+      : 'rgb(241 246 253 / 0.9)'
+    : tokens.mutedSurface;
 
   return {
     '--motion-duration': animationsEnabled ? tokens.motionDuration : '0ms',
@@ -495,7 +506,21 @@ export const getThemeStyle = (
     '--theme-font-secondary': colorOverrides?.fontSecondary || tokens.fontSecondary,
     '--theme-font-ui': colorOverrides?.fontUI || tokens.fontUI || tokens.fontMain,
     '--modal-surface-rgb': tokens.modalSurfaceRgb,
-    '--modal-border-rgb': tokens.modalBorderRgb
+    '--modal-border-rgb': tokens.modalBorderRgb,
+    '--ui-canvas': tokens.bg,
+    '--ui-surface': contentSurface,
+    '--ui-surface-muted': contentMutedSurface,
+    '--ui-surface-raised': contentSurface,
+    '--ui-control': contentMutedSurface,
+    '--ui-text-primary': tokens.text,
+    '--ui-text-secondary': tokens.mutedText,
+    '--ui-border-subtle': tokens.border,
+    '--ui-border-strong': `color-mix(in srgb, ${tokens.border} 72%, ${tokens.text})`,
+    '--ui-focus-ring': tokens.main,
+    '--ui-success': isDarkMode ? '#4ade80' : '#15803d',
+    '--ui-warning': isDarkMode ? '#fbbf24' : '#b45309',
+    '--ui-danger': isDarkMode ? '#fb7185' : '#be123c',
+    '--ui-info': tokens.main
   } as CSSProperties;
 };
 

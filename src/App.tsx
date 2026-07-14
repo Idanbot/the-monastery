@@ -87,7 +87,7 @@ function AppShell() {
         '--resize-handle-color': settings.resizeHandleColor || '#94a3b8'
       })}
     >
-      <div className="app-frame h-full w-full bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans overflow-hidden transition-colors duration-200">
+      <div className="app-frame ui-canvas flex h-full w-full flex-col overflow-hidden font-sans">
         <Toaster richColors position="top-right" theme={isDarkMode ? 'dark' : 'light'} />
 
         <AppHeader />
@@ -147,7 +147,7 @@ function AppShell() {
           </div>
         )}
 
-        <main className="app-main relative flex min-h-0 flex-1 flex-col gap-2 overflow-hidden bg-slate-100 p-2 pb-24 dark:bg-slate-950 sm:gap-4 sm:p-4 sm:pb-24 md:flex-row md:pb-4">
+        <main className="app-main relative flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2 pb-24 sm:gap-4 sm:p-4 sm:pb-24 md:flex-row md:pb-4">
           <WorkspaceContent />
           <WorkspaceSidebar />
         </main>

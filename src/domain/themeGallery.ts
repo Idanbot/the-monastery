@@ -55,6 +55,11 @@ export const resolveThemeGalleryTokens = (visualTheme: VisualTheme, group: Theme
     swatchEnd: isSystem ? darkTokens.bg : tokens.accent,
     labelBackground: tokens.bgColor || tokens.bg,
     labelText: tokens.text,
+    surface: tokens.surface,
+    mutedSurface: tokens.mutedSurface,
+    accent: tokens.accent,
+    border: tokens.border,
+    mutedText: tokens.mutedText,
     hasGlass: Boolean(contract.features?.glass)
   };
 };

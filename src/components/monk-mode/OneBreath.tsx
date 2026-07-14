@@ -1,77 +1,64 @@
-import { useRef, useState } from 'react';
-import { useSpring, animated, easings } from '@react-spring/web';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
+
+type BreathPhase = 'inhale-1' | 'inhale-2' | 'exhale' | 'done';
+
+const phaseDuration: Record<Exclude<BreathPhase, 'done'>, number> = {
+  'inhale-1': 2000,
+  'inhale-2': 900,
+  exhale: 4500
+};
+
+const nextPhase: Record<Exclude<BreathPhase, 'done'>, BreathPhase> = {
+  'inhale-1': 'inhale-2',
+  'inhale-2': 'exhale',
+  exhale: 'done'
+};
+
+const phaseText: Record<BreathPhase, string> = {
+  'inhale-1': 'Inhale deep',
+  'inhale-2': 'One more sip',
+  exhale: 'Long exhale',
+  done: ''
+};
 
 export function OneBreath({ onComplete }: { onComplete: () => void }) {
-  const [phase, setPhase] = useState<'inhale-1' | 'inhale-2' | 'exhale' | 'done'>('inhale-1');
+  const [phase, setPhase] = useState<BreathPhase>('inhale-1');
   const completedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const shouldReduceMotion = useReducedMotion();
 
-  const complete = () => {
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  const complete = useCallback(() => {
     if (completedRef.current) return;
     completedRef.current = true;
-    onComplete();
-  };
+    onCompleteRef.current();
+  }, []);
 
-  // Entrance fade-in for the overlay
-  const overlaySpring = useSpring({
-    from: { opacity: 0 },
-    to: { opacity: phase === 'done' ? 0 : 1 },
-    config: { duration: 800, easing: easings.easeInOutSine },
-    onRest: () => {
-      if (phase === 'done') {
-        onComplete();
-      }
+  useEffect(() => {
+    if (shouldReduceMotion || phase === 'done') {
+      complete();
+      return undefined;
     }
-  });
 
-  // Breathing circle animation (Physiological sigh: long inhale, quick second inhale, long exhale)
-  const circleSpring = useSpring({
-    from: { scale: 0.5, opacity: 0.1 },
-    to: {
-      scale: phase === 'inhale-1' ? 1.3 : phase === 'inhale-2' ? 1.6 : phase === 'exhale' ? 0.5 : 0.5,
-      opacity: phase === 'inhale-1' || phase === 'inhale-2' ? 0.8 : 0.1
-    },
-    config: {
-      duration: phase === 'inhale-1' ? 2000 : phase === 'inhale-2' ? 500 : phase === 'exhale' ? 4000 : 500,
-      easing: easings.easeInOutSine
-    },
-    onRest: () => {
-      if (phase === 'inhale-1') {
-        setPhase('inhale-2');
-      } else if (phase === 'inhale-2') {
-        setTimeout(() => setPhase('exhale'), 400); // Brief hold after second inhale
-      } else if (phase === 'exhale') {
-        setTimeout(() => setPhase('done'), 500); // Brief hold before completing
-      }
-    }
-  });
+    const timeout = window.setTimeout(() => setPhase(nextPhase[phase]), phaseDuration[phase]);
+    return () => window.clearTimeout(timeout);
+  }, [complete, phase, shouldReduceMotion]);
 
-  const textSpring = useSpring({
-    from: { opacity: 0, transform: 'translateY(10px)' },
-    to: {
-      opacity: phase === 'done' ? 0 : 0.8,
-      transform: phase === 'done' ? 'translateY(-10px)' : 'translateY(0px)'
-    },
-    config: { duration: 800, easing: easings.easeInOutSine }
-  });
-
-  const getPhaseText = () => {
-    switch (phase) {
-      case 'inhale-1':
-        return 'Inhale deep';
-      case 'inhale-2':
-        return 'One more sip';
-      case 'exhale':
-        return 'Long exhale';
-      default:
-        return '';
-    }
-  };
+  const scale = phase === 'inhale-1' ? 1.3 : phase === 'inhale-2' ? 1.6 : 0.5;
+  const circleOpacity = phase === 'inhale-1' || phase === 'inhale-2' ? 0.82 : 0.12;
+  const duration = phase === 'done' ? 0.3 : phaseDuration[phase] / 1000;
 
   return (
-    <animated.div
+    <motion.div
       data-testid="one-breath"
-      style={overlaySpring}
-      className="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto z-50 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-sm"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: phase === 'done' ? 0 : 1 }}
+      transition={{ duration: 0.35, ease: 'easeInOut' }}
+      className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[color-mix(in_srgb,var(--ui-canvas)_82%,transparent)] backdrop-blur-md"
     >
       <button
         type="button"
@@ -80,26 +67,29 @@ export function OneBreath({ onComplete }: { onComplete: () => void }) {
           setPhase('done');
           complete();
         }}
-        className="absolute right-5 top-5 rounded-full border border-slate-200 bg-white/75 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm backdrop-blur hover:bg-white dark:border-slate-700 dark:bg-slate-900/75 dark:text-slate-300 dark:hover:bg-slate-900"
+        className="ui-control ui-focus-ring absolute right-5 top-5 rounded-full px-3 py-1.5 text-xs font-semibold"
       >
         Skip
       </button>
-      <div className="relative flex items-center justify-center w-96 h-96">
-        <animated.div
-          style={{
-            ...circleSpring,
-            transform: circleSpring.scale.to((s: number) => `scale(${s})`)
-          }}
-          className="absolute w-48 h-48 rounded-full border border-indigo-400 dark:border-indigo-400/80 bg-indigo-200/40 dark:bg-indigo-500/20 shadow-[0_0_60px_rgba(99,102,241,0.3)]"
+
+      <div className="relative flex h-72 w-72 items-center justify-center sm:h-96 sm:w-96">
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0.1 }}
+          animate={{ scale, opacity: circleOpacity }}
+          transition={{ duration, ease: 'easeInOut' }}
+          className="absolute h-44 w-44 rounded-full border border-[color-mix(in_srgb,var(--ui-info)_55%,transparent)] bg-[color-mix(in_srgb,var(--ui-info)_14%,transparent)] shadow-[0_0_70px_color-mix(in_srgb,var(--ui-info)_24%,transparent)] sm:h-48 sm:w-48"
         />
-        <div className="w-4 h-4 rounded-full bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)] z-10" />
+        <div className="z-10 h-3 w-3 rounded-full bg-[var(--ui-info)] shadow-[0_0_18px_color-mix(in_srgb,var(--ui-info)_46%,transparent)]" />
       </div>
 
-      <animated.div style={textSpring} className="absolute mt-64 text-center">
-        <h2 className="text-xl font-medium tracking-widest text-slate-800 dark:text-slate-200 uppercase transition-all duration-300">
-          {getPhaseText()}
-        </h2>
-      </animated.div>
-    </animated.div>
+      <motion.h2
+        key={phase}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: phase === 'done' ? 0 : 0.84, y: phase === 'done' ? -8 : 0 }}
+        className="absolute mt-64 text-center text-lg font-medium text-[var(--ui-text-primary)]"
+      >
+        {phaseText[phase]}
+      </motion.h2>
+    </motion.div>
   );
 }

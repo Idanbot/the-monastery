@@ -343,15 +343,16 @@ test('customizes clock, resize handles, and timeline guides from settings', asyn
   await expect(page.getByTestId('main-sidebar-resizer')).toBeVisible();
 
   await page.getByRole('button', { name: /open settings/i }).click();
-  await page.getByRole('button', { name: 'Appearance' }).click();
+  const settingsContent = page.getByTestId('settings-content');
+  await settingsContent.getByRole('button', { name: 'Appearance', exact: true }).click();
   await expect(page.getByLabel('Hourly timeline guide lines')).toHaveCount(0);
   await expect(page.getByLabel('Resize bars')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Board' }).click();
+  await settingsContent.getByRole('button', { name: 'Board', exact: true }).click();
   await page.getByLabel('Resize bars').uncheck();
   await page.getByLabel('Resize bar thickness').fill('12');
   await page.getByLabel('Resize bar length').fill('88');
   await page.getByLabel('Resize bar color').fill('#ff2d55');
-  await page.getByRole('button', { name: 'Time' }).click();
+  await settingsContent.getByRole('button', { name: 'Time', exact: true }).click();
   await page.getByRole('checkbox', { name: 'Clock background' }).uncheck();
   await page.getByLabel('Hourly timeline guide lines').uncheck();
   await page.getByLabel('Current time red line').uncheck();
@@ -381,8 +382,10 @@ test('keeps theme gallery readable and stable while switching themes', async ({ 
 
   const gallery = page.getByTestId('theme-gallery');
   await expect(gallery).toBeVisible();
-  await expect(page.getByTestId('theme-gallery-card')).toHaveCount(16);
+  await expect(page.getByTestId('theme-gallery-card')).toHaveCount(5);
   await expect(page.getByTestId('theme-gallery-group-light')).not.toContainText('Nord');
+  await expect(page.getByTestId('theme-gallery-group-dark')).not.toContainText('Nord');
+  await page.getByRole('button', { name: 'Dark Themes', exact: true }).click();
   await expect(page.getByTestId('theme-gallery-group-dark')).toContainText('Nord');
 
   const readability = await page.getByTestId('theme-gallery-label').evaluateAll((labels) => {
@@ -405,15 +408,17 @@ test('keeps theme gallery readable and stable while switching themes', async ({ 
 
     return labels.map((label) => {
       const style = getComputedStyle(label);
+      const labelRowStyle = getComputedStyle(label.parentElement!);
       return {
         text: label.textContent?.trim(),
-        contrast: contrast(parseRgb(style.color), parseRgb(style.backgroundColor)),
+        contrast: contrast(parseRgb(style.color), parseRgb(labelRowStyle.backgroundColor)),
         fits: label.scrollWidth <= label.clientWidth + 1
       };
     });
   });
 
-  expect(readability.every((item) => item.contrast >= 4.5 && item.fits)).toBe(true);
+  const unreadableLabels = readability.filter((item) => item.contrast < 4.5 || !item.fits);
+  expect(unreadableLabels, JSON.stringify(unreadableLabels)).toEqual([]);
 
   const shell = page.locator('.app-shell');
   await expect(shell).toHaveAttribute('data-visual-theme', 'zen');
@@ -510,6 +515,7 @@ test('uses command palette, shortcuts, and task templates', async ({ page }) => 
   await page.keyboard.press('m');
   await completeBreathingIntro(page);
   await expect(page.getByRole('heading', { name: /monk mode/i })).toBeVisible();
+  await page.getByRole('button', { name: /show focus map/i }).click();
   await expect(page.getByTestId('monk-minimap')).toBeVisible();
 });
 
@@ -975,9 +981,8 @@ test('enables monk mode and switches visual theme', async ({ page }) => {
   await expect(page.getByRole('button', { name: /analytics/i })).toHaveCount(0);
 
   await page.getByRole('button', { name: /open settings/i }).click();
-  await page.getByRole('button', { name: 'Appearance' }).click();
-  const appearanceSection = page.locator('section').filter({ hasText: 'Appearance' });
-  await appearanceSection.locator('[data-theme-card="terminal-white"]').click();
+  await page.getByTestId('settings-content').getByRole('button', { name: 'Appearance', exact: true }).click();
+  await chooseTheme(page, 'terminal-white');
   await expect(page.locator('[data-monk-mode][data-visual-theme="terminal-white"]')).toBeVisible();
 });
 
@@ -1000,14 +1005,12 @@ test('uses the shared themed dropdown surface for filters and profiles', async (
 test('keeps themed modals readable in terminal themes', async ({ page }) => {
   await page.goto('/');
 
-  await page.getByRole('button', { name: /open settings/i }).click();
-  await page.getByRole('button', { name: /^appearance$/i }).click();
-  const appearanceSection = page.locator('section').filter({ hasText: 'Appearance' });
-  await appearanceSection.locator('[data-theme-card="terminal"]').click();
+  await openSettingsSection(page, 'Appearance');
+  await chooseTheme(page, 'terminal');
 
   await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveCSS('color', 'rgb(124, 255, 138)');
 
-  await appearanceSection.locator('[data-theme-card="terminal-white"]').click();
+  await chooseTheme(page, 'terminal-white');
   await expect(page.getByRole('dialog', { name: /preferences/i })).toHaveCSS('color', 'rgb(255, 255, 255)');
 });
 
