@@ -23,4 +23,11 @@ describe('MobileBoardControls', () => {
     const update = setSettings.mock.lastCall?.[0];
     expect(update(defaultSettings)).toEqual({ ...defaultSettings, mobileFocusMode: true });
   });
+
+  it('gives the phone board a readable title and task summary', () => {
+    render(<MobileBoardControls settings={defaultSettings} setSettings={vi.fn()} taskCount={7} />);
+
+    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByText('7 active tasks')).toBeInTheDocument();
+  });
 });

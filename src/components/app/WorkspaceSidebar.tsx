@@ -38,7 +38,7 @@ export function WorkspaceSidebar() {
           <button
             aria-label="Close sidebar"
             onClick={() => setSidebarOpen(false)}
-            className="p-2 text-slate-500"
+            className="ui-focus-ring flex h-11 w-11 items-center justify-center rounded-xl text-slate-500"
           >
             <X size={20} />
           </button>

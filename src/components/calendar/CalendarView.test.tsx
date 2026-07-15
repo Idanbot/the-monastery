@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '../../test/renderWithProviders';
 import { CalendarView } from './CalendarView';
@@ -27,5 +27,25 @@ describe('CalendarView component', () => {
 
     // Unscheduled sidebar
     expect(screen.getByTestId('unscheduled-sidebar')).toBeInTheDocument();
+  });
+
+  it('uses the agenda instead of the 24-hour grid on a phone', () => {
+    const matchMedia = vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      matches: query === '(max-width: 639px)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    }));
+
+    renderWithProviders(<CalendarView />);
+
+    expect(screen.getByTestId('mobile-calendar-agenda')).toBeInTheDocument();
+    expect(screen.queryByTestId('calendar-scroll-area')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('unscheduled-sidebar')).not.toBeInTheDocument();
+    matchMedia.mockRestore();
   });
 });

@@ -5,8 +5,10 @@ import { useUIContext } from '../../contexts/UIContext';
 import { CalendarHeader } from './CalendarHeader';
 import { DayColumn } from './DayColumn';
 import { UnscheduledSidebar } from './UnscheduledSidebar';
+import { MobileCalendarAgenda } from './MobileCalendarAgenda';
 import { formatTime } from '../../domain/tasks';
 import { getWeekDates, clockTimeToMinutes, minutesToClockTime } from '../../domain/calendarView';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 export const CalendarView: React.FC = () => {
   const { settings } = useSettingsContext();
@@ -15,6 +17,7 @@ export const CalendarView: React.FC = () => {
 
   const [currentDate, setCurrentDate] = useState(() => new Date(now));
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const isPhoneLayout = useMediaQuery('(max-width: 639px)');
 
   const weekDates = getWeekDates(currentDate);
   const displayDates = viewMode === 'week' ? weekDates : [currentDate];
@@ -48,13 +51,17 @@ export const CalendarView: React.FC = () => {
   );
 
   const handleAddUnscheduled = () => {
-    addTask('backlog', {
-      title: '',
-      urgency: 5,
-      scheduledDate: '',
-      scheduledStart: '',
-      scheduledEnd: ''
-    });
+    addTask(
+      'backlog',
+      {
+        title: '',
+        urgency: 5,
+        scheduledDate: '',
+        scheduledStart: '',
+        scheduledEnd: ''
+      },
+      (task) => setSelectedTaskId(task.id)
+    );
   };
 
   const handleCreateScheduledTask = (date: string, time: string) => {
@@ -70,6 +77,30 @@ export const CalendarView: React.FC = () => {
       (task) => setSelectedTaskId(task.id)
     );
   };
+
+  const moveCurrentDate = (days: number) =>
+    setCurrentDate((previous) => {
+      const next = new Date(previous);
+      next.setDate(previous.getDate() + days);
+      return next;
+    });
+
+  if (isPhoneLayout) {
+    return (
+      <MobileCalendarAgenda
+        currentDate={currentDate}
+        tasks={tasks}
+        now={now}
+        clockFormat={settings.clockFormat}
+        onPreviousDay={() => moveCurrentDate(-1)}
+        onNextDay={() => moveCurrentDate(1)}
+        onToday={() => setCurrentDate(new Date(now))}
+        onSelectTask={setSelectedTaskId}
+        onCreateTask={handleCreateScheduledTask}
+        onAddUnscheduled={handleAddUnscheduled}
+      />
+    );
+  }
 
   return (
     <div

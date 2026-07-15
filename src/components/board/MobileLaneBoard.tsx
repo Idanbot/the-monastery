@@ -23,7 +23,10 @@ export function MobileLaneBoard({ filteredTasks, onMoveTask, ...columnProps }: M
   ) as Record<TaskStatus, number>;
 
   return (
-    <div data-testid="mobile-lane-board" className="flex h-full min-h-0 flex-col sm:hidden">
+    <div
+      data-testid="mobile-lane-board"
+      className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col sm:hidden"
+    >
       <div
         role="tablist"
         aria-label="Board lanes"
@@ -40,14 +43,14 @@ export function MobileLaneBoard({ filteredTasks, onMoveTask, ...columnProps }: M
             aria-selected={activeStatus === status}
             aria-label={`${statusLabels[status]}, ${counts[status]} ${counts[status] === 1 ? 'task' : 'tasks'}`}
             onClick={() => setActiveStatus(status)}
-            className={`ui-focus-ring min-w-0 rounded-lg px-1 py-2 text-[11px] font-semibold ${
+            className={`ui-focus-ring min-h-12 min-w-0 rounded-lg px-1 py-1.5 text-xs font-semibold ${
               activeStatus === status
                 ? 'bg-[var(--ui-surface-raised)] text-[var(--ui-info)] shadow-sm'
                 : 'text-[var(--ui-text-secondary)] hover:text-[var(--ui-text-primary)]'
             }`}
           >
             <span className="block truncate">{compactStatusLabel[status]}</span>
-            <span className="mt-0.5 block text-[10px] opacity-80">{counts[status]}</span>
+            <span className="mt-0.5 block text-[11px] opacity-80">{counts[status]}</span>
           </button>
         ))}
       </div>
@@ -57,7 +60,7 @@ export function MobileLaneBoard({ filteredTasks, onMoveTask, ...columnProps }: M
         id={`mobile-lane-panel-${activeStatus}`}
         aria-labelledby={`mobile-lane-tab-${activeStatus}`}
         data-testid="mobile-active-lane"
-        className="min-h-0 flex-1"
+        className="min-h-0 w-full flex-1"
       >
         <TaskColumn
           {...columnProps}

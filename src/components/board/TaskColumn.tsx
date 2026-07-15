@@ -2,6 +2,7 @@ import {
   ArrowDownUp,
   CheckSquare,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   Clock,
   Flame,
@@ -56,7 +57,7 @@ export function TaskColumn({
       onDragOver={(e) => handleDragOver(e, status)}
       onDrop={(e) => handleDrop(e, status)}
     >
-      <div className="task-lane-header flex shrink-0 items-center justify-between border-b px-3 py-2.5">
+      <div className="task-lane-header flex min-h-12 shrink-0 items-center justify-between border-b px-3 py-2 sm:min-h-0 sm:py-2.5">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
             <div className={`task-status-dot h-2 w-2 shrink-0 rounded-full ${statusColorClass(status)}`} />
@@ -64,7 +65,8 @@ export function TaskColumn({
           </h2>
           <button
             onClick={() => cycleSort(status)}
-            className={`rounded p-1 text-slate-400 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 ${collapsed ? 'hidden' : ''}`}
+            aria-label={`Sort tasks in ${statusLabels[status]}: ${sortType}`}
+            className={`flex h-11 w-11 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 sm:h-auto sm:w-auto sm:p-1 ${collapsed ? 'hidden' : ''}`}
             title={`Sort: ${sortType}`}
           >
             {sortType === 'urgency' && <Flame size={12} className="text-orange-500" />}
@@ -82,7 +84,7 @@ export function TaskColumn({
             aria-expanded={!collapsed}
             title={`${collapsed ? 'Expand' : 'Collapse'} ${statusLabels[status]} lane`}
             onClick={() => onToggleLane(status)}
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-slate-700 ${collapsed ? 'bg-slate-200/70 dark:bg-slate-700/70' : ''}`}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-slate-700 sm:h-8 sm:w-8 ${collapsed ? 'bg-slate-200/70 dark:bg-slate-700/70' : ''}`}
           >
             {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
           </button>
@@ -144,7 +146,7 @@ export function TaskColumn({
                   }}
                   data-task-card="true"
                   data-active={isActive ? 'true' : 'false'}
-                  className={`task-card group cursor-pointer overflow-hidden rounded-xl border ${settings.collapseTasks ? 'p-2.5' : 'p-3'} ${isDragging ? 'opacity-50 grayscale' : ''} ${isKeyboardFocused ? 'ring-2 ring-[var(--ui-warning)]' : ''}
+                  className={`task-card group min-h-16 cursor-pointer overflow-hidden rounded-xl border ${settings.collapseTasks ? 'p-3 sm:p-2.5' : 'p-3.5 sm:p-3'} ${isDragging ? 'opacity-50 grayscale' : ''} ${isKeyboardFocused ? 'ring-2 ring-[var(--ui-warning)]' : ''}
                 `}
                 >
                   {isActive && (
@@ -160,11 +162,16 @@ export function TaskColumn({
                         className="hidden shrink-0 cursor-grab text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-slate-600 md:block"
                       />
                       <h3
-                        className={`truncate text-sm font-semibold leading-tight ${task.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-slate-200'}`}
+                        className={`line-clamp-2 text-base font-semibold leading-snug sm:truncate sm:text-sm sm:leading-tight ${task.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-slate-200'}`}
                       >
                         {task.title || 'Untitled Task'}
                       </h3>
                     </div>
+                    <ChevronRight
+                      size={18}
+                      aria-hidden="true"
+                      className="mt-0.5 shrink-0 text-[var(--ui-text-secondary)] md:hidden"
+                    />
                     <div
                       className="task-card-actions hidden shrink-0 items-center gap-0.5 md:flex md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
                       onClick={(event) => event.stopPropagation()}

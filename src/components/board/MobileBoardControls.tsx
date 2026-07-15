@@ -6,11 +6,12 @@ import { defaultBoardColumnOrder, statusLabels } from '../../domain/tasks';
 type Props = {
   settings: AppSettings;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  taskCount?: number;
 };
 
 const pairOrder = (top: TaskStatus, pair: TaskStatus[]) => [top, pair.find((status) => status !== top)!];
 
-export function MobileBoardControls({ settings, setSettings }: Props) {
+export function MobileBoardControls({ settings, setSettings, taskCount = 0 }: Props) {
   const [customizing, setCustomizing] = useState(false);
   const order = settings.boardColumnOrder || defaultBoardColumnOrder;
   const updateOrder = (key: 'compactActive' | 'compactDone', value: TaskStatus[]) =>
@@ -20,14 +21,25 @@ export function MobileBoardControls({ settings, setSettings }: Props) {
     }));
 
   return (
-    <div data-testid="mobile-board-controls" className="mb-2 flex flex-col items-end gap-2 lg:hidden">
+    <div data-testid="mobile-board-controls" className="mb-2 flex w-full flex-col items-end gap-2 lg:hidden">
+      {!settings.mobileFocusMode && (
+        <header className="flex w-full items-end justify-between gap-3 px-1 pt-1 sm:hidden">
+          <div>
+            <div className="ui-eyebrow">Workspace</div>
+            <h1 className="mt-0.5 text-2xl font-semibold text-[var(--ui-text-primary)]">Board</h1>
+          </div>
+          <div className="pb-1 text-sm font-medium text-[var(--ui-text-secondary)]">
+            {taskCount} active {taskCount === 1 ? 'task' : 'tasks'}
+          </div>
+        </header>
+      )}
       <button
         type="button"
         aria-label={settings.mobileFocusMode ? 'Show full mobile board' : 'Use focused mobile view'}
         onClick={() =>
           setSettings((previous) => ({ ...previous, mobileFocusMode: !previous.mobileFocusMode }))
         }
-        className="ui-control ui-focus-ring flex min-h-9 w-fit items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold"
+        className="ui-control ui-focus-ring hidden min-h-11 w-fit items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold sm:flex sm:min-h-9"
       >
         {settings.mobileFocusMode ? 'Full board' : 'Focus view'}
       </button>

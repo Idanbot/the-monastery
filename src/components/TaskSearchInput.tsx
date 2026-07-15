@@ -37,7 +37,7 @@ export function TaskSearchInput({
       : 'relative mb-2 md:hidden sm:mb-3';
   const inputClass =
     'ui-control flex items-center gap-2 rounded-xl px-3 text-[var(--ui-text-secondary)] ' +
-    (variant === 'header' ? 'h-9' : 'py-1.5 sm:py-2');
+    (variant === 'header' ? 'h-9' : 'min-h-12 py-1.5 sm:py-2');
   const showResults = value.trim().length >= 2 && (loading || results.length > 0);
 
   return (
@@ -55,7 +55,7 @@ export function TaskSearchInput({
           <button
             type="button"
             onClick={() => onChange('')}
-            className="text-[var(--ui-text-secondary)] hover:text-[var(--ui-text-primary)]"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-[var(--ui-text-secondary)] hover:bg-[var(--ui-surface-raised)] hover:text-[var(--ui-text-primary)]"
             title="Clear search"
           >
             <X size={14} />
@@ -76,7 +76,7 @@ export function TaskSearchInput({
               data-search-result={`${result.entityType}:${result.entityId}`}
               type="button"
               onClick={() => onSelectResult?.(result)}
-              className="ui-menu-item block w-full rounded-xl px-3 py-2 text-left"
+              className="ui-menu-item block min-h-12 w-full rounded-xl px-3 py-2 text-left"
             >
               <span className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-medium text-[var(--ui-text-primary)]">

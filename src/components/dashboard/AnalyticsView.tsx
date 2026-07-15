@@ -3,6 +3,7 @@ import { ActivityGraph } from './ActivityGraph';
 import { calculateAnalytics } from '../../domain/analytics';
 import { activeTaskStatuses, formatDurationString, statusLabels, taskStatuses } from '../../domain/tasks';
 import type { AppSettings, Profile, Task } from '../../domain/types';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const percentWidth = (value: number) => String(Math.min(100, value)) + '%';
 
@@ -111,6 +112,132 @@ const renderRadarChart = (roles: Array<any>) => {
   );
 };
 
+type AnalyticsResult = ReturnType<typeof calculateAnalytics>;
+
+function MobileAnalyticsSummary({
+  analytics,
+  tasks,
+  activeProfile,
+  currentTask,
+  openRoleSettings
+}: {
+  analytics: AnalyticsResult;
+  tasks: Task[];
+  activeProfile: Profile | null;
+  currentTask: Task | null;
+  openRoleSettings: () => void;
+}) {
+  return (
+    <section
+      data-testid="mobile-analytics-view"
+      className="custom-scrollbar min-h-0 w-full flex-1 overflow-y-auto pb-3 sm:hidden"
+    >
+      <header className="mb-3 flex items-end justify-between gap-3 px-1 pt-1">
+        <div className="min-w-0">
+          <div className="ui-eyebrow">Insights</div>
+          <h1 className="mt-0.5 text-2xl font-semibold text-[var(--ui-text-primary)]">Analytics</h1>
+          {activeProfile && (
+            <p className="mt-1 truncate text-sm text-[var(--ui-text-secondary)]">{activeProfile.name}</p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={openRoleSettings}
+          className="ui-control ui-focus-ring min-h-11 shrink-0 rounded-xl px-3 text-sm font-semibold"
+        >
+          Goals
+        </button>
+      </header>
+
+      <div className="grid grid-cols-2 gap-2">
+        <article className="ui-surface col-span-2 rounded-2xl border p-4 shadow-sm">
+          <div className="text-sm font-medium text-[var(--ui-text-secondary)]">Tracked time</div>
+          <div className="mt-1 font-mono text-3xl font-semibold tabular-nums text-[var(--ui-info)]">
+            {formatDurationString(analytics.totalTrackedMs)}
+          </div>
+        </article>
+        {taskStatuses.map((status) => (
+          <article
+            key={status}
+            data-testid={`mobile-metric-${status}`}
+            className="ui-surface rounded-2xl border p-3 shadow-sm"
+          >
+            <div className="text-xs font-medium text-[var(--ui-text-secondary)]">{statusLabels[status]}</div>
+            <div className="mt-1 font-mono text-2xl font-semibold tabular-nums text-[var(--ui-text-primary)]">
+              {analytics.statusCounts[status]}
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <section className="ui-surface mt-3 rounded-2xl border p-4 shadow-sm">
+        <div className="ui-eyebrow">Current focus</div>
+        <div className="mt-1 line-clamp-2 text-base font-semibold text-[var(--ui-text-primary)]">
+          {currentTask?.title || 'No active task'}
+        </div>
+        <div className="mt-2 text-sm text-[var(--ui-text-secondary)]">
+          Top tag: {analytics.tagRows[0]?.tag || 'No tracked tags'}
+        </div>
+      </section>
+
+      <div className="mt-3">
+        <ActivityGraph tasks={tasks} compact />
+      </div>
+
+      <details className="ui-surface mt-3 rounded-2xl border shadow-sm">
+        <summary className="ui-focus-ring flex min-h-12 cursor-pointer items-center justify-between rounded-2xl px-4 text-base font-semibold">
+          <span>Role progress</span>
+          <span className="ui-muted-chip text-xs">{analytics.roleRows.length}</span>
+        </summary>
+        <div className="space-y-3 border-t border-[var(--ui-border-subtle)] p-4">
+          {analytics.roleRows.map((role) => {
+            const target = Math.max(0, Number(role.weeklyTargetHours) || 0);
+            return (
+              <div key={role.id}>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="min-w-0 truncate font-medium">{role.name}</span>
+                  <span className="shrink-0 font-mono text-xs text-[var(--ui-text-secondary)]">
+                    {role.hours.toFixed(1)}h{target ? ` / ${target}h` : ''}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--ui-control)]">
+                  <div
+                    className="h-full rounded-full bg-[var(--ui-info)]"
+                    style={{ width: target ? percentWidth(role.weeklyProgress * 100) : '0%' }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+          {analytics.roleRows.length === 0 && (
+            <p className="text-sm text-[var(--ui-text-secondary)]">No role goals yet.</p>
+          )}
+        </div>
+      </details>
+
+      <details className="ui-surface mt-3 rounded-2xl border shadow-sm">
+        <summary className="ui-focus-ring flex min-h-12 cursor-pointer items-center justify-between rounded-2xl px-4 text-base font-semibold">
+          <span>Tag progress</span>
+          <span className="ui-muted-chip text-xs">{analytics.tagRows.length}</span>
+        </summary>
+        <div className="space-y-3 border-t border-[var(--ui-border-subtle)] p-4">
+          {analytics.tagRows.slice(0, 12).map((row) => (
+            <div key={row.tag} className="flex min-h-8 items-center justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate font-medium">{row.tag}</span>
+              <span className="shrink-0 font-mono text-xs text-[var(--ui-text-secondary)]">
+                {row.hours.toFixed(1)}h
+              </span>
+            </div>
+          ))}
+          {analytics.tagRows.length === 0 && (
+            <p className="text-sm text-[var(--ui-text-secondary)]">No tracked tag time yet.</p>
+          )}
+        </div>
+      </details>
+    </section>
+  );
+}
+
 export function AnalyticsView({
   tasks,
   settings,
@@ -127,10 +254,23 @@ export function AnalyticsView({
   openRoleSettings: () => void;
 }) {
   const analytics = calculateAnalytics({ tasks, roles: settings.roles, tagGoals: settings.tagGoals, now });
+  const isPhoneLayout = useMediaQuery('(max-width: 639px)');
   const statusChartData = taskStatuses.map((status) => ({
     name: statusLabels[status],
     tasks: analytics.statusCounts[status] || 0
   }));
+
+  if (isPhoneLayout) {
+    return (
+      <MobileAnalyticsSummary
+        analytics={analytics}
+        tasks={tasks}
+        activeProfile={activeProfile}
+        currentTask={currentTask}
+        openRoleSettings={openRoleSettings}
+      />
+    );
+  }
 
   return (
     <div className="flex-1 min-h-0 p-6 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">

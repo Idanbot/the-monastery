@@ -1,7 +1,9 @@
 import { expect, test } from './fixtures';
 import {
+  browserToday,
   chooseTheme,
   completeBreathingIntro,
+  createScheduledTask,
   createTask,
   installStableVisualState,
   openSettingsSection,
@@ -89,6 +91,47 @@ test('mobile task board remains visually stable', async ({ page }) => {
     ...screenshotOptions,
     maxDiffPixels: 1000
   });
+});
+
+test('mobile Today view remains visually stable', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await stabilizePage(page);
+  await createTask(page, 'Review the migration plan');
+  await page.getByText('Review the migration plan').first().click();
+  await page.getByLabel('Status').selectOption('in-progress');
+  await page.getByRole('button', { name: /save task/i }).click();
+  await page.getByTestId('mobile-shell').getByRole('button', { name: 'Today' }).click();
+  await expect(page.locator('.app-main')).toHaveScreenshot('mobile-today.png', screenshotOptions);
+});
+
+test('mobile calendar agenda remains visually stable', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await stabilizePage(page);
+  await createScheduledTask(page, 'Architecture review', await browserToday(page), '09:30', '10:30');
+  await page.getByTestId('mobile-shell').getByRole('button', { name: 'Calendar' }).click();
+  await expect(page.locator('.app-main')).toHaveScreenshot('mobile-calendar.png', screenshotOptions);
+});
+
+test('mobile analytics summary remains visually stable', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await stabilizePage(page);
+  await createTask(page, 'Analytics visual task');
+  await page.getByTestId('mobile-shell').getByRole('button', { name: 'More' }).click();
+  await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Analytics' }).click();
+  await expect(page.locator('.app-main')).toHaveScreenshot('mobile-analytics.png', screenshotOptions);
+});
+
+test('mobile projects view remains visually stable', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await stabilizePage(page);
+  await page.getByTestId('mobile-shell').getByRole('button', { name: 'More' }).click();
+  await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Projects' }).click();
+  await expect(page.getByTestId('projects-view')).toBeVisible();
+  await expect(page.locator('.app-main')).toHaveScreenshot('mobile-projects.png', screenshotOptions);
 });
 
 test('collapsed full-layout lanes remain visually stable', async ({ page }) => {

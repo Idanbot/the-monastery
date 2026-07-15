@@ -45,6 +45,20 @@ test('mobile controls pass accessibility checks', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('mobile-lane-tabs')).toBeVisible();
   await expectNoSeriousViolations(page);
+
+  const shell = page.getByTestId('mobile-shell');
+  await shell.getByRole('button', { name: 'Today' }).click();
+  await expect(page.getByTestId('mobile-focus-view')).toBeVisible();
+  await expectNoSeriousViolations(page);
+
+  await shell.getByRole('button', { name: 'Calendar' }).click();
+  await expect(page.getByTestId('mobile-calendar-agenda')).toBeVisible();
+  await expectNoSeriousViolations(page);
+
+  await shell.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Analytics' }).click();
+  await expect(page.getByTestId('mobile-analytics-view')).toBeVisible();
+  await expectNoSeriousViolations(page);
 });
 
 test('calendar supports keyboard navigation, descriptive events, and contrast checks', async ({ page }) => {

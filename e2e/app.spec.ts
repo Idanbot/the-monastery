@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import type { Page } from '@playwright/test';
 import {
   api,
   browserToday,
@@ -11,6 +12,12 @@ import {
   resetServerState,
   searchTasks
 } from './helpers';
+
+const expectNoHorizontalOverflow = async (page: Page) => {
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)
+  ).toBe(true);
+};
 
 test.beforeEach(async ({ page, request }) => {
   const activeProfileId = await resetServerState(request);
@@ -1075,15 +1082,20 @@ test('uses one navigable mobile lane while preserving focus controls and collaps
 
   const laneBoard = page.getByTestId('mobile-lane-board');
   await expect(laneBoard).toBeVisible();
+  const laneBoardBox = await laneBoard.boundingBox();
+  expect(laneBoardBox?.width).toBeGreaterThanOrEqual(366);
   await expect(laneBoard.locator('[data-testid^="board-column-"]')).toHaveCount(1);
   await expect(laneBoard.getByRole('tab', { name: /in-progress, 2 tasks/i })).toBeVisible();
+  for (const tab of await laneBoard.getByRole('tab').all()) {
+    expect((await tab.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
   await laneBoard.getByRole('tab', { name: /in-progress, 2 tasks/i }).click();
   await expect(laneBoard.getByTestId('board-column-in-progress')).toContainText(mobileTitle);
   await expect(laneBoard.getByTestId('board-column-in-progress')).toContainText(nextTitle);
 
-  const mobileControls = page.getByTestId('mobile-board-controls');
-  await expect(mobileControls).toBeVisible();
-  await mobileControls.getByRole('button', { name: /use focused mobile view/i }).click();
+  const mobileShell = page.getByTestId('mobile-shell');
+  await expect(page.getByRole('heading', { name: 'Board' })).toBeVisible();
+  await mobileShell.getByRole('button', { name: 'Today' }).click();
   const focusView = page.getByTestId('mobile-focus-view');
   await expect(focusView).toBeVisible();
   await expect(focusView).toContainText(mobileTitle);
@@ -1097,7 +1109,7 @@ test('uses one navigable mobile lane while preserving focus controls and collaps
   ).toBeVisible();
   await focusView.getByRole('button', { name: /reject current task/i }).click();
   await focusView.getByRole('button', { name: /complete current task/i }).click();
-  await mobileControls.getByRole('button', { name: /show full mobile board/i }).click();
+  await mobileShell.getByRole('button', { name: 'Board' }).click();
   await laneBoard.getByRole('tab', { name: /rejected, 1 task/i }).click();
   await expect(laneBoard.getByTestId('board-column-rejected')).toContainText(mobileTitle);
   await laneBoard.getByRole('tab', { name: /done, 1 task/i }).click();
@@ -1130,16 +1142,57 @@ test('uses dedicated mobile navigation and a compact more sheet', async ({ page 
   await shell.getByRole('button', { name: 'Board' }).click();
   await expect(page.getByTestId('mobile-lane-board')).toBeVisible();
 
+  await shell.getByRole('button', { name: 'Calendar' }).click();
+  const mobileAgenda = page.getByTestId('mobile-calendar-agenda');
+  await expect(mobileAgenda).toBeVisible();
+  await expect(page.getByTestId('calendar-scroll-area')).toHaveCount(0);
+  expect(
+    (await mobileAgenda.getByRole('button', { name: 'Today' }).boundingBox())?.height
+  ).toBeGreaterThanOrEqual(44);
+
   await shell.getByRole('button', { name: 'More' }).click();
   const more = page.getByRole('dialog', { name: 'More' });
   await expect(more.getByRole('button', { name: 'Projects' })).toBeVisible();
-  await more.getByRole('button', { name: 'Filters' }).click();
-  await expect(more.getByRole('combobox', { name: /search known tags/i })).toBeVisible();
+  await more.getByRole('button', { name: 'Analytics' }).click();
+  await expect(page.getByTestId('mobile-analytics-view')).toBeVisible();
+
+  await shell.getByRole('button', { name: 'More' }).click();
+  await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Projects' }).click();
+  await expect(page.getByTestId('projects-view')).toBeVisible();
+
+  await shell.getByRole('button', { name: 'More' }).click();
+  const reopenedMore = page.getByRole('dialog', { name: 'More' });
+  await reopenedMore.getByRole('button', { name: 'Filters' }).click();
+  await expect(reopenedMore.getByRole('combobox', { name: /search known tags/i })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(more).toBeHidden();
+  await expect(reopenedMore).toBeHidden();
 
   await shell.getByRole('button', { name: 'Create task' }).click();
   await expect(page.getByTestId('task-modal')).toBeVisible();
+});
+
+test('keeps primary mobile views readable at narrow and large phone widths', async ({ page }) => {
+  for (const width of [320, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/');
+    const shell = page.getByTestId('mobile-shell');
+
+    for (const viewName of ['Board', 'Today', 'Calendar'] as const) {
+      await shell.getByRole('button', { name: viewName }).click();
+      await expectNoHorizontalOverflow(page);
+      for (const button of await page.getByTestId('workspace-content').locator('button:visible').all()) {
+        const label = (await button.getAttribute('aria-label')) || (await button.textContent()) || 'button';
+        expect((await button.boundingBox())?.height, `${viewName}: ${label.trim()}`).toBeGreaterThanOrEqual(
+          44
+        );
+      }
+    }
+
+    await shell.getByRole('button', { name: 'More' }).click();
+    await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Analytics' }).click();
+    await expect(page.getByTestId('mobile-analytics-view')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  }
 });
 
 test('plays and persists focus media while allowing a minimized player', async ({ page }) => {

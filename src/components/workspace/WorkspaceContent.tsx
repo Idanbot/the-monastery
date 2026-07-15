@@ -73,12 +73,12 @@ export function WorkspaceContent() {
   const isPhoneLayout = useMediaQuery('(max-width: 639px)');
 
   return (
-    <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
+    <div data-testid="workspace-content" className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
       {!settings.monkMode &&
         view !== 'dashboard' &&
         view !== 'calendar' &&
         view !== 'projects' &&
-        !(view === 'board' && settings.mobileFocusMode) && (
+        view !== 'board' && (
           <TaskSearchInput
             value={searchQuery}
             onChange={setSearchQuery}
@@ -143,7 +143,7 @@ export function WorkspaceContent() {
             now={now}
             activeProfile={activeProfile ?? null}
             currentTask={currentTask}
-            openRoleSettings={() => {}}
+            openRoleSettings={() => openSettings('roles')}
           />
         </Suspense>
       )}
@@ -231,7 +231,24 @@ export function WorkspaceContent() {
               onClose={() => setFocusPlannerOpen(false)}
             />
           )}
-          <MobileBoardControls settings={settings} setSettings={setSettings} />
+          <MobileBoardControls
+            settings={settings}
+            setSettings={setSettings}
+            taskCount={
+              filteredTasks.filter((task) => task.status === 'backlog' || task.status === 'in-progress')
+                .length
+            }
+          />
+          {!settings.mobileFocusMode && (
+            <TaskSearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              variant="inline"
+              results={unifiedSearchResults}
+              loading={unifiedSearchLoading}
+              onSelectResult={selectUnifiedSearchResult}
+            />
+          )}
           {settings.mobileFocusMode && (
             <MobileFocusView
               filteredTasks={filteredTasks}
