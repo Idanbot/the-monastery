@@ -475,19 +475,12 @@ it('prompts before closing dirty modal edits and can discard them', async () => 
   expect(screen.queryByText(/unsaved note/i)).not.toBeInTheDocument();
 });
 
-it('filters tasks by tag', async () => {
-  const user = userEvent.setup();
+it('filters tasks by tag', () => {
+  seedTasks([makeTask(), makeTask({ id: 'frontend-task', title: 'Frontend polish', tags: ['Frontend'] })]);
   render(<App />);
 
-  await clickNewTask(user);
-  const titleInput = screen.getByLabelText(/title/i);
-  await user.type(titleInput, 'Frontend polish');
-  await user.clear(screen.getByPlaceholderText(/backend, high priority/i));
-  await user.type(screen.getByPlaceholderText(/backend, high priority/i), 'Frontend');
-  await user.click(screen.getByRole('button', { name: /save task/i }));
-
-  await user.click(screen.getByRole('button', { name: /filters/i }));
-  await user.click(screen.getByRole('option', { name: /^frontend$/i }));
+  fireEvent.click(screen.getByRole('button', { name: /filters/i }));
+  fireEvent.click(screen.getByRole('option', { name: /^frontend$/i }));
 
   expect(screen.getAllByText(/frontend polish/i).length).toBeGreaterThan(0);
   expect(screen.queryByText(/design database schema/i)).not.toBeInTheDocument();
