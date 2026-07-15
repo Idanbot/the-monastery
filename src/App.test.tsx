@@ -420,10 +420,9 @@ it('creates a task from smart quick add input', async () => {
   });
   render(<App />);
 
-  await user.type(
-    screen.getByPlaceholderText(/quick add/i),
-    'GKE migration tomorrow 9-10 #cloud !7 https://example.com/course'
-  );
+  fireEvent.change(screen.getByPlaceholderText(/quick add/i), {
+    target: { value: 'GKE migration tomorrow 9-10 #cloud !7 https://example.com/course' }
+  });
   await user.click(screen.getByRole('button', { name: /^add$/i }));
 
   expect(screen.getByDisplayValue(/gke migration/i)).toBeInTheDocument();
