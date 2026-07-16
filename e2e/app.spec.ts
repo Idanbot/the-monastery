@@ -1221,6 +1221,15 @@ test('plays and persists focus media while allowing a minimized player', async (
   await page.getByRole('button', { name: 'Minimize media player' }).click();
   await expect(dock).toHaveAttribute('data-expanded', 'false');
   await expect(player).toBeAttached();
+  await expect(page.getByRole('slider', { name: 'Seek media' })).toBeVisible();
+  const volume = page.getByRole('slider', { name: 'Media volume' });
+  await expect(volume).toBeVisible();
+  await volume.fill('0.4');
+  await expect(volume).toHaveValue('0.4');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(dock).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  expect((await dock.boundingBox())?.width).toBeLessThanOrEqual(374);
   await page.getByRole('button', { name: 'Stop media' }).click();
   await expect(dock).toHaveCount(0);
 

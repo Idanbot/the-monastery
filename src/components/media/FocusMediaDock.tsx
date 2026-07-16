@@ -1,6 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FocusReactPlayer as ReactPlayer } from './FocusReactPlayer';
-import { ChevronDown, ExternalLink, Maximize2, Music2, Square, Upload } from 'lucide-react';
+import {
+  ChevronDown,
+  ExternalLink,
+  Maximize2,
+  Music2,
+  Pause,
+  Play,
+  Square,
+  Upload,
+  Volume2,
+  VolumeX
+} from 'lucide-react';
 import { parseFocusMediaUrl } from '../../domain/focusMedia';
 
 type Props = {
@@ -13,10 +24,28 @@ type Props = {
   onStop: () => void;
 };
 
+const validMediaTime = (value: number) => (Number.isFinite(value) && value > 0 ? value : 0);
+
+const formatMediaTime = (seconds: number) => {
+  const totalSeconds = Math.floor(validMediaTime(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const remainder = totalSeconds % 60;
+  return hours > 0
+    ? `${hours}:${minutes.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`
+    : `${minutes}:${remainder.toString().padStart(2, '0')}`;
+};
+
 export function FocusMediaDock({ active, expanded, url, onChangeUrl, onExpand, onMinimize, onStop }: Props) {
+  const playerRef = useRef<HTMLVideoElement>(null);
   const [draftUrl, setDraftUrl] = useState(url);
   const [validationError, setValidationError] = useState('');
   const [playbackError, setPlaybackError] = useState('');
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
   const media = parseFocusMediaUrl(url);
   const playbackUrl =
     media.kind === 'youtube' ? media.embedUrl : media.kind === 'audio' ? media.sourceUrl : '';
@@ -26,6 +55,9 @@ export function FocusMediaDock({ active, expanded, url, onChangeUrl, onExpand, o
     setDraftUrl(url);
     setValidationError('');
     setPlaybackError('');
+    setPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
   }, [url]);
 
   if (!active) return null;
@@ -41,6 +73,18 @@ export function FocusMediaDock({ active, expanded, url, onChangeUrl, onExpand, o
     onChangeUrl(next.sourceUrl);
   };
 
+  const seekTo = (nextTime: number) => {
+    const boundedTime = Math.min(Math.max(validMediaTime(nextTime), 0), duration || 0);
+    if (playerRef.current) playerRef.current.currentTime = boundedTime;
+    setCurrentTime(boundedTime);
+  };
+
+  const updateVolume = (nextVolume: number) => {
+    const boundedVolume = Math.min(Math.max(nextVolume, 0), 1);
+    setVolume(boundedVolume);
+    if (boundedVolume > 0) setMuted(false);
+  };
+
   return (
     <section
       data-testid="focus-media-dock"
@@ -50,7 +94,7 @@ export function FocusMediaDock({ active, expanded, url, onChangeUrl, onExpand, o
       className={`fixed z-[45] overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 ${
         expanded
           ? 'inset-x-2 bottom-20 max-h-[calc(100vh-6rem)] md:bottom-4 md:left-auto md:right-4 md:w-[28rem]'
-          : 'bottom-20 right-2 w-56 md:bottom-4 md:right-4'
+          : 'bottom-20 right-2 w-[calc(100vw-1rem)] max-w-sm md:bottom-4 md:right-4'
       }`}
     >
       <header className="flex min-h-11 items-center gap-2 border-b border-slate-200 px-3 dark:border-slate-700">
@@ -99,8 +143,12 @@ export function FocusMediaDock({ active, expanded, url, onChangeUrl, onExpand, o
               className={media.kind === 'youtube' ? 'aspect-video w-full' : 'p-4'}
             >
               <ReactPlayer
+                ref={playerRef}
                 src={playbackUrl}
                 controls
+                playing={playing}
+                volume={volume}
+                muted={muted}
                 playsInline
                 preload="metadata"
                 width="100%"
@@ -117,6 +165,14 @@ export function FocusMediaDock({ active, expanded, url, onChangeUrl, onExpand, o
                   </div>
                 }
                 onReady={() => setPlaybackError('')}
+                onPlay={() => setPlaying(true)}
+                onPause={() => setPlaying(false)}
+                onTimeUpdate={(event) => setCurrentTime(validMediaTime(event.currentTarget.currentTime))}
+                onDurationChange={(event) => setDuration(validMediaTime(event.currentTarget.duration))}
+                onVolumeChange={(event) => {
+                  setVolume(event.currentTarget.volume);
+                  setMuted(event.currentTarget.muted);
+                }}
                 onError={() =>
                   setPlaybackError(
                     'This media could not be played here. Try another URL or open it at the source.'
@@ -180,6 +236,71 @@ export function FocusMediaDock({ active, expanded, url, onChangeUrl, onExpand, o
           )}
         </form>
       </div>
+
+      {!expanded && media.kind !== 'unsupported' && (
+        <div
+          data-testid="compact-media-controls"
+          className="space-y-1.5 bg-slate-50/90 px-3 py-2.5 dark:bg-slate-950/70"
+        >
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              aria-label={playing ? 'Pause media' : 'Play media'}
+              title={playing ? 'Pause' : 'Play'}
+              onClick={() => setPlaying((value) => !value)}
+              className="grid size-10 shrink-0 place-items-center rounded-full bg-indigo-600 text-white shadow-sm transition-colors hover:bg-indigo-700"
+            >
+              {playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}
+            </button>
+            <div className="min-w-0 flex-1">
+              <input
+                aria-label="Seek media"
+                aria-valuetext={`${formatMediaTime(currentTime)} of ${formatMediaTime(duration)}`}
+                type="range"
+                min="0"
+                max={duration}
+                step="0.1"
+                value={Math.min(currentTime, duration || 0)}
+                disabled={duration <= 0}
+                onChange={(event) => seekTo(Number(event.target.value))}
+                className="h-5 w-full cursor-pointer accent-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+              />
+              <div className="flex items-center justify-between text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
+                <span>{`${formatMediaTime(currentTime)} / ${formatMediaTime(duration)}`}</span>
+                <span className="truncate pl-2">{media.kind === 'youtube' ? 'YouTube' : 'Audio'}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex min-h-9 items-center gap-2">
+            <button
+              type="button"
+              aria-label={muted || volume === 0 ? 'Unmute media' : 'Mute media'}
+              title={muted || volume === 0 ? 'Unmute' : 'Mute'}
+              onClick={() => {
+                if (volume === 0) setVolume(1);
+                setMuted(volume > 0 && !muted);
+              }}
+              className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-slate-200/70 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              {muted || volume === 0 ? <VolumeX size={17} /> : <Volume2 size={17} />}
+            </button>
+            <input
+              aria-label="Media volume"
+              aria-valuetext={`${Math.round((muted ? 0 : volume) * 100)} percent`}
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={muted ? 0 : volume}
+              onChange={(event) => updateVolume(Number(event.target.value))}
+              className="h-5 min-w-0 flex-1 cursor-pointer accent-indigo-600"
+            />
+            <span className="w-9 text-right text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
+              {Math.round((muted ? 0 : volume) * 100)}%
+            </span>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
