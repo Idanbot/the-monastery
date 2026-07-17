@@ -56,6 +56,13 @@ const fullSettings = (overrides: Record<string, unknown> = {}) => ({
   clockFormat: '24h',
   showSeconds: true,
   sidebarWidgets: ['clock', 'agenda'],
+  mainViewModules: [
+    { id: 'focus', area: 'center', visible: true },
+    { id: 'activity', area: 'center', visible: true },
+    { id: 'calendar', area: 'right', visible: true },
+    { id: 'media', area: 'right', visible: true },
+    { id: 'clock', area: 'right', visible: true }
+  ],
   focusMediaUrl: 'https://youtu.be/4e839orj52w',
   sidebarWidth: 320,
   clockHeight: 160,
@@ -482,6 +489,13 @@ it('stores profile settings and includes tasks/settings in backups', async () =>
             weeklyTargetHours: 4,
             monthlyTargetHours: 0
           }
+        ],
+        mainViewModules: [
+          { id: 'focus', area: 'center', visible: true },
+          { id: 'activity', area: 'right', visible: true },
+          { id: 'calendar', area: 'right', visible: true },
+          { id: 'media', area: 'right', visible: false },
+          { id: 'clock', area: 'right', visible: true }
         ]
       })
     }
@@ -505,7 +519,16 @@ it('stores profile settings and includes tasks/settings in backups', async () =>
           subtasks: [],
           logs: [],
           activeLogStart: null,
-          activity: []
+          activity: [
+            {
+              id: 'completed-task1',
+              type: 'system',
+              text: 'Marked done',
+              timestamp: '2026-07-17T10:00:00.000Z',
+              kind: 'task-completed',
+              subjectId: 'task1'
+            }
+          ]
         }
       ]
     }
@@ -517,6 +540,11 @@ it('stores profile settings and includes tasks/settings in backups', async () =>
 
   expect(settings.statusCode).toBe(200);
   expect(settings.json().settings.theme).toBe('dark');
+  expect(settings.json().settings.mainViewModules).toContainEqual({
+    id: 'activity',
+    area: 'right',
+    visible: true
+  });
   expect(backup.statusCode).toBe(200);
   expect(backup.json()).toMatchObject({
     schemaVersion: 2,
@@ -524,7 +552,13 @@ it('stores profile settings and includes tasks/settings in backups', async () =>
       {
         id: 'default',
         settings: { theme: 'dark' },
-        tasks: [{ id: 'task1', title: 'Backed up task' }]
+        tasks: [
+          {
+            id: 'task1',
+            title: 'Backed up task',
+            activity: [{ kind: 'task-completed', subjectId: 'task1' }]
+          }
+        ]
       }
     ]
   });

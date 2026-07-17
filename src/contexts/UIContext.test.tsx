@@ -93,6 +93,7 @@ describe('UIContext', () => {
     expect(screen.getByTestId('probe-date')).not.toHaveTextContent('unscheduled');
 
     expect(screen.getByRole('button', { name: 'Start timer: Palette integration task' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to main' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Go to calendar' })).toBeInTheDocument();
   });
 });

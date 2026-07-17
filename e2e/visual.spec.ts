@@ -52,6 +52,15 @@ test('compact desktop header remains visually stable', async ({ page }) => {
   });
 });
 
+test('customizable main workspace remains visually stable', async ({ page }) => {
+  await page.goto('/');
+  await stabilizePage(page);
+  await expect(page.getByTestId('main-workspace')).toHaveScreenshot('main-workspace.png', {
+    ...screenshotOptions,
+    maxDiffPixels: 200
+  });
+});
+
 test('settings modal and Liquid Glass settings remain visually stable', async ({ page }) => {
   await page.goto('/');
   await stabilizePage(page);

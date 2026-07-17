@@ -87,7 +87,9 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const { profiles, selectProfile, activeProfileId, isBackendAvailable } = useProfileContext();
 
-  const [view, setView] = useState('board');
+  const [view, setView] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches ? 'main' : 'board'
+  );
   const [now, setNow] = useState(Date.now());
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine
@@ -162,7 +164,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         monkModeOpenedAt: enabled ? new Date().toISOString() : undefined
       }));
       if (enabled) {
-        setView('board');
+        setView('main');
         setIsEnteringMonkMode(true);
       } else {
         setIsEnteringMonkMode(false);
@@ -342,6 +344,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       {
         heading: 'Navigation',
         commands: [
+          { value: 'go to main home navigate', label: 'Go to main', onSelect: () => setView('main') },
           { value: 'go to board navigate', label: 'Go to board', onSelect: () => setView('board') },
           {
             value: 'go to calendar navigate',

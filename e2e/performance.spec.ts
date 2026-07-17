@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures';
 import { normalizeTask } from '../src/domain/tasks';
-import { api, expectStatus, resetServerState } from './helpers';
+import { api, expectStatus, openBoard, resetServerState } from './helpers';
 
 test('large board stays within render budget and supports lane movement', async ({ page, request }) => {
   test.setTimeout(60_000);
@@ -18,10 +18,15 @@ test('large board stays within render budget and supports lane movement', async 
     localStorage.setItem('the-monastery_active_profile_id_v1', activeProfileId);
   }, profileId);
 
-  const renderStarted = Date.now();
+  const mainRenderStarted = Date.now();
   await page.goto('/');
+  await expect(page.getByTestId('main-workspace')).toBeVisible();
+  expect(Date.now() - mainRenderStarted).toBeLessThan(8_000);
+
+  const boardRenderStarted = Date.now();
+  await openBoard(page);
   await expect(page.getByTestId('kanban-board')).toBeVisible();
-  expect(Date.now() - renderStarted).toBeLessThan(8_000);
+  expect(Date.now() - boardRenderStarted).toBeLessThan(8_000);
 
   const card = page.getByLabel(/Performance task 249, Backlog/i);
   await card.scrollIntoViewIfNeeded();

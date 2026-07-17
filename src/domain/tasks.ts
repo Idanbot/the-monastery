@@ -1,6 +1,7 @@
 import type { AppSettings, Task, TaskRecurrence, TaskStatus } from './types';
 import { visualThemeIds } from './themes';
 import { normalizeSchemaSettings, schemaSettingDefaults } from './settingsSchema';
+import { defaultMainViewModules, normalizeMainViewModules } from './mainView';
 
 export const validStatuses: TaskStatus[] = ['backlog', 'in-progress', 'done', 'rejected'];
 export const taskStatuses = validStatuses;
@@ -172,6 +173,7 @@ export const defaultSettings: AppSettings = {
   dailyGoal: '',
   shutdownChecklist: { review: false, plan: false, clear: false },
   sidebarWidgets: ['now', 'clock', 'media', 'agenda'],
+  mainViewModules: defaultMainViewModules,
   focusMediaUrl: 'https://youtu.be/4e839orj52w',
   sidebarWidth: 320,
   clockHeight: 160,
@@ -329,6 +331,7 @@ export const mergeSettings = (saved) => ({
       ? saved.shutdownChecklist
       : {})
   },
+  mainViewModules: normalizeMainViewModules(saved?.mainViewModules),
   animationsEnabled:
     saved?.animationsEnabled === undefined
       ? defaultSettings.animationsEnabled
@@ -428,6 +431,10 @@ export const normalizeActivity = (activity) =>
         .map((entry) => ({
           id: typeof entry.id === 'string' ? entry.id : generateId(),
           type: entry.type === 'note' ? ('note' as const) : ('system' as const),
+          ...(['task-completed', 'subtask-completed', 'focus-session', 'time-tracked'].includes(entry.kind)
+            ? { kind: entry.kind }
+            : {}),
+          ...(typeof entry.subjectId === 'string' && entry.subjectId ? { subjectId: entry.subjectId } : {}),
           text: entry.text,
           timestamp: typeof entry.timestamp === 'string' ? entry.timestamp : new Date().toISOString()
         }))

@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 
-export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) => void }) {
+export function PomodoroTimer({
+  onComplete,
+  compact = false
+}: {
+  onComplete?: (minutes: number) => void;
+  compact?: boolean;
+}) {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState<'work' | 'break'>('work');
@@ -49,7 +55,7 @@ export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) =
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <div className="ui-control mb-5 flex gap-1 rounded-full p-1">
+      <div className={`ui-control flex gap-1 rounded-full p-1 ${compact ? 'mb-2' : 'mb-5'}`}>
         <button
           onClick={() => switchMode('work')}
           className={`ui-focus-ring rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
@@ -73,7 +79,9 @@ export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) =
       </div>
 
       <div
-        className="mb-6 font-mono text-6xl font-semibold tabular-nums text-[var(--ui-text-primary)] sm:text-7xl"
+        className={`font-mono font-semibold tabular-nums text-[var(--ui-text-primary)] ${
+          compact ? 'mb-2 text-5xl' : 'mb-6 text-6xl sm:text-7xl'
+        }`}
         style={{ fontVariantNumeric: 'tabular-nums' }}
       >
         {formatTime(timeLeft)}
@@ -83,12 +91,14 @@ export function PomodoroTimer({ onComplete }: { onComplete?: (minutes: number) =
         <button
           aria-label={isActive ? 'Pause focus timer' : 'Start focus timer'}
           onClick={toggleTimer}
-          className="ui-accent-button ui-focus-ring flex h-14 w-14 items-center justify-center rounded-full"
+          className={`ui-accent-button ui-focus-ring flex items-center justify-center rounded-full ${
+            compact ? 'h-11 w-11' : 'h-14 w-14'
+          }`}
         >
           {isActive ? (
-            <Pause size={24} fill="currentColor" />
+            <Pause size={compact ? 20 : 24} fill="currentColor" />
           ) : (
-            <Play size={24} fill="currentColor" className="ml-1" />
+            <Play size={compact ? 20 : 24} fill="currentColor" className="ml-1" />
           )}
         </button>
 

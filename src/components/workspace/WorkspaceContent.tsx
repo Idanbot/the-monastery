@@ -7,6 +7,7 @@ import { MonkModeView } from '../monk-mode/MonkModeView';
 import { TaskSearchInput } from '../TaskSearchInput';
 import { CalendarView } from '../calendar/CalendarView';
 import { FocusPlanningPanel } from '../planning/FocusPlanningPanel';
+import { MainWorkspace } from './MainWorkspace';
 
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
@@ -27,11 +28,11 @@ export function WorkspaceContent() {
   const { settings, setSettings, toggleBoardLane, startResize, openSettings } = useSettingsContext();
   const {
     tasks,
-    setTasks,
     filteredTasks,
     currentTask,
     addTask,
     applyFocusPlan,
+    recordFocusSession,
     updateTaskTimer,
     startTask,
     completeTask,
@@ -71,6 +72,8 @@ export function WorkspaceContent() {
   } = useUIContext();
   const [focusPlannerOpen, setFocusPlannerOpen] = useState(false);
   const isPhoneLayout = useMediaQuery('(max-width: 639px)');
+  const isDesktopLayout = useMediaQuery('(min-width: 768px)');
+  const showBoardWorkspace = view === 'board' || (view === 'main' && !isDesktopLayout);
 
   return (
     <div data-testid="workspace-content" className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
@@ -78,6 +81,7 @@ export function WorkspaceContent() {
         view !== 'dashboard' &&
         view !== 'calendar' &&
         view !== 'projects' &&
+        view !== 'main' &&
         view !== 'board' && (
           <TaskSearchInput
             value={searchQuery}
@@ -109,22 +113,7 @@ export function WorkspaceContent() {
               });
             }
             if (!currentTask) return;
-            setTasks((prev) =>
-              prev.map((task) =>
-                task.id === currentTask.id
-                  ? {
-                      ...task,
-                      logs: [
-                        ...task.logs,
-                        {
-                          start: new Date(Date.now() - minutes * 60_000).toISOString(),
-                          end: new Date().toISOString()
-                        }
-                      ]
-                    }
-                  : task
-              )
-            );
+            recordFocusSession(currentTask.id, minutes);
           }}
         />
       )}
@@ -181,7 +170,9 @@ export function WorkspaceContent() {
 
       {!settings.monkMode && view === 'calendar' && <CalendarView />}
 
-      {!settings.monkMode && view === 'board' && (
+      {!settings.monkMode && view === 'main' && isDesktopLayout && <MainWorkspace />}
+
+      {!settings.monkMode && showBoardWorkspace && (
         <>
           <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
             <form

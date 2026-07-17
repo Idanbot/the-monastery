@@ -1,4 +1,4 @@
-import type { Task, TaskStatus } from './types';
+import type { ActivityKind, Task, TaskStatus } from './types';
 import { generateId } from './tasks';
 
 type CommandOptions = { now?: string; ids?: () => string };
@@ -16,9 +16,10 @@ export type TaskCommand =
 
 export type TaskCommandEffect = { type: 'task-promoted'; taskId: string };
 
-const activity = (text: string, timestamp: string, ids: () => string) => ({
+const activity = (text: string, timestamp: string, ids: () => string, kind?: ActivityKind) => ({
   id: ids(),
   type: 'system' as const,
+  ...(kind ? { kind } : {}),
   text,
   timestamp
 });
@@ -96,7 +97,15 @@ export const executeTaskCommand = (
         return {
           ...moved,
           status: command.status,
-          activity: [...moved.activity, activity(`Status changed to ${command.status}`, timestamp, ids)]
+          activity: [
+            ...moved.activity,
+            activity(
+              `Status changed to ${command.status}`,
+              timestamp,
+              ids,
+              command.status === 'done' ? 'task-completed' : undefined
+            )
+          ]
         };
       })
     };
@@ -120,7 +129,7 @@ export const executeTaskCommand = (
           return {
             ...stopped,
             status: 'done',
-            activity: [...stopped.activity, activity('Marked done', timestamp, ids)]
+            activity: [...stopped.activity, activity('Marked done', timestamp, ids, 'task-completed')]
           };
         }
         if (task.id === next?.id) {
@@ -186,7 +195,7 @@ export const executeTaskCommand = (
             logs: [...task.logs, { start, end: timestamp }],
             activity: [
               ...task.activity,
-              activity(`Completed ${command.minutes}m focus session`, timestamp, ids)
+              activity(`Completed ${command.minutes}m focus session`, timestamp, ids, 'focus-session')
             ]
           }
         : task

@@ -52,7 +52,16 @@ export const resetServerState = async (
   return activeProfile.id;
 };
 
+export const openBoard = async (page) => {
+  if ((page.viewportSize()?.width ?? 1280) < 768) return;
+  const boardButton = page.getByTestId('view-switch-board');
+  await boardButton.waitFor({ state: 'visible' });
+  await boardButton.click();
+  await expect(page.getByTestId('kanban-board')).toBeVisible();
+};
+
 export const createTask = async (page, title: string) => {
+  await openBoard(page);
   await page
     .locator('button[aria-label="Backlog task"]:visible, button[aria-label="Create task"]:visible')
     .click();
@@ -61,6 +70,7 @@ export const createTask = async (page, title: string) => {
 };
 
 export const createScheduledTask = async (page, title: string, date: string, start: string, end = '') => {
+  await openBoard(page);
   await page
     .locator('button[aria-label="Backlog task"]:visible, button[aria-label="Create task"]:visible')
     .click();

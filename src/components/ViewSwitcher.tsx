@@ -1,6 +1,7 @@
-import { BarChart2, Calendar, FolderKanban, LayoutDashboard, ListTodo } from 'lucide-react';
+import { BarChart2, Calendar, FolderKanban, House, LayoutDashboard, ListTodo } from 'lucide-react';
 
 const VIEWS = [
+  { id: 'main', label: 'Main', icon: House },
   { id: 'board', label: 'Board', icon: LayoutDashboard },
   { id: 'mobile', label: 'List', icon: ListTodo },
   { id: 'calendar', label: 'Calendar', icon: Calendar },

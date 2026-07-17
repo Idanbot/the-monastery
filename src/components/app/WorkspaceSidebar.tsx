@@ -14,7 +14,7 @@ export function WorkspaceSidebar() {
 
   const { view, now, sidebarOpen, setSidebarOpen, openMediaPlayer } = useUIContext();
 
-  if (view === 'calendar') return null;
+  if (view === 'calendar' || view === 'main') return null;
 
   return (
     <>

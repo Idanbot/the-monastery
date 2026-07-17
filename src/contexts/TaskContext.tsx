@@ -55,6 +55,7 @@ interface TaskContextType {
   createRoleRoutineTasks: () => void;
   planMyDay: (onComplete?: () => void) => void;
   applyFocusPlan: (date: string, taskIds: string[], startMinutes: number) => void;
+  recordFocusSession: (taskId: string, minutes: number) => void;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -286,6 +287,10 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   }, []);
 
+  const recordFocusSession = useCallback((taskId: string, minutes: number) => {
+    setTasks((previous) => executeTaskCommand(previous, { type: 'record-focus', taskId, minutes }).tasks);
+  }, []);
+
   const value = useMemo(
     () => ({
       tasks,
@@ -323,7 +328,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       rejectTask,
       createRoleRoutineTasks,
       planMyDay,
-      applyFocusPlan
+      applyFocusPlan,
+      recordFocusSession
     }),
     [
       tasks,
@@ -359,7 +365,8 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
       rejectTask,
       createRoleRoutineTasks,
       planMyDay,
-      applyFocusPlan
+      applyFocusPlan,
+      recordFocusSession
     ]
   );
 

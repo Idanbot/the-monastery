@@ -15,7 +15,9 @@ const activityEntrySchema = z.object({
   id: z.string(),
   type: z.enum(['system', 'note']),
   text: z.string(),
-  timestamp: z.string()
+  timestamp: z.string(),
+  kind: z.enum(['task-completed', 'subtask-completed', 'focus-session', 'time-tracked']).optional(),
+  subjectId: z.string().optional()
 });
 
 const subtaskSchema = z.object({
@@ -73,6 +75,11 @@ const visualThemeSchema = z.enum([
 ]);
 
 const taskStatusEnumSchema = z.enum(['backlog', 'in-progress', 'done', 'rejected']);
+const mainViewModuleSchema = z.object({
+  id: z.enum(['focus', 'activity', 'calendar', 'media', 'clock']),
+  area: z.enum(['center', 'right']),
+  visible: z.boolean()
+});
 
 const goalCadenceSchema = z.object({
   dailyTargetHours: z.number(),
@@ -124,6 +131,7 @@ export const appSettingsSchema = z.object({
   clockFormat: z.enum(['12h', '24h']),
   showSeconds: z.boolean(),
   sidebarWidgets: z.array(z.string()),
+  mainViewModules: z.array(mainViewModuleSchema).max(5),
   focusMediaUrl: z.string().max(2048),
   sidebarWidth: z.number(),
   clockHeight: z.number(),

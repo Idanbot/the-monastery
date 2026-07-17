@@ -1,86 +1,59 @@
 import { useMemo } from 'react';
-import { Flame } from 'lucide-react';
-import { Task } from '../../domain/types';
+import { CheckCheck, CheckCircle2, Clock3, Flame } from 'lucide-react';
+import type { Task } from '../../domain/types';
+import { formatDurationString } from '../../domain/tasks';
+import { buildActivitySummary } from '../../domain/activityTracking';
 
 interface ActivityGraphProps {
   tasks: Task[];
   compact?: boolean;
+  now?: number;
 }
 
-export function ActivityGraph({ tasks, compact = false }: ActivityGraphProps) {
-  const activityData = useMemo(() => {
-    const days = 90;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+export function ActivityGraph({ tasks, compact = false, now = Date.now() }: ActivityGraphProps) {
+  const summary = useMemo(() => buildActivitySummary(tasks, { now, days: 90 }), [tasks, now]);
+  const visibleActivity = compact ? summary.days.slice(-28) : summary.days;
+  const maxScore = Math.max(1, ...visibleActivity.map((day) => day.score));
 
-    const counts = new Map<string, number>();
-
-    // Collect all task logs
-    tasks.forEach((task) => {
-      task.logs.forEach((log) => {
-        if (log.start && log.end) {
-          const date = new Date(log.start);
-          const dateString = date.toISOString().split('T')[0];
-          counts.set(dateString, (counts.get(dateString) || 0) + 1);
-        }
-      });
-      // Also check completion dates as activity
-      if (task.status === 'done' && task.activity.length > 0) {
-        const lastActivity = task.activity[task.activity.length - 1];
-        if (lastActivity) {
-          const dateString = new Date(lastActivity.timestamp).toISOString().split('T')[0];
-          counts.set(dateString, (counts.get(dateString) || 0) + 1);
-        }
-      }
-    });
-
-    const data = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateString = d.toISOString().split('T')[0];
-      data.push({
-        date: dateString,
-        count: counts.get(dateString) || 0
-      });
-    }
-
-    return data;
-  }, [tasks]);
-
-  const visibleActivity = compact ? activityData.slice(-28) : activityData;
-  const maxCount = Math.max(1, ...visibleActivity.map((d) => d.count));
-
-  const getColorClass = (count: number) => {
-    if (count === 0) return 'border border-[var(--ui-border-subtle)] bg-[var(--ui-control)]';
-    const intensity = count / maxCount;
+  const getColorClass = (score: number) => {
+    if (score === 0) return 'border border-[var(--ui-border-subtle)] bg-[var(--ui-control)]';
+    const intensity = score / maxScore;
     if (intensity < 0.25) return 'bg-emerald-200 dark:bg-emerald-900/40';
     if (intensity < 0.5) return 'bg-emerald-300 dark:bg-emerald-800/60';
     if (intensity < 0.75) return 'bg-emerald-400 dark:bg-emerald-600/80';
     return 'bg-emerald-500 dark:bg-emerald-500';
   };
 
-  const currentStreak = useMemo(() => {
-    let streak = 0;
-    for (let i = activityData.length - 1; i >= 0; i--) {
-      if (activityData[i].count > 0) {
-        streak++;
-      } else {
-        // if today is 0, don't break streak yet
-        if (i === activityData.length - 1) continue;
-        break;
-      }
-    }
-    return streak;
-  }, [activityData]);
+  const detailLabel = (day: (typeof visibleActivity)[number]) =>
+    `${day.date}: ${formatDurationString(day.trackedMs)} tracked, ${day.completedSubtasks} subtask${day.completedSubtasks === 1 ? '' : 's'} completed, ${day.completedTasks} task${day.completedTasks === 1 ? '' : 's'} completed`;
 
   return (
-    <div className="ui-surface w-full rounded-2xl border p-4 shadow-sm sm:rounded-xl sm:p-5">
+    <section className="ui-surface w-full rounded-2xl border p-4 shadow-sm sm:rounded-xl sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h3 className="text-base font-bold">Activity</h3>
         <span className="ui-muted-chip inline-flex items-center gap-1.5 text-sm font-medium text-[var(--ui-success)]">
-          <Flame size={14} /> {currentStreak} day streak
+          <Flame size={14} /> {summary.currentStreak} day streak
         </span>
+      </div>
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        <ActivityMetric
+          testId="activity-tracked-time"
+          icon={Clock3}
+          label="Focused"
+          value={formatDurationString(summary.totalTrackedMs)}
+        />
+        <ActivityMetric
+          testId="activity-subtasks-completed"
+          icon={CheckCheck}
+          label="Subtasks"
+          value={String(summary.completedSubtasks)}
+        />
+        <ActivityMetric
+          testId="activity-tasks-completed"
+          icon={CheckCircle2}
+          label="Tasks"
+          value={String(summary.completedTasks)}
+        />
       </div>
       <div
         className={
@@ -88,14 +61,37 @@ export function ActivityGraph({ tasks, compact = false }: ActivityGraphProps) {
         }
         data-testid="activity-days"
       >
-        {visibleActivity.map((day, i) => (
+        {visibleActivity.map((day) => (
           <div
-            key={i}
-            className={`h-4 w-4 rounded-[3px] transition-colors ${getColorClass(day.count)}`}
-            title={`${day.date}: ${day.count} activities`}
+            key={day.date}
+            role="img"
+            aria-label={detailLabel(day)}
+            className={`h-4 w-4 rounded-[3px] transition-colors ${getColorClass(day.score)}`}
+            title={detailLabel(day)}
           />
         ))}
       </div>
+    </section>
+  );
+}
+
+function ActivityMetric({
+  testId,
+  icon: Icon,
+  label,
+  value
+}: {
+  testId: string;
+  icon: typeof Clock3;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="ui-control min-w-0 rounded-xl px-2.5 py-2" data-testid={testId}>
+      <div className="flex items-center gap-1 text-[10px] font-semibold uppercase text-[var(--ui-text-secondary)]">
+        <Icon size={12} /> {label}
+      </div>
+      <div className="mt-1 truncate font-mono text-sm font-bold text-[var(--ui-text-primary)]">{value}</div>
     </div>
   );
 }

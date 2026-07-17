@@ -26,9 +26,13 @@ export type TimeLog = {
   end: string | null;
 };
 
+export type ActivityKind = 'task-completed' | 'subtask-completed' | 'focus-session' | 'time-tracked';
+
 export type ActivityEntry = {
   id: string;
   type: 'system' | 'note';
+  kind?: ActivityKind;
+  subjectId?: string;
   text: string;
   timestamp: string;
 };
@@ -95,6 +99,13 @@ export type Project = {
 
 export type WebhookProviderPreference = { enabled: boolean; template: string };
 export type WebhookProviderSettings = Record<'discord' | 'slack' | 'telegram', WebhookProviderPreference>;
+export type MainViewModuleId = 'focus' | 'activity' | 'calendar' | 'media' | 'clock';
+export type MainViewArea = 'center' | 'right';
+export type MainViewModule = {
+  id: MainViewModuleId;
+  area: MainViewArea;
+  visible: boolean;
+};
 
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';
@@ -113,6 +124,7 @@ export type AppSettings = {
   clockFormat: '12h' | '24h';
   showSeconds: boolean;
   sidebarWidgets: string[];
+  mainViewModules: MainViewModule[];
   focusMediaUrl: string;
   sidebarWidth: number;
   clockHeight: number;

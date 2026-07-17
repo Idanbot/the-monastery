@@ -124,10 +124,10 @@ export function AppHeader() {
           <div className="flex min-w-0 shrink-0 items-center gap-2">
             <button
               type="button"
-              aria-label="Go to board"
+              aria-label="Go to main view"
               onClick={() => {
                 setMonkMode(false);
-                setView('board');
+                setView('main');
                 setSidebarOpen(false);
               }}
               className="ui-focus-ring flex items-center gap-2 rounded-xl text-left"
@@ -258,14 +258,16 @@ export function AppHeader() {
               </div>
             )}
 
-            <button
-              aria-label={isSidebarVisible ? 'Hide right container' : 'Show right container'}
-              title={isSidebarVisible ? 'Hide right container' : 'Show right container'}
-              onClick={toggleSidebarVisible}
-              className={`ui-icon-button ${isSidebarVisible ? '' : 'ui-icon-button-active'}`}
-            >
-              {isSidebarVisible ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
-            </button>
+            {view !== 'main' && view !== 'calendar' && (
+              <button
+                aria-label={isSidebarVisible ? 'Hide right container' : 'Show right container'}
+                title={isSidebarVisible ? 'Hide right container' : 'Show right container'}
+                onClick={toggleSidebarVisible}
+                className={`ui-icon-button ${isSidebarVisible ? '' : 'ui-icon-button-active'}`}
+              >
+                {isSidebarVisible ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+              </button>
+            )}
 
             {isBackendAvailable && (
               <div className="relative hidden lg:block">

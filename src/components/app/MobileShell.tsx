@@ -50,8 +50,9 @@ export function MobileShell({
 }: Props) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const todayActive = view === 'board' && focusMode;
-  const boardActive = view === 'board' && !focusMode;
+  const boardViewActive = view === 'board' || view === 'main';
+  const todayActive = boardViewActive && focusMode;
+  const boardActive = boardViewActive && !focusMode;
 
   useEffect(() => {
     if (!moreOpen) return undefined;

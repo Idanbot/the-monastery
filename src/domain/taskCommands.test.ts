@@ -43,6 +43,10 @@ describe('executeTaskCommand', () => {
       status: 'done',
       activeLogStart: null
     });
+    expect(result.tasks.find((item) => item.id === 'active')?.activity.at(-1)).toMatchObject({
+      kind: 'task-completed',
+      text: 'Marked done'
+    });
     expect(result.tasks.find((item) => item.id === 'high')?.status).toBe('in-progress');
     expect(result.effects).toEqual([{ type: 'task-promoted', taskId: 'high' }]);
   });

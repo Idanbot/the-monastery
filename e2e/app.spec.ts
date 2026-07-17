@@ -8,6 +8,7 @@ import {
   createScheduledTask,
   createTask,
   expectTaskVisible,
+  openBoard,
   openSettingsSection,
   resetServerState,
   searchTasks
@@ -52,6 +53,44 @@ test('keeps the desktop header within a compact viewport', async ({ page }) => {
   await expect(createTaskButton).toContainText('Task');
   await expect(header.getByRole('button', { name: /open settings/i })).toBeVisible();
   expect(await header.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
+test('opens a customizable desktop main workspace with Kanban on demand', async ({ page }) => {
+  await page.goto('/');
+
+  await expect(page.getByTestId('main-workspace')).toBeVisible();
+  await expect(page.getByTestId('main-focus-module')).toHaveAttribute('data-area', 'center');
+  await expect(page.getByTestId('main-activity-module')).toHaveAttribute('data-area', 'center');
+  await expect(page.getByTestId('main-calendar-module')).toHaveAttribute('data-area', 'right');
+
+  await page.getByRole('button', { name: 'Customize main view' }).click();
+  const customizer = page.getByTestId('main-view-customizer');
+  await customizer.getByRole('checkbox', { name: 'Show Media' }).uncheck();
+  await customizer.getByLabel('Activity placement').selectOption('right');
+  await expect(page.getByTestId('main-media-module')).toHaveCount(0);
+  await expect(page.getByTestId('main-activity-module')).toHaveAttribute('data-area', 'right');
+
+  const profileId = await page.getByTestId('active-profile-control').getAttribute('data-active-profile-id');
+  if (!profileId) throw new Error('Missing active profile id');
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/profiles/${profileId}/settings`);
+      const body = await response.json();
+      return body.settings?.mainViewModules;
+    })
+    .toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'activity', area: 'right', visible: true }),
+        expect.objectContaining({ id: 'media', visible: false })
+      ])
+    );
+
+  await page.reload();
+  await expect(page.getByTestId('main-activity-module')).toHaveAttribute('data-area', 'right');
+  await expect(page.getByTestId('main-media-module')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Open Kanban' }).click();
+  await expect(page.getByRole('dialog', { name: 'Kanban board' })).toBeVisible();
+  await expect(page.getByTestId('kanban-board')).toBeVisible();
 });
 
 test('creates and finds a task in the browser app', async ({ page }) => {
@@ -150,6 +189,7 @@ test('persists task notes, goals, and deletions across reloads', async ({ page }
 
 test('adds a task tag from the fuzzy tag pool', async ({ page }) => {
   await page.goto('/');
+  await openBoard(page);
 
   await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Pool tag smoke');
@@ -173,6 +213,7 @@ test('adds a task tag from the fuzzy tag pool', async ({ page }) => {
 
 test('manages tag aliases, role links, and goals through settings', async ({ page }) => {
   await page.goto('/');
+  await openBoard(page);
 
   await page.getByLabel('Backlog task').click();
   await page.getByLabel('Title').fill('Taxonomy source task');
@@ -458,6 +499,7 @@ test('customizes Liquid Glass colors and exposes material surfaces', async ({ pa
   await page.getByLabel('Text color').fill('#2c2c2e');
   await expect(page.getByTestId('theme-gallery')).not.toContainText('Terminal Clean');
   await page.getByRole('button', { name: /close settings/i }).click();
+  await openBoard(page);
 
   const shell = page.locator('.app-shell');
   await expect(shell).toHaveAttribute('data-visual-theme', 'liquid-glass');
@@ -497,6 +539,7 @@ test('customizes Liquid Glass colors and exposes material surfaces', async ({ pa
 
 test('uses command palette, shortcuts, and task templates', async ({ page }) => {
   await page.goto('/');
+  await openBoard(page);
   await expect(page.getByRole('heading', { name: 'TheMonastery' })).toBeVisible();
 
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K');
@@ -542,6 +585,7 @@ test('searches tasks and applies scheduling, timer, status, and navigation comma
     })
     .toContain(title);
   await page.reload();
+  await openBoard(page);
   await expect(page.getByTestId('board-column-backlog')).toContainText(title);
 
   const openPalette = async (query: string) => {
@@ -896,6 +940,7 @@ test('persists sidebar resizing through server-backed settings', async ({ page, 
   );
   await page.goto('/');
   await settingsLoaded;
+  await openBoard(page);
   const profileControl = page.getByTestId('active-profile-control');
   await expect(profileControl).toHaveAttribute('data-active-profile-id', /.+/);
   const activeProfileId = await profileControl.getAttribute('data-active-profile-id');
@@ -936,6 +981,7 @@ test('persists sidebar resizing through server-backed settings', async ({ page, 
     })
     .toBeGreaterThan(initialWidth);
   await page.reload();
+  await openBoard(page);
   await expect
     .poll(async () => sidebar.evaluate((element) => element.getBoundingClientRect().width))
     .toBeGreaterThan(resizedWidth - 5);
@@ -1197,7 +1243,7 @@ test('keeps primary mobile views readable at narrow and large phone widths', asy
 
 test('plays and persists focus media while allowing a minimized player', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: /focus media/i }).click();
+  await page.getByTestId('main-media-module').getByRole('button', { name: 'Open' }).click();
 
   const dock = page.getByTestId('focus-media-dock');
   await expect(dock).toHaveAttribute('data-expanded', 'true');

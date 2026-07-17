@@ -97,14 +97,37 @@ export function useTaskDraft({ tasks, setTasks, selectedTaskId, setSelectedTaskI
         : draftTask;
       const normalized = normalizeTask(withPendingNote);
       const currentTask = tasksRef.current.find((task) => task.id === normalized.id);
+      const completedSubtasks = currentTask
+        ? normalized.subtasks.filter((subtask) => {
+            const previous = currentTask.subtasks.find((candidate) => candidate.id === subtask.id);
+            return subtask.status === 'done' && previous?.status !== 'done';
+          })
+        : [];
+      const completionTimestamp = new Date().toISOString();
+      const withCompletionActivity = completedSubtasks.length
+        ? {
+            ...normalized,
+            activity: [
+              ...normalized.activity,
+              ...completedSubtasks.map((subtask) => ({
+                id: generateId(),
+                type: 'system' as const,
+                kind: 'subtask-completed' as const,
+                subjectId: subtask.id,
+                text: `Completed subtask: ${subtask.title || 'Untitled subtask'}`,
+                timestamp: completionTimestamp
+              }))
+            ]
+          }
+        : normalized;
       const persisted =
-        currentTask && currentTask.status !== normalized.status
-          ? executeTaskCommand([{ ...normalized, status: currentTask.status }], {
+        currentTask && currentTask.status !== withCompletionActivity.status
+          ? executeTaskCommand([{ ...withCompletionActivity, status: currentTask.status }], {
               type: 'move',
-              taskId: normalized.id,
-              status: normalized.status
+              taskId: withCompletionActivity.id,
+              status: withCompletionActivity.status
             }).tasks[0]
-          : normalized;
+          : withCompletionActivity;
       setTasks((prev) => prev.map((task) => (task.id === persisted.id ? persisted : task)));
       modalBaselineRef.current = cloneTask(persisted);
       setModalBaselineSnapshot(JSON.stringify(modalBaselineRef.current));

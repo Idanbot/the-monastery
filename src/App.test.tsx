@@ -34,8 +34,26 @@ const clickNewTask = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(screen.getAllByRole('button', { name: /backlog task/i })[0]);
 };
 
+const mockMedia = (matches: (query: string) => boolean) => {
+  const matchMedia = vi.mocked(window.matchMedia);
+  matchMedia.mockReset();
+  matchMedia.mockImplementation((query) => ({
+    matches: matches(query),
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn()
+  }));
+};
+
+const mockDesktopMedia = () => mockMedia((query) => query === '(min-width: 768px)');
+
 beforeEach(() => {
   localStorage.clear();
+  mockMedia(() => false);
 });
 
 it('renders a tiny app version indicator', async () => {
@@ -80,14 +98,17 @@ it('separates global actions from workspace controls and anchors current work', 
   expect(screen.getByTestId('task-modal')).toBeInTheDocument();
 });
 
-it('renders TheMonastery board', () => {
+it('opens the customizable TheMonastery main workspace', async () => {
+  mockDesktopMedia();
+  const user = userEvent.setup();
   render(<App />);
 
   expect(screen.getByRole('heading', { name: /themonastery/i })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Backlog' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'In-Progress' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Done' })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Rejected' })).toBeInTheDocument();
+  await user.click(screen.getByTestId('view-switch-main'));
+  expect(screen.getByTestId('main-workspace')).toBeInTheDocument();
+  expect(screen.getByTestId('main-focus-module')).toBeInTheDocument();
+  expect(screen.getByTestId('main-activity-module')).toBeInTheDocument();
+  expect(screen.getByTestId('main-calendar-module')).toBeInTheDocument();
 });
 
 it('filters commands in the command palette', async () => {
@@ -123,7 +144,8 @@ it('renders analytics with a chart component', async () => {
   expect(await screen.findByTestId('analytics-status-chart', {}, { timeout: 5000 })).toBeInTheDocument();
 });
 
-it('returns to the board when the logo is clicked', async () => {
+it('returns to the main workspace when the logo is clicked', async () => {
+  mockDesktopMedia();
   const user = userEvent.setup();
   seedTasks([makeTask({ id: 'done-task', title: 'Done task', status: 'done' })]);
   render(<App />);
@@ -131,9 +153,9 @@ it('returns to the board when the logo is clicked', async () => {
   await user.click(screen.getByTestId('view-switch-dashboard'));
   expect(await screen.findByTestId('analytics-status-chart', {}, { timeout: 5000 })).toBeInTheDocument();
 
-  await user.click(screen.getByRole('button', { name: /go to board/i }));
-  expect(screen.getByTestId('kanban-board')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Backlog' })).toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: /go to main view/i }));
+  expect(screen.getByTestId('main-workspace')).toBeInTheDocument();
+  expect(screen.getByTestId('main-focus-module')).toBeInTheDocument();
 });
 
 it('shows virtualized mobile task list', async () => {
