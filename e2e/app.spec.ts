@@ -59,16 +59,39 @@ test('opens a customizable desktop main workspace with Kanban on demand', async 
   await page.goto('/');
 
   await expect(page.getByTestId('main-workspace')).toBeVisible();
-  await expect(page.getByTestId('main-focus-module')).toHaveAttribute('data-area', 'center');
-  await expect(page.getByTestId('main-activity-module')).toHaveAttribute('data-area', 'center');
-  await expect(page.getByTestId('main-calendar-module')).toHaveAttribute('data-area', 'right');
+  await expect(page.getByTestId('main-focus-module')).toHaveAttribute('data-slot', 'topLeft');
+  await expect(page.getByTestId('main-activity-module')).toHaveAttribute('data-slot', 'topRight');
+  await expect(page.getByTestId('main-calendar-module')).toHaveAttribute('data-slot', 'bottomLeft');
+  await expect(page.getByTestId('main-media-module')).toHaveAttribute('data-slot', 'bottomLeft');
+  await expect(page.getByTestId('main-clock-module')).toHaveAttribute('data-slot', 'bottomRight');
+  await expect(page.getByTestId('main-timeline-module')).toHaveAttribute('data-slot', 'bottomRight');
+
+  const slotBoxes = await page.getByTestId(/^main-view-slot-/).evaluateAll((elements) =>
+    elements.map((element) => {
+      const box = element.getBoundingClientRect();
+      return { width: box.width, height: box.height };
+    })
+  );
+  expect(slotBoxes).toHaveLength(4);
+  expect(
+    Math.max(...slotBoxes.map((box) => box.width)) - Math.min(...slotBoxes.map((box) => box.width))
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.max(...slotBoxes.map((box) => box.height)) - Math.min(...slotBoxes.map((box) => box.height))
+  ).toBeLessThanOrEqual(1);
+
+  const clockBox = await page.getByTestId('main-clock-module').boundingBox();
+  const timelineBox = await page.getByTestId('main-timeline-module').boundingBox();
+  expect(clockBox).not.toBeNull();
+  expect(timelineBox).not.toBeNull();
+  expect(clockBox!.y + clockBox!.height).toBeLessThanOrEqual(timelineBox!.y);
 
   await page.getByRole('button', { name: 'Customize main view' }).click();
-  const customizer = page.getByTestId('main-view-customizer');
-  await customizer.getByRole('checkbox', { name: 'Show Media' }).uncheck();
-  await customizer.getByLabel('Activity placement').selectOption('right');
-  await expect(page.getByTestId('main-media-module')).toHaveCount(0);
-  await expect(page.getByTestId('main-activity-module')).toHaveAttribute('data-area', 'right');
+  const settings = page.getByRole('dialog', { name: /preferences/i });
+  await settings.getByLabel('Top right quarter').selectOption('timeline');
+  await settings.getByRole('button', { name: /close settings/i }).click();
+  await expect(page.getByTestId('main-view-slot-topRight')).toHaveAttribute('data-module', 'timeline');
+  await expect(page.getByTestId('main-activity-module')).toHaveCount(0);
 
   const profileId = await page.getByTestId('active-profile-control').getAttribute('data-active-profile-id');
   if (!profileId) throw new Error('Missing active profile id');
@@ -76,20 +99,25 @@ test('opens a customizable desktop main workspace with Kanban on demand', async 
     .poll(async () => {
       const response = await page.request.get(`/api/profiles/${profileId}/settings`);
       const body = await response.json();
-      return body.settings?.mainViewModules;
+      return body.settings?.mainViewSlots;
     })
-    .toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: 'activity', area: 'right', visible: true }),
-        expect.objectContaining({ id: 'media', visible: false })
-      ])
-    );
+    .toEqual(expect.objectContaining({ topRight: 'timeline' }));
 
   await page.reload();
-  await expect(page.getByTestId('main-activity-module')).toHaveAttribute('data-area', 'right');
-  await expect(page.getByTestId('main-media-module')).toHaveCount(0);
+  await expect(page.getByTestId('main-view-slot-topRight')).toHaveAttribute('data-module', 'timeline');
+  await expect(page.getByTestId('main-activity-module')).toHaveCount(0);
   await page.getByRole('button', { name: 'Open Kanban' }).click();
-  await expect(page.getByRole('dialog', { name: 'Kanban board' })).toBeVisible();
+  const kanbanDialog = page.getByRole('dialog', { name: 'Kanban board' });
+  await expect(kanbanDialog).toBeVisible();
+  await expect(kanbanDialog).toHaveAttribute('data-surface', 'modal');
+  expect(
+    await kanbanDialog.evaluate((element) => {
+      const color = getComputedStyle(element).backgroundColor;
+      const channels = color.match(/[\d.]+/g)?.map(Number) || [];
+      if (channels.length < 3) return 0;
+      return channels.length >= 4 ? channels[3] : 1;
+    })
+  ).toBeGreaterThanOrEqual(0.9);
   await expect(page.getByTestId('kanban-board')).toBeVisible();
 });
 

@@ -190,6 +190,18 @@ describe('SettingsModal', () => {
     expect(sizeUpdate(props.settings)).toEqual({ ...props.settings, clockTextScale: 1.1 });
   });
 
+  it('replaces any main view quarter from settings', async () => {
+    const user = userEvent.setup();
+    const props = renderSettings({ initialSection: 'main' });
+
+    await user.selectOptions(await screen.findByLabelText('Top left quarter'), 'calendar');
+    const slotUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(slotUpdate(props.settings)).toEqual({
+      ...props.settings,
+      mainViewSlots: { ...props.settings.mainViewSlots, topLeft: 'calendar' }
+    });
+  });
+
   it('requests permission before enabling browser notifications', async () => {
     const requestPermission = vi.fn().mockResolvedValue('granted');
     vi.stubGlobal(

@@ -7,10 +7,16 @@ import { buildActivitySummary } from '../../domain/activityTracking';
 interface ActivityGraphProps {
   tasks: Task[];
   compact?: boolean;
+  fill?: boolean;
   now?: number;
 }
 
-export function ActivityGraph({ tasks, compact = false, now = Date.now() }: ActivityGraphProps) {
+export function ActivityGraph({
+  tasks,
+  compact = false,
+  fill = false,
+  now = Date.now()
+}: ActivityGraphProps) {
   const summary = useMemo(() => buildActivitySummary(tasks, { now, days: 90 }), [tasks, now]);
   const visibleActivity = compact ? summary.days.slice(-28) : summary.days;
   const maxScore = Math.max(1, ...visibleActivity.map((day) => day.score));
@@ -28,7 +34,11 @@ export function ActivityGraph({ tasks, compact = false, now = Date.now() }: Acti
     `${day.date}: ${formatDurationString(day.trackedMs)} tracked, ${day.completedSubtasks} subtask${day.completedSubtasks === 1 ? '' : 's'} completed, ${day.completedTasks} task${day.completedTasks === 1 ? '' : 's'} completed`;
 
   return (
-    <section className="ui-surface w-full rounded-2xl border p-4 shadow-sm sm:rounded-xl sm:p-5">
+    <section
+      className={`ui-surface w-full rounded-2xl border p-4 shadow-sm sm:rounded-xl sm:p-5 ${
+        fill ? 'custom-scrollbar h-full min-h-0 overflow-y-auto' : ''
+      }`}
+    >
       <div className="mb-4 flex items-center justify-between gap-3">
         <h3 className="text-base font-bold">Activity</h3>
         <span className="ui-muted-chip inline-flex items-center gap-1.5 text-sm font-medium text-[var(--ui-success)]">

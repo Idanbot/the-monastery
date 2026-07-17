@@ -106,6 +106,9 @@ export type MainViewModule = {
   area: MainViewArea;
   visible: boolean;
 };
+export type MainViewSlotId = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
+export type MainViewSlotContentId = MainViewModuleId | 'timeline' | 'calendar-media' | 'clock-timeline';
+export type MainViewSlots = Record<MainViewSlotId, MainViewSlotContentId>;
 
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';
@@ -124,6 +127,8 @@ export type AppSettings = {
   clockFormat: '12h' | '24h';
   showSeconds: boolean;
   sidebarWidgets: string[];
+  mainViewSlots: MainViewSlots;
+  /** Legacy layout retained so profiles created before the slot grid can be migrated. */
   mainViewModules: MainViewModule[];
   focusMediaUrl: string;
   sidebarWidth: number;

@@ -43,6 +43,7 @@ const appBuildDate = typeof __APP_BUILD_DATE__ === 'string' ? __APP_BUILD_DATE__
 
 const sectionIds = [
   'appearance',
+  'main',
   'time',
   'board',
   'tags',
@@ -56,6 +57,7 @@ const sectionIds = [
 
 const sectionNavigation = [
   ['appearance', 'Appearance', 'Theme, type, and motion'],
+  ['main', 'Main view', 'Four dashboard quarters'],
   ['time', 'Time', 'Clock and timeline'],
   ['board', 'Board', 'Layout and task cards'],
   ['tags', 'Tags', 'Inventory and relationships'],
@@ -582,6 +584,10 @@ export function SettingsModal({
 
                 {visibleSectionIds.includes('time') && (
                   <RegisteredSettingsSection id="time" {...registeredSectionProps} />
+                )}
+
+                {visibleSectionIds.includes('main') && (
+                  <RegisteredSettingsSection id="main" {...registeredSectionProps} />
                 )}
 
                 {visibleSectionIds.includes('board') && (

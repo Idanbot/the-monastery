@@ -11,11 +11,13 @@ import { cssVars } from '../lib/cssVars';
 export function ClockWidget({
   settings,
   now,
-  onOpenSettings
+  onOpenSettings,
+  fill = false
 }: {
   settings: AppSettings;
   now: number;
   onOpenSettings: (section: string) => void;
+  fill?: boolean;
 }) {
   const clockDate = new Date(now);
   const clockMinuteAngle = clockDate.getMinutes() * 6 + clockDate.getSeconds() * 0.1;
@@ -31,7 +33,7 @@ export function ClockWidget({
       data-clock-mode={settings.clockDisplayMode === 'analog' ? 'analog' : 'digital'}
       className="clock-widget rounded-2xl border p-4 flex flex-col items-center justify-center relative overflow-hidden shrink-0"
       style={cssVars({
-        height: String(clockHeight) + 'px',
+        height: fill ? '100%' : String(clockHeight) + 'px',
         background:
           settings.clockBackgroundVisible === false ? 'transparent' : 'var(--clock-background-color)',
         borderColor: settings.clockBackgroundVisible === false ? 'transparent' : 'var(--theme-border)',

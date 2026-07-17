@@ -1,4 +1,5 @@
 export const settingsSectionRegistry = [
+  { id: 'main', load: () => import('./registered/MainViewRegisteredSection') },
   { id: 'time', load: () => import('./registered/TimeRegisteredSection') },
   { id: 'board', load: () => import('./registered/BoardRegisteredSection') },
   { id: 'tags', load: () => import('./registered/TagsRegisteredSection') },

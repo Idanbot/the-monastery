@@ -1,35 +1,21 @@
 import { useMemo, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import {
-  ArrowDown,
-  ArrowUp,
-  CalendarDays,
-  Columns3,
-  Music2,
-  RotateCcw,
-  Settings2,
-  Target,
-  X
-} from 'lucide-react';
+import { CalendarDays, Columns3, Music2, Settings2, Target, X } from 'lucide-react';
 import { ActivityGraph } from '../dashboard/ActivityGraph';
 import { ClockWidget } from '../ClockWidget';
 import { CurrentTaskPin } from '../CurrentTaskPin';
 import { PomodoroTimer } from '../monk-mode/PomodoroTimer';
 import { KanbanBoard } from '../board/TaskBoard';
 import { FocusPlanningPanel } from '../planning/FocusPlanningPanel';
+import { AgendaTimeline } from '../timeline/AgendaTimeline';
+import { ThemedPortalSurface } from '../ui/ThemedPortalSurface';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
 import { useUIContext } from '../../contexts/UIContext';
-import {
-  defaultMainViewModules,
-  mainViewModuleDefinitions,
-  moveMainViewModule,
-  normalizeMainViewModules,
-  updateMainViewModule
-} from '../../domain/mainView';
+import { mainViewSlotDefinitions, normalizeMainViewSlots } from '../../domain/mainView';
 import { activeTaskStatuses, formatDateInputValue } from '../../domain/tasks';
 import { sendBrowserNotification } from '../../domain/notifications';
-import type { MainViewArea, MainViewModule, Task } from '../../domain/types';
+import type { MainViewSlotContentId, MainViewSlotId, Task } from '../../domain/types';
 
 export function MainWorkspace() {
   const { settings, setSettings, openSettings, startResize, toggleBoardLane } = useSettingsContext();
@@ -65,25 +51,34 @@ export function MainWorkspace() {
     submitQuickAddTask,
     keyboardFocusedTaskId
   } = useUIContext();
-  const [customizing, setCustomizing] = useState(false);
   const [kanbanOpen, setKanbanOpen] = useState(false);
   const [focusPlannerOpen, setFocusPlannerOpen] = useState(false);
-  const modules = useMemo(
-    () => normalizeMainViewModules(settings.mainViewModules),
-    [settings.mainViewModules]
+  const slots = useMemo(
+    () => normalizeMainViewSlots(settings.mainViewSlots, settings.mainViewModules),
+    [settings.mainViewModules, settings.mainViewSlots]
   );
-  const visibleCenter = modules.filter((module) => module.visible && module.area === 'center');
-  const visibleRight = modules.filter((module) => module.visible && module.area === 'right');
 
-  const setModules = (next: MainViewModule[]) =>
-    setSettings((previous) => ({ ...previous, mainViewModules: next }));
-
-  const renderModule = (module: MainViewModule) => {
-    if (module.id === 'focus') {
+  const renderModule = (content: MainViewSlotContentId, slot: MainViewSlotId) => {
+    if (content === 'calendar-media') {
+      return (
+        <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] gap-3">
+          {renderModule('calendar', slot)}
+          {renderModule('media', slot)}
+        </div>
+      );
+    }
+    if (content === 'clock-timeline') {
+      return (
+        <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+          {renderModule('clock', slot)}
+          {renderModule('timeline', slot)}
+        </div>
+      );
+    }
+    if (content === 'focus') {
       return (
         <MainFocusModule
-          key={module.id}
-          area={module.area}
+          slot={slot}
           settings={settings}
           now={now}
           currentTask={currentTask}
@@ -105,18 +100,17 @@ export function MainWorkspace() {
         />
       );
     }
-    if (module.id === 'activity') {
+    if (content === 'activity') {
       return (
-        <div key={module.id} data-testid="main-activity-module" data-area={module.area}>
-          <ActivityGraph tasks={tasks} now={now} compact />
+        <div data-testid="main-activity-module" data-slot={slot} className="h-full min-h-0">
+          <ActivityGraph tasks={tasks} now={now} compact fill />
         </div>
       );
     }
-    if (module.id === 'calendar') {
+    if (content === 'calendar') {
       return (
         <MainCalendarModule
-          key={module.id}
-          area={module.area}
+          slot={slot}
           tasks={tasks}
           now={now}
           onOpenCalendar={() => setView('calendar')}
@@ -124,19 +118,19 @@ export function MainWorkspace() {
         />
       );
     }
-    if (module.id === 'media') {
+    if (content === 'media') {
+      return <MainMediaModule slot={slot} url={settings.focusMediaUrl} onOpen={openMediaPlayer} />;
+    }
+    if (content === 'timeline') {
       return (
-        <MainMediaModule
-          key={module.id}
-          area={module.area}
-          url={settings.focusMediaUrl}
-          onOpen={openMediaPlayer}
-        />
+        <div data-testid="main-timeline-module" data-slot={slot} className="h-full min-h-0">
+          <AgendaTimeline />
+        </div>
       );
     }
     return (
-      <div key={module.id} data-testid="main-clock-module" data-area={module.area}>
-        <ClockWidget settings={settings} now={now} onOpenSettings={openSettings} />
+      <div data-testid="main-clock-module" data-slot={slot} className="h-full min-h-0">
+        <ClockWidget settings={settings} now={now} onOpenSettings={openSettings} fill />
       </div>
     );
   };
@@ -167,18 +161,13 @@ export function MainWorkspace() {
           <button
             type="button"
             aria-label="Customize main view"
-            aria-expanded={customizing}
-            onClick={() => setCustomizing((open) => !open)}
+            onClick={() => openSettings('main')}
             className="ui-icon-button ui-control"
           >
             <Settings2 size={17} />
           </button>
         </div>
       </div>
-
-      {customizing && (
-        <MainViewCustomizer modules={modules} onChange={setModules} onClose={() => setCustomizing(false)} />
-      )}
 
       {focusPlannerOpen && (
         <FocusPlanningPanel
@@ -193,95 +182,92 @@ export function MainWorkspace() {
         />
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(260px,320px)] gap-3 lg:gap-4">
-        <div
-          className={`custom-scrollbar grid min-h-0 auto-rows-min gap-4 overflow-y-auto pr-1 ${
-            visibleCenter.length > 1 ? 'lg:grid-cols-2' : 'grid-cols-1'
-          }`}
-        >
-          {visibleCenter.length > 0 ? (
-            visibleCenter.map(renderModule)
-          ) : (
-            <EmptyArea label="Middle" onCustomize={() => setCustomizing(true)} />
-          )}
-        </div>
-        <aside
-          aria-label="Main view utilities"
-          className="custom-scrollbar min-h-0 space-y-3 overflow-y-auto pr-1"
-        >
-          {visibleRight.length > 0 ? (
-            visibleRight.map(renderModule)
-          ) : (
-            <EmptyArea label="Right rail" onCustomize={() => setCustomizing(true)} />
-          )}
-        </aside>
+      <div
+        data-testid="main-view-grid"
+        className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-3 lg:gap-4"
+      >
+        {mainViewSlotDefinitions.map(({ id }) => (
+          <div
+            key={id}
+            data-testid={`main-view-slot-${id}`}
+            data-slot={id}
+            data-module={slots[id]}
+            className="min-h-0 min-w-0 overflow-hidden"
+          >
+            {renderModule(slots[id], id)}
+          </div>
+        ))}
       </div>
 
       <Dialog.Root open={kanbanOpen} onOpenChange={setKanbanOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-[80] bg-slate-950/45 backdrop-blur-sm" />
-          <Dialog.Content
-            aria-describedby={undefined}
-            className="themed-modal fixed inset-3 z-[81] flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--ui-border-subtle)] bg-[var(--ui-surface)] p-3 shadow-2xl md:inset-6"
-          >
-            <div className="mb-3 flex shrink-0 items-center gap-3">
-              <Dialog.Title className="text-lg font-semibold text-[var(--ui-text-primary)]">
-                Kanban board
-              </Dialog.Title>
-              <form
-                onSubmit={submitQuickAddTask}
-                className="ui-control ml-auto hidden min-w-0 max-w-xl flex-1 items-center gap-2 rounded-xl px-2 py-1.5 sm:flex"
-                aria-label="Quick add task"
-              >
-                <input
-                  value={quickAddText}
-                  onChange={(event) => setQuickAddText(event.target.value)}
-                  placeholder="Quick add task"
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={!quickAddText.trim()}
-                  className="ui-accent-button rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
+          <Dialog.Overlay asChild>
+            <ThemedPortalSurface variant="overlay" className="fixed inset-0 z-[80]" />
+          </Dialog.Overlay>
+          <Dialog.Content asChild aria-describedby={undefined}>
+            <ThemedPortalSurface
+              variant="modal"
+              className="fixed inset-3 z-[81] flex min-h-0 flex-col overflow-hidden rounded-2xl border p-3 shadow-2xl md:inset-6"
+            >
+              <div className="mb-3 flex shrink-0 items-center gap-3">
+                <Dialog.Title className="text-lg font-semibold text-[var(--ui-text-primary)]">
+                  Kanban board
+                </Dialog.Title>
+                <form
+                  onSubmit={submitQuickAddTask}
+                  className="ui-control ml-auto hidden min-w-0 max-w-xl flex-1 items-center gap-2 rounded-xl px-2 py-1.5 sm:flex"
+                  aria-label="Quick add task"
                 >
-                  Add
+                  <input
+                    value={quickAddText}
+                    onChange={(event) => setQuickAddText(event.target.value)}
+                    placeholder="Quick add task"
+                    className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!quickAddText.trim()}
+                    className="ui-accent-button rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
+                  >
+                    Add
+                  </button>
+                </form>
+                <button
+                  type="button"
+                  onClick={() => openSettings('board')}
+                  className="ui-control ui-focus-ring hidden min-h-9 rounded-lg px-3 text-xs font-semibold sm:block"
+                >
+                  Board settings
                 </button>
-              </form>
-              <button
-                type="button"
-                onClick={() => openSettings('board')}
-                className="ui-control ui-focus-ring hidden min-h-9 rounded-lg px-3 text-xs font-semibold sm:block"
-              >
-                Board settings
-              </button>
-              <Dialog.Close asChild>
-                <button type="button" aria-label="Close Kanban" className="ui-icon-button ui-control">
-                  <X size={18} />
-                </button>
-              </Dialog.Close>
-            </div>
-            <div className="flex min-h-0 flex-1">
-              <KanbanBoard
-                filteredTasks={filteredTasks}
-                settings={settings}
-                columnSorts={columnSorts}
-                cycleSort={cycleSort}
-                draggedTaskId={draggedTaskId}
-                dragOverInfo={dragOverInfo}
-                setDraggedTaskId={setDraggedTaskId}
-                setDragOverInfo={setDragOverInfo}
-                handleDragOver={handleDragOver}
-                handleDrop={handleDrop}
-                handleDragStart={handleDragStart}
-                onMoveTask={moveTask}
-                onReorderTask={reorderTask}
-                setSelectedTaskId={setSelectedTaskId}
-                keyboardFocusedTaskId={keyboardFocusedTaskId}
-                now={now}
-                startResize={startResize}
-                onToggleLane={toggleBoardLane}
-              />
-            </div>
+                <Dialog.Close asChild>
+                  <button type="button" aria-label="Close Kanban" className="ui-icon-button ui-control">
+                    <X size={18} />
+                  </button>
+                </Dialog.Close>
+              </div>
+              <div className="flex min-h-0 flex-1">
+                <KanbanBoard
+                  filteredTasks={filteredTasks}
+                  settings={settings}
+                  columnSorts={columnSorts}
+                  cycleSort={cycleSort}
+                  draggedTaskId={draggedTaskId}
+                  dragOverInfo={dragOverInfo}
+                  setDraggedTaskId={setDraggedTaskId}
+                  setDragOverInfo={setDragOverInfo}
+                  handleDragOver={handleDragOver}
+                  handleDrop={handleDrop}
+                  handleDragStart={handleDragStart}
+                  onMoveTask={moveTask}
+                  onReorderTask={reorderTask}
+                  setSelectedTaskId={setSelectedTaskId}
+                  keyboardFocusedTaskId={keyboardFocusedTaskId}
+                  now={now}
+                  startResize={startResize}
+                  onToggleLane={toggleBoardLane}
+                />
+              </div>
+            </ThemedPortalSurface>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
@@ -290,7 +276,7 @@ export function MainWorkspace() {
 }
 
 function MainFocusModule({
-  area,
+  slot,
   settings,
   now,
   currentTask,
@@ -302,7 +288,7 @@ function MainFocusModule({
   onUpdateDailyGoal,
   onPomodoroComplete
 }: {
-  area: MainViewArea;
+  slot: MainViewSlotId;
   settings: ReturnType<typeof useSettingsContext>['settings'];
   now: number;
   currentTask: Task | null;
@@ -315,7 +301,11 @@ function MainFocusModule({
   onPomodoroComplete: (minutes: number) => void;
 }) {
   return (
-    <section data-testid="main-focus-module" data-area={area} className="space-y-3">
+    <section
+      data-testid="main-focus-module"
+      data-slot={slot}
+      className="flex h-full min-h-0 flex-col overflow-hidden"
+    >
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="ui-eyebrow text-[var(--ui-info)]">Monk mode</div>
@@ -331,38 +321,43 @@ function MainFocusModule({
           <Target size={16} /> Immerse
         </button>
       </div>
-      <div className="ui-surface rounded-2xl border p-3 shadow-sm">
-        <PomodoroTimer compact onComplete={onPomodoroComplete} />
-        <label className="mt-3 block border-t border-[var(--ui-border-subtle)] pt-3">
-          <span className="ui-eyebrow">One outcome for today</span>
-          <input
-            value={settings.dailyGoal || ''}
-            onChange={(event) => onUpdateDailyGoal(event.target.value)}
-            placeholder="One outcome for today"
-            className="mt-2 w-full bg-transparent text-center text-base font-medium outline-none"
+      <div className="mt-3 grid min-h-0 flex-1 grid-cols-2 gap-3">
+        <div className="ui-surface custom-scrollbar min-h-0 overflow-y-auto rounded-2xl border p-3 shadow-sm">
+          <PomodoroTimer compact onComplete={onPomodoroComplete} />
+          <label className="mt-2 flex items-center gap-2 border-t border-[var(--ui-border-subtle)] pt-2">
+            <span className="ui-eyebrow shrink-0">Goal</span>
+            <input
+              value={settings.dailyGoal || ''}
+              onChange={(event) => onUpdateDailyGoal(event.target.value)}
+              placeholder="One outcome for today"
+              aria-label="One outcome for today"
+              className="min-w-0 flex-1 bg-transparent text-right text-xs font-medium outline-none"
+            />
+          </label>
+        </div>
+        <div className="custom-scrollbar min-h-0 overflow-y-auto">
+          <CurrentTaskPin
+            task={currentTask}
+            now={now}
+            onOpen={onOpenTask}
+            onAdd={onAddTask}
+            onToggleTimer={onToggleTimer}
+            onComplete={onCompleteTask}
           />
-        </label>
+        </div>
       </div>
-      <CurrentTaskPin
-        task={currentTask}
-        now={now}
-        onOpen={onOpenTask}
-        onAdd={onAddTask}
-        onToggleTimer={onToggleTimer}
-        onComplete={onCompleteTask}
-      />
     </section>
   );
 }
 
 function MainCalendarModule({
-  area,
+  slot,
   tasks,
   now,
   onOpenCalendar,
   onOpenTask
 }: {
-  area: MainViewArea;
+  slot: MainViewSlotId;
   tasks: Task[];
   now: number;
   onOpenCalendar: () => void;
@@ -381,8 +376,8 @@ function MainCalendarModule({
   return (
     <section
       data-testid="main-calendar-module"
-      data-area={area}
-      className="ui-surface rounded-2xl border p-4 shadow-sm"
+      data-slot={slot}
+      className="ui-surface custom-scrollbar h-full min-h-0 overflow-y-auto rounded-2xl border p-4 shadow-sm"
     >
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -427,7 +422,7 @@ function MainCalendarModule({
   );
 }
 
-function MainMediaModule({ area, url, onOpen }: { area: MainViewArea; url: string; onOpen: () => void }) {
+function MainMediaModule({ slot, url, onOpen }: { slot: MainViewSlotId; url: string; onOpen: () => void }) {
   let source = 'Saved focus source';
   try {
     source = new URL(url).hostname.replace(/^www\./, '');
@@ -437,7 +432,7 @@ function MainMediaModule({ area, url, onOpen }: { area: MainViewArea; url: strin
   return (
     <section
       data-testid="main-media-module"
-      data-area={area}
+      data-slot={slot}
       className="ui-surface flex items-center gap-3 rounded-2xl border p-4 shadow-sm"
     >
       <div className="ui-accent-button grid size-10 shrink-0 place-items-center rounded-xl">
@@ -455,109 +450,5 @@ function MainMediaModule({ area, url, onOpen }: { area: MainViewArea; url: strin
         Open
       </button>
     </section>
-  );
-}
-
-function MainViewCustomizer({
-  modules,
-  onChange,
-  onClose
-}: {
-  modules: MainViewModule[];
-  onChange: (modules: MainViewModule[]) => void;
-  onClose: () => void;
-}) {
-  return (
-    <section
-      data-testid="main-view-customizer"
-      aria-label="Customize main view"
-      className="ui-surface custom-scrollbar mb-3 max-h-56 shrink-0 overflow-y-auto rounded-2xl border p-3 shadow-sm"
-    >
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold">Main modules</h3>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onChange(defaultMainViewModules.map((module) => ({ ...module })))}
-            aria-label="Reset main view"
-            className="ui-icon-button ui-control"
-          >
-            <RotateCcw size={15} />
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close main view customizer"
-            className="ui-icon-button"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      </div>
-      <div className="grid gap-2 lg:grid-cols-2">
-        {modules.map((module) => {
-          const definition = mainViewModuleDefinitions.find((candidate) => candidate.id === module.id)!;
-          return (
-            <div key={module.id} className="ui-control flex min-w-0 items-center gap-2 rounded-xl p-2">
-              <label className="flex min-w-0 flex-1 items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={module.visible}
-                  onChange={(event) =>
-                    onChange(updateMainViewModule(modules, module.id, { visible: event.target.checked }))
-                  }
-                  aria-label={`Show ${definition.label}`}
-                  className="accent-indigo-600"
-                />
-                <span className="truncate">{definition.label}</span>
-              </label>
-              <select
-                aria-label={`${definition.label} placement`}
-                value={module.area}
-                onChange={(event) =>
-                  onChange(
-                    updateMainViewModule(modules, module.id, {
-                      area: event.target.value as MainViewArea
-                    })
-                  )
-                }
-                className="rounded-lg border border-[var(--ui-border-subtle)] bg-transparent px-2 py-1 text-xs"
-              >
-                <option value="center">Middle</option>
-                <option value="right">Right</option>
-              </select>
-              <button
-                type="button"
-                aria-label={`Move ${definition.label} up`}
-                onClick={() => onChange(moveMainViewModule(modules, module.id, 'up'))}
-                className="ui-icon-button size-8"
-              >
-                <ArrowUp size={14} />
-              </button>
-              <button
-                type="button"
-                aria-label={`Move ${definition.label} down`}
-                onClick={() => onChange(moveMainViewModule(modules, module.id, 'down'))}
-                className="ui-icon-button size-8"
-              >
-                <ArrowDown size={14} />
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function EmptyArea({ label, onCustomize }: { label: string; onCustomize: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onCustomize}
-      className="ui-surface ui-focus-ring flex min-h-28 w-full items-center justify-center rounded-2xl border border-dashed text-sm text-[var(--ui-text-secondary)]"
-    >
-      Add a module to {label}
-    </button>
   );
 }

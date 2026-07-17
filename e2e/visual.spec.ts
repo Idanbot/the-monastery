@@ -61,6 +61,16 @@ test('customizable main workspace remains visually stable', async ({ page }) => 
   });
 });
 
+test('Kanban modal remains readable and visually stable', async ({ page }) => {
+  await page.goto('/');
+  await stabilizePage(page);
+  await page.getByRole('button', { name: 'Open Kanban' }).click();
+  await expect(page.getByRole('dialog', { name: 'Kanban board' })).toHaveScreenshot('kanban-modal.png', {
+    ...screenshotOptions,
+    maxDiffPixels: 200
+  });
+});
+
 test('settings modal and Liquid Glass settings remain visually stable', async ({ page }) => {
   await page.goto('/');
   await stabilizePage(page);

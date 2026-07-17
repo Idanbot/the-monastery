@@ -56,6 +56,12 @@ const fullSettings = (overrides: Record<string, unknown> = {}) => ({
   clockFormat: '24h',
   showSeconds: true,
   sidebarWidgets: ['clock', 'agenda'],
+  mainViewSlots: {
+    topLeft: 'focus',
+    topRight: 'activity',
+    bottomLeft: 'calendar-media',
+    bottomRight: 'clock-timeline'
+  },
   mainViewModules: [
     { id: 'focus', area: 'center', visible: true },
     { id: 'activity', area: 'center', visible: true },
@@ -496,7 +502,13 @@ it('stores profile settings and includes tasks/settings in backups', async () =>
           { id: 'calendar', area: 'right', visible: true },
           { id: 'media', area: 'right', visible: false },
           { id: 'clock', area: 'right', visible: true }
-        ]
+        ],
+        mainViewSlots: {
+          topLeft: 'focus',
+          topRight: 'calendar',
+          bottomLeft: 'activity',
+          bottomRight: 'clock-timeline'
+        }
       })
     }
   });
@@ -544,6 +556,12 @@ it('stores profile settings and includes tasks/settings in backups', async () =>
     id: 'activity',
     area: 'right',
     visible: true
+  });
+  expect(settings.json().settings.mainViewSlots).toEqual({
+    topLeft: 'focus',
+    topRight: 'calendar',
+    bottomLeft: 'activity',
+    bottomRight: 'clock-timeline'
   });
   expect(backup.statusCode).toBe(200);
   expect(backup.json()).toMatchObject({

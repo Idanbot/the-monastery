@@ -1,7 +1,12 @@
 import type { AppSettings, Task, TaskRecurrence, TaskStatus } from './types';
 import { visualThemeIds } from './themes';
 import { normalizeSchemaSettings, schemaSettingDefaults } from './settingsSchema';
-import { defaultMainViewModules, normalizeMainViewModules } from './mainView';
+import {
+  defaultMainViewModules,
+  defaultMainViewSlots,
+  normalizeMainViewModules,
+  normalizeMainViewSlots
+} from './mainView';
 
 export const validStatuses: TaskStatus[] = ['backlog', 'in-progress', 'done', 'rejected'];
 export const taskStatuses = validStatuses;
@@ -173,6 +178,7 @@ export const defaultSettings: AppSettings = {
   dailyGoal: '',
   shutdownChecklist: { review: false, plan: false, clear: false },
   sidebarWidgets: ['now', 'clock', 'media', 'agenda'],
+  mainViewSlots: defaultMainViewSlots,
   mainViewModules: defaultMainViewModules,
   focusMediaUrl: 'https://youtu.be/4e839orj52w',
   sidebarWidth: 320,
@@ -331,6 +337,7 @@ export const mergeSettings = (saved) => ({
       ? saved.shutdownChecklist
       : {})
   },
+  mainViewSlots: normalizeMainViewSlots(saved?.mainViewSlots, saved?.mainViewModules),
   mainViewModules: normalizeMainViewModules(saved?.mainViewModules),
   animationsEnabled:
     saved?.animationsEnabled === undefined

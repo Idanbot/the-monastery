@@ -8,7 +8,7 @@ import { MainWorkspace } from './MainWorkspace';
 describe('MainWorkspace', () => {
   beforeEach(() => localStorage.clear());
 
-  it('renders the requested center and utility modules and opens Kanban on demand', async () => {
+  it('renders four equal quarters with paired utilities and opens Kanban on a shared surface', async () => {
     const user = userEvent.setup();
     localStorage.setItem(
       'the-monastery_tasks_v1',
@@ -18,28 +18,43 @@ describe('MainWorkspace', () => {
     renderWithProviders(<MainWorkspace />);
 
     expect(screen.getByTestId('main-workspace')).toBeInTheDocument();
-    expect(screen.getByTestId('main-focus-module')).toHaveAttribute('data-area', 'center');
-    expect(screen.getByTestId('main-activity-module')).toHaveAttribute('data-area', 'center');
-    expect(screen.getByTestId('main-calendar-module')).toHaveAttribute('data-area', 'right');
-    expect(screen.getByTestId('main-media-module')).toHaveAttribute('data-area', 'right');
-    expect(screen.getByTestId('main-clock-module')).toHaveAttribute('data-area', 'right');
+    const grid = screen.getByTestId('main-view-grid');
+    expect(within(grid).getAllByTestId(/^main-view-slot-/)).toHaveLength(4);
+    expect(screen.getByTestId('main-focus-module')).toHaveAttribute('data-slot', 'topLeft');
+    expect(screen.getByTestId('main-activity-module')).toHaveAttribute('data-slot', 'topRight');
+    expect(screen.getByTestId('main-calendar-module')).toHaveAttribute('data-slot', 'bottomLeft');
+    expect(screen.getByTestId('main-media-module')).toHaveAttribute('data-slot', 'bottomLeft');
+    expect(screen.getByTestId('main-clock-module')).toHaveAttribute('data-slot', 'bottomRight');
+    expect(screen.getByTestId('main-timeline-module')).toHaveAttribute('data-slot', 'bottomRight');
 
     await user.click(screen.getByRole('button', { name: 'Open Kanban' }));
     const dialog = screen.getByRole('dialog', { name: 'Kanban board' });
+    expect(dialog).toHaveAttribute('data-surface', 'modal');
+    expect(dialog).toHaveAttribute('data-material', 'modal');
+    expect(dialog).toHaveAttribute('data-visual-theme', 'liquid-glass');
+    expect(dialog.style.getPropertyValue('--modal-surface-rgb')).not.toBe('');
     expect(within(dialog).getByTestId('kanban-board')).toBeInTheDocument();
     expect(within(dialog).getByRole('heading', { name: 'In-Progress' })).toBeInTheDocument();
   });
 
-  it('customizes module visibility and placement', async () => {
-    const user = userEvent.setup();
+  it('renders persisted replacement modules in their selected quarters', () => {
+    localStorage.setItem(
+      'the-monastery_settings_v1',
+      JSON.stringify({
+        mainViewSlots: {
+          topLeft: 'calendar',
+          topRight: 'media',
+          bottomLeft: 'activity',
+          bottomRight: 'timeline'
+        }
+      })
+    );
     renderWithProviders(<MainWorkspace />);
 
-    await user.click(screen.getByRole('button', { name: 'Customize main view' }));
-    const customizer = screen.getByTestId('main-view-customizer');
-    await user.click(within(customizer).getByRole('checkbox', { name: 'Show Media' }));
-    expect(screen.queryByTestId('main-media-module')).not.toBeInTheDocument();
-
-    await user.selectOptions(within(customizer).getByLabelText('Activity placement'), 'right');
-    expect(screen.getByTestId('main-activity-module')).toHaveAttribute('data-area', 'right');
+    expect(screen.getByTestId('main-calendar-module')).toHaveAttribute('data-slot', 'topLeft');
+    expect(screen.getByTestId('main-media-module')).toHaveAttribute('data-slot', 'topRight');
+    expect(screen.getByTestId('main-activity-module')).toHaveAttribute('data-slot', 'bottomLeft');
+    expect(screen.getByTestId('main-timeline-module')).toHaveAttribute('data-slot', 'bottomRight');
+    expect(screen.queryByTestId('main-focus-module')).not.toBeInTheDocument();
   });
 });

@@ -80,6 +80,16 @@ const mainViewModuleSchema = z.object({
   area: z.enum(['center', 'right']),
   visible: z.boolean()
 });
+const mainViewSlotContentSchema = z.enum([
+  'focus',
+  'activity',
+  'calendar',
+  'media',
+  'clock',
+  'timeline',
+  'calendar-media',
+  'clock-timeline'
+]);
 
 const goalCadenceSchema = z.object({
   dailyTargetHours: z.number(),
@@ -131,6 +141,14 @@ export const appSettingsSchema = z.object({
   clockFormat: z.enum(['12h', '24h']),
   showSeconds: z.boolean(),
   sidebarWidgets: z.array(z.string()),
+  mainViewSlots: z
+    .object({
+      topLeft: mainViewSlotContentSchema,
+      topRight: mainViewSlotContentSchema,
+      bottomLeft: mainViewSlotContentSchema,
+      bottomRight: mainViewSlotContentSchema
+    })
+    .optional(),
   mainViewModules: z.array(mainViewModuleSchema).max(5),
   focusMediaUrl: z.string().max(2048),
   sidebarWidth: z.number(),
