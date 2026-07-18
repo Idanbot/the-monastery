@@ -54,7 +54,13 @@ export default tseslint.config(
         'warn',
         {
           allowConstantExport: true,
-          allowExportNames: ['useProfileContext', 'useSettingsContext', 'useTaskContext', 'useUIContext']
+          allowExportNames: [
+            'useMediaPlayback',
+            'useProfileContext',
+            'useSettingsContext',
+            'useTaskContext',
+            'useUIContext'
+          ]
         }
       ]
     }

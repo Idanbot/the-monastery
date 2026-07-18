@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="320" viewBox="0 0 512 320" shape-rendering="crispEdges">
+  <defs>
+    <g id="awake">
+      <rect x="18" y="4" width="10" height="24" fill="#394150"/><rect x="36" y="4" width="10" height="24" fill="#394150"/>
+      <rect x="21" y="8" width="4" height="16" fill="#e8a5ad"/><rect x="39" y="8" width="4" height="16" fill="#e8a5ad"/>
+      <rect x="16" y="20" width="32" height="32" fill="#394150"/><rect x="20" y="24" width="24" height="24" fill="#d8dde5"/>
+      <rect x="24" y="30" width="4" height="4" fill="#111827"/><rect x="36" y="30" width="4" height="4" fill="#111827"/><rect x="30" y="36" width="4" height="4" fill="#ef9aa6"/>
+      <rect x="20" y="48" width="10" height="6" fill="#f1f3f6"/><rect x="34" y="48" width="10" height="6" fill="#f1f3f6"/>
+    </g>
+    <g id="look"><use href="#awake"/><rect x="24" y="30" width="4" height="4" fill="#d8dde5"/><rect x="25" y="30" width="4" height="4" fill="#111827"/><rect x="36" y="30" width="4" height="4" fill="#d8dde5"/><rect x="37" y="30" width="4" height="4" fill="#111827"/></g>
+    <g id="stretch"><use href="#awake" transform="translate(-3 8) scale(1.1 .86)"/></g>
+    <g id="celebrate"><use href="#awake"/><rect x="23" y="29" width="6" height="5" fill="#d8dde5"/><rect x="35" y="29" width="6" height="5" fill="#d8dde5"/><rect x="24" y="32" width="4" height="2" fill="#111827"/><rect x="36" y="32" width="4" height="2" fill="#111827"/></g>
+    <g id="sleep"><use href="#awake"/><rect x="23" y="29" width="6" height="5" fill="#d8dde5"/><rect x="35" y="29" width="6" height="5" fill="#d8dde5"/><rect x="24" y="32" width="4" height="2" fill="#394150"/><rect x="36" y="32" width="4" height="2" fill="#394150"/><rect x="18" y="8" width="10" height="20" fill="#394150" transform="rotate(-8 23 18)"/></g>
+  </defs>
+  <use href="#awake"/><use href="#awake" transform="translate(64 -2)"/><use href="#awake" transform="translate(128)"/><use href="#awake" transform="translate(192 -1)"/><use href="#awake" transform="translate(256)"/><use href="#awake" transform="translate(320 -2)"/><use href="#awake" transform="translate(384)"/><use href="#awake" transform="translate(448 -1)"/>
+  <use href="#look" transform="translate(0 64)"/><use href="#look" transform="translate(62 64)"/><use href="#look" transform="translate(126 64)"/><use href="#look" transform="translate(192 64)"/><use href="#look" transform="translate(258 64)"/><use href="#look" transform="translate(322 64)"/><use href="#look" transform="translate(384 64)"/><use href="#look" transform="translate(446 64)"/>
+  <use href="#stretch" transform="translate(0 128)"/><use href="#stretch" transform="translate(64 128)"/><use href="#stretch" transform="translate(128 128)"/><use href="#stretch" transform="translate(192 128)"/><use href="#stretch" transform="translate(256 128)"/><use href="#stretch" transform="translate(320 128)"/><use href="#stretch" transform="translate(384 128)"/><use href="#stretch" transform="translate(448 128)"/>
+  <use href="#celebrate" transform="translate(0 192)"/><use href="#celebrate" transform="translate(64 186)"/><use href="#celebrate" transform="translate(128 190)"/><use href="#celebrate" transform="translate(192 184)"/><use href="#celebrate" transform="translate(256 192)"/><use href="#celebrate" transform="translate(320 186)"/><use href="#celebrate" transform="translate(384 190)"/><use href="#celebrate" transform="translate(448 184)"/>
+  <use href="#sleep" transform="translate(0 258)"/><use href="#sleep" transform="translate(64 258)"/><use href="#sleep" transform="translate(128 258)"/><use href="#sleep" transform="translate(192 258)"/><use href="#sleep" transform="translate(256 258)"/><use href="#sleep" transform="translate(320 258)"/><use href="#sleep" transform="translate(384 258)"/><use href="#sleep" transform="translate(448 258)"/>
+</svg>

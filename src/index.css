@@ -522,85 +522,32 @@ h6,
   background: transparent !important;
 }
 
-@keyframes streak-flame-pulse {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-1px) scale(1.16) rotate(3deg);
+@keyframes activity-pet-frames {
+  to {
+    background-position-x: -256px;
   }
 }
 
-@keyframes activity-pet-idle {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0);
-  }
-  50% {
-    transform: translateY(-2px) rotate(2deg);
-  }
+.activity-pet-sprite {
+  background-repeat: no-repeat;
+  background-size: 256px 160px;
+  image-rendering: pixelated;
 }
 
-@keyframes activity-pet-look {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  40% {
-    transform: translateX(-3px) rotate(-5deg);
-  }
-  70% {
-    transform: translateX(3px) rotate(5deg);
-  }
-}
-
-@keyframes activity-pet-celebrate {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
-  }
-  45% {
-    transform: translateY(-5px) scale(1.08);
-  }
-}
-
-.streak-flame-active {
-  transform-origin: center bottom;
-  animation: streak-flame-pulse 1.1s ease-in-out infinite;
-}
-
-.activity-pet[data-streak-active='true'] .activity-pet-icon {
-  animation: activity-pet-idle 2.2s ease-in-out infinite;
-}
-
-.activity-pet[data-activity='look'] .activity-pet-icon {
-  animation-name: activity-pet-look;
-}
-
-.activity-pet[data-activity='stretch'] .activity-pet-icon {
-  animation-duration: 1.4s;
-  transform: scaleX(1.12) scaleY(0.9);
-}
-
-.activity-pet[data-activity='celebrate'] .activity-pet-icon {
-  animation-name: activity-pet-celebrate;
-  animation-duration: 0.8s;
+.activity-pet[data-animated='true'] .activity-pet-sprite {
+  animation: activity-pet-frames 0.96s steps(8) infinite;
 }
 
 .activity-pet[data-streak-active='false'] {
-  color: var(--ui-text-secondary);
   opacity: 0.64;
 }
 
-[data-animations-enabled='false'] .streak-flame-active,
-[data-animations-enabled='false'] .activity-pet-icon {
+[data-animations-enabled='false'] .activity-pet-sprite {
   animation: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .streak-flame-active,
-  .activity-pet-icon {
+  .activity-pet-sprite {
     animation: none !important;
   }
 }

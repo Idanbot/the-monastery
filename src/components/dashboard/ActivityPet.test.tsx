@@ -14,10 +14,15 @@ describe('ActivityPet', () => {
     const { rerender } = render(<ActivityPet petId="cat" streakActive />);
 
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-activity', 'idle');
+    expect(screen.getByTestId('activity-pet-sprite')).toHaveStyle({
+      backgroundImage: 'url(/pets/cat.svg)'
+    });
+    expect(screen.getByTestId('activity-pet-sprite')).toHaveAttribute('aria-hidden', 'true');
     act(() => vi.advanceTimersByTime(4500));
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-activity', 'look');
 
     rerender(<ActivityPet petId="cat" streakActive={false} />);
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-activity', 'sleepy');
+    expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-sprite-row', '4');
   });
 });

@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { forwardRef, useState, type ReactEventHandler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MediaPlaybackProvider, useMediaPlayback } from '../../contexts/MediaPlaybackContext';
 import { FocusMediaDock } from './FocusMediaDock';
 
 const youtubeUrl = 'https://youtu.be/4e839orj52w';
@@ -55,7 +56,8 @@ describe('FocusMediaDock', () => {
         onExpand={vi.fn()}
         onMinimize={vi.fn()}
         onStop={vi.fn()}
-      />
+      />,
+      { wrapper: MediaPlaybackProvider }
     );
 
     expect(screen.getByTestId('react-player')).toHaveAttribute(
@@ -106,7 +108,7 @@ describe('FocusMediaDock', () => {
       );
     };
 
-    render(<Harness />);
+    render(<Harness />, { wrapper: MediaPlaybackProvider });
     const player = screen.getByTestId('react-player');
     await user.click(screen.getByRole('button', { name: 'Minimize media player' }));
     expect(screen.getByTestId('react-player')).toBe(player);
@@ -114,6 +116,43 @@ describe('FocusMediaDock', () => {
 
     await user.click(screen.getByRole('button', { name: 'Stop media' }));
     expect(screen.queryByTestId('focus-media-dock')).not.toBeInTheDocument();
+  });
+
+  it('honors a play command that activates the player from an external control', async () => {
+    const user = userEvent.setup();
+    const Harness = () => {
+      const [active, setActive] = useState(false);
+      const { playing, setPlaying } = useMediaPlayback();
+      return (
+        <>
+          <output data-testid="external-playback-state">{String(playing)}</output>
+          <button
+            type="button"
+            onClick={() => {
+              setPlaying(true);
+              setActive(true);
+            }}
+          >
+            Play from settings
+          </button>
+          <FocusMediaDock
+            active={active}
+            expanded={false}
+            url={youtubeUrl}
+            onChangeUrl={vi.fn()}
+            onExpand={vi.fn()}
+            onMinimize={vi.fn()}
+            onStop={() => setActive(false)}
+          />
+        </>
+      );
+    };
+
+    render(<Harness />, { wrapper: MediaPlaybackProvider });
+    await user.click(screen.getByRole('button', { name: 'Play from settings' }));
+
+    expect(screen.getByTestId('external-playback-state')).toHaveTextContent('true');
+    expect(playerPropsSpy).toHaveBeenLastCalledWith(expect.objectContaining({ playing: true }));
   });
 
   it('keeps seek, playback, and volume controls usable while minimized', async () => {
@@ -127,7 +166,8 @@ describe('FocusMediaDock', () => {
         onExpand={vi.fn()}
         onMinimize={vi.fn()}
         onStop={vi.fn()}
-      />
+      />,
+      { wrapper: MediaPlaybackProvider }
     );
 
     const player = screen.getByTestId('react-player') as HTMLVideoElement;
@@ -160,7 +200,7 @@ describe('FocusMediaDock', () => {
     expect(screen.getByRole('slider', { name: 'Media volume' })).toHaveValue('0.4');
   });
 
-  it('docks the minimized controls into the active workspace host', async () => {
+  it('keeps the playback engine stable while minimized controls follow the active workspace host', async () => {
     const host = document.createElement('div');
     host.id = 'workspace-media-host';
     document.body.appendChild(host);
@@ -175,17 +215,24 @@ describe('FocusMediaDock', () => {
         onExpand={vi.fn()}
         onMinimize={vi.fn()}
         onStop={vi.fn()}
-      />
+      />,
+      { wrapper: MediaPlaybackProvider }
     );
 
     const dock = await screen.findByTestId('focus-media-dock');
+    const player = screen.getByTestId('react-player');
+    const controls = screen.getByTestId('compact-media-controls');
     expect(dock).toHaveAttribute('data-docked', 'true');
-    expect(host).toContainElement(screen.getByTestId('compact-media-controls'));
+    expect(host).toContainElement(controls);
+    expect(host).not.toContainElement(player);
+    expect(player.isConnected).toBe(true);
 
     const replacement = document.createElement('div');
     replacement.id = host.id;
     host.replaceWith(replacement);
-    await waitFor(() => expect(replacement).toContainElement(dock));
+    await waitFor(() => expect(replacement).toContainElement(screen.getByTestId('compact-media-controls')));
+    expect(screen.getByTestId('react-player')).toBe(player);
+    expect(player.isConnected).toBe(true);
     replacement.remove();
   });
 
@@ -199,7 +246,8 @@ describe('FocusMediaDock', () => {
         onExpand={vi.fn()}
         onMinimize={vi.fn()}
         onStop={vi.fn()}
-      />
+      />,
+      { wrapper: MediaPlaybackProvider }
     );
 
     act(() => (playerPropsSpy.mock.lastCall?.[0] as MockPlayerProps).onError?.());

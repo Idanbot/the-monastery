@@ -1311,18 +1311,22 @@ test('plays and persists focus media while allowing a minimized player', async (
   await page.getByRole('button', { name: 'Minimize media player' }).click();
   await expect(dock).toHaveAttribute('data-expanded', 'false');
   await expect(dock).toHaveAttribute('data-docked', 'true');
-  await expect(page.getByTestId('main-media-dock-host').getByTestId('focus-media-dock')).toBeVisible();
+  const compactControls = page.getByTestId('compact-media-controls');
+  await expect(page.getByTestId('main-media-dock-host').getByTestId('compact-media-controls')).toBeVisible();
+  await expect(page.getByTestId('main-media-dock-host').getByTestId('focus-media-dock')).toHaveCount(0);
   await expect(player).toBeAttached();
+  expect((await player.boundingBox())?.x).toBeLessThan(-9000);
   await expect(page.getByRole('slider', { name: 'Seek media' })).toBeVisible();
   const volume = page.getByRole('slider', { name: 'Media volume' });
   await expect(volume).toBeVisible();
   await volume.fill('0.4');
   await expect(volume).toHaveValue('0.4');
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(dock).toBeVisible();
-  await expect(page.locator('#board-focus-media-host').getByTestId('focus-media-dock')).toBeVisible();
+  await expect(compactControls).toBeVisible();
+  await expect(page.locator('#board-focus-media-host').getByTestId('compact-media-controls')).toBeVisible();
+  await expect(player).toBeAttached();
   await expectNoHorizontalOverflow(page);
-  expect((await dock.boundingBox())?.width).toBeLessThanOrEqual(374);
+  expect((await compactControls.boundingBox())?.width).toBeLessThanOrEqual(374);
   await page.getByRole('button', { name: 'Stop media' }).click();
   await expect(dock).toHaveCount(0);
 
@@ -1332,6 +1336,12 @@ test('plays and persists focus media while allowing a minimized player', async (
     'data-source',
     'https://media.example/focus.mp3'
   );
+  await openSettingsSection(page, 'Media');
+  const settingsDialog = page.getByRole('dialog', { name: /preferences/i });
+  await expect(settingsDialog.getByRole('button', { name: 'Mute media' })).toBeVisible();
+  const settingsVolume = settingsDialog.getByRole('slider', { name: 'Settings media volume' });
+  await settingsVolume.fill('0.25');
+  await expect(settingsVolume).toHaveValue('0.25');
 });
 
 test('keeps a mobile-created task after reload', async ({ page, request }) => {

@@ -4,6 +4,7 @@ import { settingsSectionRegistry, settingsSectionIds } from './settingsSectionRe
 it('registers every extracted settings section once', () => {
   expect(settingsSectionIds).toEqual([
     'main',
+    'media',
     'time',
     'board',
     'tags',

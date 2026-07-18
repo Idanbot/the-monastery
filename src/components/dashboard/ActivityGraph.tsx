@@ -62,12 +62,18 @@ export function ActivityGraph({
             <ActivityPet petId={petId} streakActive={summary.currentStreak > 0} animated={animatePet} />
           )}
           <span className="ui-muted-chip inline-flex items-center gap-1.5 text-sm font-medium text-[var(--ui-success)]">
-            <Flame
-              data-testid="streak-flame"
-              data-animated={animateFlame && summary.currentStreak > 0 ? 'true' : 'false'}
-              className={animateFlame && summary.currentStreak > 0 ? 'streak-flame-active' : ''}
-              size={14}
-            />{' '}
+            {animateFlame && summary.currentStreak > 0 ? (
+              <img
+                data-testid="streak-flame"
+                data-animated="true"
+                src="/activity/flame-animated.svg"
+                alt=""
+                aria-hidden="true"
+                className="size-4"
+              />
+            ) : (
+              <Flame data-testid="streak-flame" data-animated="false" size={14} />
+            )}{' '}
             {summary.currentStreak} day streak
           </span>
         </div>

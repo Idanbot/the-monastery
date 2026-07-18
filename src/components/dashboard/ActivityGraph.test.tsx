@@ -52,6 +52,7 @@ describe('ActivityGraph', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('17.07.26');
     expect(screen.getByRole('tooltip')).toHaveTextContent('1h 0m focused');
     expect(screen.getByTestId('streak-flame')).toHaveAttribute('data-animated', 'true');
+    expect(screen.getByTestId('streak-flame')).toHaveAttribute('src', '/activity/flame-animated.svg');
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'owl');
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-streak-active', 'true');
   });

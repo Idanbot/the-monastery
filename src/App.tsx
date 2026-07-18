@@ -3,6 +3,7 @@ import { SettingsProvider, useSettingsContext } from './contexts/SettingsContext
 import { TaskProvider } from './contexts/TaskContext';
 import { ProfileProvider, useProfileContext } from './contexts/ProfileContext';
 import { UIProvider, useUIContext } from './contexts/UIContext';
+import { MediaPlaybackProvider } from './contexts/MediaPlaybackContext';
 import { OwnerTokenGate } from './components/app/OwnerTokenGate';
 import { cssVars } from './lib/cssVars';
 
@@ -26,7 +27,9 @@ export default function App({ authEnabled }: { authEnabled?: boolean } = {}) {
         <TaskProvider>
           <ProfileProvider>
             <UIProvider>
-              <AppShell />
+              <MediaPlaybackProvider>
+                <AppShell />
+              </MediaPlaybackProvider>
             </UIProvider>
           </ProfileProvider>
         </TaskProvider>

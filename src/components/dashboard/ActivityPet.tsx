@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Bird, Cat, Rabbit } from 'lucide-react';
 import type { ActivityPetId } from '../../domain/types';
 import { activityPetOptions } from '../../domain/activityPets';
-
-const petIcons = { cat: Cat, owl: Bird, rabbit: Rabbit } as const;
 
 const activeActivities = ['idle', 'look', 'stretch', 'celebrate'] as const;
 
@@ -19,7 +16,7 @@ export function ActivityPet({
   const [activityIndex, setActivityIndex] = useState(0);
   const definition = activityPetOptions.find((candidate) => candidate.id === petId) || activityPetOptions[0];
   const activity = streakActive ? activeActivities[activityIndex] : 'sleepy';
-  const Icon = petIcons[definition.id];
+  const spriteRow = streakActive ? activityIndex : 4;
 
   useEffect(() => {
     if (!streakActive || !animated) return;
@@ -45,14 +42,23 @@ export function ActivityPet({
       data-testid="activity-pet"
       data-pet-id={definition.id}
       data-streak-active={streakActive ? 'true' : 'false'}
+      data-animated={streakActive && animated ? 'true' : 'false'}
       data-activity={activity}
-      data-sprite-row={streakActive ? activityIndex : 4}
+      data-sprite-row={spriteRow}
       role="img"
       aria-label={`${definition.label} is ${activity}`}
-      className="activity-pet ui-muted-chip grid size-9 shrink-0 place-items-center rounded-xl text-[var(--ui-info)]"
+      className="activity-pet ui-muted-chip grid size-9 shrink-0 place-items-center rounded-xl"
       title={`${definition.label}: ${activity}`}
     >
-      <Icon className="activity-pet-icon" size={20} aria-hidden="true" />
+      <span
+        data-testid="activity-pet-sprite"
+        aria-hidden="true"
+        className="activity-pet-sprite block size-8"
+        style={{
+          backgroundImage: `url(/pets/${definition.id}.svg)`,
+          backgroundPositionY: `${spriteRow * -32}px`
+        }}
+      />
     </div>
   );
 }

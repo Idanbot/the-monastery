@@ -36,6 +36,7 @@ interface UIContextType {
   setIsShortcutHelpOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isMediaPlayerActive: boolean;
   isMediaPlayerExpanded: boolean;
+  activateMediaPlayer: () => void;
   openMediaPlayer: () => void;
   minimizeMediaPlayer: () => void;
   stopMediaPlayer: () => void;
@@ -128,6 +129,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setIsMediaPlayerActive(true);
     setIsMediaPlayerExpanded(true);
   }, []);
+  const activateMediaPlayer = useCallback(() => setIsMediaPlayerActive(true), []);
   const minimizeMediaPlayer = useCallback(() => setIsMediaPlayerExpanded(false), []);
   const stopMediaPlayer = useCallback(() => {
     setIsMediaPlayerExpanded(false);
@@ -408,6 +410,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       setIsShortcutHelpOpen,
       isMediaPlayerActive,
       isMediaPlayerExpanded,
+      activateMediaPlayer,
       openMediaPlayer,
       minimizeMediaPlayer,
       stopMediaPlayer,
@@ -447,6 +450,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       unifiedSearchResults,
       unifiedSearchLoading,
       selectUnifiedSearchResult,
+      activateMediaPlayer,
       openMediaPlayer,
       minimizeMediaPlayer,
       stopMediaPlayer

@@ -46,6 +46,24 @@ const contextMocks = vi.hoisted(() => ({
     localBackups: [],
     restoreLocalBackup: vi.fn(),
     removeLocalBackup: vi.fn()
+  },
+  uiContext: {
+    isMediaPlayerActive: false,
+    activateMediaPlayer: vi.fn(),
+    openMediaPlayer: vi.fn(),
+    stopMediaPlayer: vi.fn()
+  },
+  mediaPlayback: {
+    playing: false,
+    currentTime: 30,
+    duration: 120,
+    volume: 0.8,
+    muted: false,
+    setPlaying: vi.fn(),
+    seekTo: vi.fn(),
+    setVolume: vi.fn(),
+    toggleMuted: vi.fn(),
+    resetPlayback: vi.fn()
   }
 }));
 
@@ -59,6 +77,14 @@ vi.mock('../../contexts/TaskContext', () => ({
 
 vi.mock('../../contexts/ProfileContext', () => ({
   useProfileContext: () => contextMocks.profileContext
+}));
+
+vi.mock('../../contexts/UIContext', () => ({
+  useUIContext: () => contextMocks.uiContext
+}));
+
+vi.mock('../../contexts/MediaPlaybackContext', () => ({
+  useMediaPlayback: () => contextMocks.mediaPlayback
 }));
 
 const renderSettings = (overrides = {}) => {
@@ -188,6 +214,32 @@ describe('SettingsModal', () => {
     await user.click(screen.getByRole('button', { name: /increase clock size/i }));
     const sizeUpdate = props.setSettings.mock.lastCall?.[0];
     expect(sizeUpdate(props.settings)).toEqual({ ...props.settings, clockTextScale: 1.1 });
+  });
+
+  it('controls the persistent media session from settings', async () => {
+    const user = userEvent.setup();
+    const props = renderSettings({ initialSection: 'media' });
+
+    await user.click(await screen.findByRole('button', { name: 'Play media' }));
+    expect(contextMocks.uiContext.activateMediaPlayer).toHaveBeenCalledOnce();
+    expect(contextMocks.mediaPlayback.setPlaying).toHaveBeenCalledWith(true);
+
+    await user.click(screen.getByRole('button', { name: 'Mute media' }));
+    expect(contextMocks.mediaPlayback.toggleMuted).toHaveBeenCalledOnce();
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Settings media volume' }), {
+      target: { value: '0.4' }
+    });
+    expect(contextMocks.mediaPlayback.setVolume).toHaveBeenCalledWith(0.4);
+
+    fireEvent.change(screen.getByLabelText('Focus media URL'), {
+      target: { value: 'https://media.example/focus.mp3' }
+    });
+    const sourceUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(sourceUpdate(props.settings)).toEqual({
+      ...props.settings,
+      focusMediaUrl: 'https://media.example/focus.mp3'
+    });
   });
 
   it('replaces any main view quarter from settings', async () => {
