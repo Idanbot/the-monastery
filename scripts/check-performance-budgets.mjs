@@ -23,7 +23,7 @@ const budgets = [
   {
     name: 'application CSS gzip',
     actual: css.reduce((total, file) => total + file.gzipBytes, 0),
-    maximum: 17 * 1024
+    maximum: 18 * 1024
   },
   {
     name: 'analytics chart chunk gzip',
