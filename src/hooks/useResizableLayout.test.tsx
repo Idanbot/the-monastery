@@ -5,6 +5,8 @@ import { useResizableLayout } from './useResizableLayout';
 const baseSettings = () => ({
   sidebarWidth: 320,
   clockHeight: 160,
+  mainViewColumnSplit: 50,
+  mainViewRowSplit: 50,
   columnWidths: { backlog: 25, inProgress: 25, done: 25, rejected: 25 },
   compactColumnWidths: { left: 50, right: 50 },
   compactHeights: { backlog: 50, inProgress: 50, done: 50, rejected: 50 }
@@ -20,6 +22,31 @@ const setup = () => {
 };
 
 describe('useResizableLayout', () => {
+  it('resizes the main view tracks in both directions with bounded proportions', () => {
+    const grid = document.createElement('div');
+    grid.id = 'main-view-grid';
+    Object.defineProperties(grid, {
+      clientWidth: { configurable: true, value: 1000 },
+      clientHeight: { configurable: true, value: 800 }
+    });
+    document.body.appendChild(grid);
+    const { result, getSettings } = setup();
+
+    act(() => result.current.startResize('main-view-columns'));
+    fireEvent.mouseMove(window, { movementX: 100 });
+    expect(getSettings().mainViewColumnSplit).toBe(60);
+    expect(document.body.style.cursor).toBe('col-resize');
+
+    act(() => result.current.startResize('main-view-rows'));
+    fireEvent.mouseMove(window, { movementY: 80 });
+    expect(getSettings().mainViewRowSplit).toBe(60);
+    expect(document.body.style.cursor).toBe('row-resize');
+
+    fireEvent.mouseMove(window, { movementY: 800 });
+    expect(getSettings().mainViewRowSplit).toBe(80);
+    grid.remove();
+  });
+
   it('resizes the sidebar and clock with clamped dimensions', () => {
     const { result, getSettings } = setup();
 

@@ -4,6 +4,7 @@ import {
   defaultMainViewSlots,
   normalizeMainViewModules,
   normalizeMainViewSlots,
+  moveMainViewSlot,
   updateMainViewModule,
   updateMainViewSlot
 } from './mainView';
@@ -86,6 +87,26 @@ describe('main view layout', () => {
     expect(updateMainViewSlot(defaultMainViewSlots, 'bottomLeft', 'timeline')).toEqual({
       ...defaultMainViewSlots,
       bottomLeft: 'timeline'
+    });
+  });
+
+  it('offers focused module combinations and swaps complete quarter assignments', () => {
+    expect(
+      normalizeMainViewSlots({
+        topLeft: 'focus-current',
+        topRight: 'activity-current',
+        bottomLeft: 'clock-media-timeline'
+      })
+    ).toMatchObject({
+      topLeft: 'focus-current',
+      topRight: 'activity-current',
+      bottomLeft: 'clock-media-timeline'
+    });
+
+    expect(moveMainViewSlot(defaultMainViewSlots, 'topRight', 'previous')).toEqual({
+      ...defaultMainViewSlots,
+      topLeft: 'activity',
+      topRight: 'focus'
     });
   });
 });

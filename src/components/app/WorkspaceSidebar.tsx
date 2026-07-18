@@ -12,7 +12,15 @@ export function WorkspaceSidebar() {
 
   const { currentTask, setSelectedTaskId, addTask, updateTaskTimer, completeTask } = useTaskContext();
 
-  const { view, now, sidebarOpen, setSidebarOpen, openMediaPlayer } = useUIContext();
+  const {
+    view,
+    now,
+    sidebarOpen,
+    setSidebarOpen,
+    isMediaPlayerActive,
+    isMediaPlayerExpanded,
+    openMediaPlayer
+  } = useUIContext();
 
   if (view === 'calendar' || view === 'main') return null;
 
@@ -58,16 +66,22 @@ export function WorkspaceSidebar() {
             <ClockWidget settings={settings} now={now} onOpenSettings={openSettings} />
           )}
           {settings.sidebarWidgets.includes('media') && (
-            <button
-              type="button"
-              onClick={openMediaPlayer}
-              className="flex min-h-10 shrink-0 items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-            >
-              <span className="flex items-center gap-2">
-                <Music2 size={16} className="text-indigo-500" /> Focus media
-              </span>
-              <span className="text-xs font-normal text-slate-400">Open</span>
-            </button>
+            <>
+              {isMediaPlayerActive && !isMediaPlayerExpanded ? (
+                <div id="sidebar-focus-media-host" className="w-full shrink-0" />
+              ) : (
+                <button
+                  type="button"
+                  onClick={openMediaPlayer}
+                  className="flex min-h-10 shrink-0 items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                >
+                  <span className="flex items-center gap-2">
+                    <Music2 size={16} className="text-indigo-500" /> Focus media
+                  </span>
+                  <span className="text-xs font-normal text-slate-400">Open</span>
+                </button>
+              )}
+            </>
           )}
           {settings.resizeHandleVisible !== false &&
             settings.sidebarWidgets.includes('clock') &&

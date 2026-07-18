@@ -34,9 +34,12 @@ export const mainViewSlotDefinitions = [
 
 export const mainViewSlotContentDefinitions = [
   { id: 'focus', label: 'Monk mode' },
+  { id: 'focus-current', label: 'Monk + current' },
   { id: 'activity', label: 'Activity' },
+  { id: 'activity-current', label: 'Activity + now' },
   { id: 'calendar-media', label: 'Calendar + media' },
   { id: 'clock-timeline', label: 'Clock + timeline' },
+  { id: 'clock-media-timeline', label: 'Clock + media + timeline' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'media', label: 'Media' },
   { id: 'clock', label: 'Clock' },
@@ -162,3 +165,15 @@ export const updateMainViewSlot = (
   slot: MainViewSlotId,
   content: MainViewSlotContentId
 ): MainViewSlots => ({ ...slots, [slot]: content });
+
+export const moveMainViewSlot = (
+  slots: MainViewSlots,
+  slot: MainViewSlotId,
+  direction: 'previous' | 'next'
+): MainViewSlots => {
+  const index = mainViewSlotDefinitions.findIndex((definition) => definition.id === slot);
+  const targetIndex = direction === 'previous' ? index - 1 : index + 1;
+  const target = mainViewSlotDefinitions[targetIndex]?.id;
+  if (!target) return slots;
+  return { ...slots, [slot]: slots[target], [target]: slots[slot] };
+};

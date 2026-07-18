@@ -80,6 +80,15 @@ test('opens a customizable desktop main workspace with Kanban on demand', async 
     Math.max(...slotBoxes.map((box) => box.height)) - Math.min(...slotBoxes.map((box) => box.height))
   ).toBeLessThanOrEqual(1);
 
+  const columnSeparator = page.getByRole('separator', { name: 'Resize main view columns' });
+  await columnSeparator.press('ArrowRight');
+  await expect(columnSeparator).toHaveAttribute('aria-valuenow', '52');
+  await page.getByRole('button', { name: 'Collapse Top left' }).click();
+  await expect(page.getByTestId('main-view-slot-topLeft')).toHaveAttribute('data-collapsed', 'true');
+  await expect(page.getByTestId('main-focus-module')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Expand Top left' }).click();
+  await expect(page.getByTestId('main-focus-module')).toBeVisible();
+
   const clockBox = await page.getByTestId('main-clock-module').boundingBox();
   const timelineBox = await page.getByTestId('main-timeline-module').boundingBox();
   expect(clockBox).not.toBeNull();
@@ -102,6 +111,13 @@ test('opens a customizable desktop main workspace with Kanban on demand', async 
       return body.settings?.mainViewSlots;
     })
     .toEqual(expect.objectContaining({ topRight: 'timeline' }));
+
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(`/api/profiles/${profileId}/settings`);
+      return (await response.json()).settings?.mainViewColumnSplit;
+    })
+    .toBe(52);
 
   await page.reload();
   await expect(page.getByTestId('main-view-slot-topRight')).toHaveAttribute('data-module', 'timeline');
@@ -1294,6 +1310,8 @@ test('plays and persists focus media while allowing a minimized player', async (
   const player = page.getByLabel('Focus audio player');
   await page.getByRole('button', { name: 'Minimize media player' }).click();
   await expect(dock).toHaveAttribute('data-expanded', 'false');
+  await expect(dock).toHaveAttribute('data-docked', 'true');
+  await expect(page.getByTestId('main-media-dock-host').getByTestId('focus-media-dock')).toBeVisible();
   await expect(player).toBeAttached();
   await expect(page.getByRole('slider', { name: 'Seek media' })).toBeVisible();
   const volume = page.getByRole('slider', { name: 'Media volume' });
@@ -1302,6 +1320,7 @@ test('plays and persists focus media while allowing a minimized player', async (
   await expect(volume).toHaveValue('0.4');
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(dock).toBeVisible();
+  await expect(page.locator('#board-focus-media-host').getByTestId('focus-media-dock')).toBeVisible();
   await expectNoHorizontalOverflow(page);
   expect((await dock.boundingBox())?.width).toBeLessThanOrEqual(374);
   await page.getByRole('button', { name: 'Stop media' }).click();

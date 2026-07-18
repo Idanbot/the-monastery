@@ -107,8 +107,16 @@ export type MainViewModule = {
   visible: boolean;
 };
 export type MainViewSlotId = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
-export type MainViewSlotContentId = MainViewModuleId | 'timeline' | 'calendar-media' | 'clock-timeline';
+export type MainViewSlotContentId =
+  | MainViewModuleId
+  | 'timeline'
+  | 'calendar-media'
+  | 'clock-timeline'
+  | 'focus-current'
+  | 'activity-current'
+  | 'clock-media-timeline';
 export type MainViewSlots = Record<MainViewSlotId, MainViewSlotContentId>;
+export type ActivityPetId = 'cat' | 'owl' | 'rabbit';
 
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';
@@ -128,6 +136,12 @@ export type AppSettings = {
   showSeconds: boolean;
   sidebarWidgets: string[];
   mainViewSlots: MainViewSlots;
+  mainViewColumnSplit: number;
+  mainViewRowSplit: number;
+  collapsedMainViewSlots: MainViewSlotId[];
+  activityPetId: ActivityPetId;
+  activityPetVisible: boolean;
+  activityFlameAnimationEnabled: boolean;
   /** Legacy layout retained so profiles created before the slot grid can be migrated. */
   mainViewModules: MainViewModule[];
   focusMediaUrl: string;

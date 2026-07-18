@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { CalendarDays, Columns3, Music2, Settings2, Target, X } from 'lucide-react';
+import { CalendarDays, Columns3, Maximize2, Minimize2, Music2, Settings2, Target, X } from 'lucide-react';
 import { ActivityGraph } from '../dashboard/ActivityGraph';
 import { ClockWidget } from '../ClockWidget';
 import { CurrentTaskPin } from '../CurrentTaskPin';
@@ -12,7 +12,11 @@ import { ThemedPortalSurface } from '../ui/ThemedPortalSurface';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
 import { useUIContext } from '../../contexts/UIContext';
-import { mainViewSlotDefinitions, normalizeMainViewSlots } from '../../domain/mainView';
+import {
+  mainViewSlotContentDefinitions,
+  mainViewSlotDefinitions,
+  normalizeMainViewSlots
+} from '../../domain/mainView';
 import { activeTaskStatuses, formatDateInputValue } from '../../domain/tasks';
 import { sendBrowserNotification } from '../../domain/notifications';
 import type { MainViewSlotContentId, MainViewSlotId, Task } from '../../domain/types';
@@ -45,6 +49,8 @@ export function MainWorkspace() {
     now,
     setView,
     setMonkMode,
+    isMediaPlayerActive,
+    isMediaPlayerExpanded,
     openMediaPlayer,
     quickAddText,
     setQuickAddText,
@@ -57,6 +63,29 @@ export function MainWorkspace() {
     () => normalizeMainViewSlots(settings.mainViewSlots, settings.mainViewModules),
     [settings.mainViewModules, settings.mainViewSlots]
   );
+  const collapsedSlots = settings.collapsedMainViewSlots || [];
+  const columnSplit = settings.mainViewColumnSplit || 50;
+  const rowSplit = settings.mainViewRowSplit || 50;
+  const mediaSlot = mainViewSlotDefinitions.find(({ id }) =>
+    ['media', 'calendar-media', 'clock-media-timeline'].includes(slots[id])
+  )?.id;
+  const toggleSlot = (slot: MainViewSlotId) => {
+    setSettings((previous) => {
+      const collapsed = previous.collapsedMainViewSlots || [];
+      return {
+        ...previous,
+        collapsedMainViewSlots: collapsed.includes(slot)
+          ? collapsed.filter((candidate) => candidate !== slot)
+          : [...collapsed, slot]
+      };
+    });
+  };
+  const resizeWithKeyboard = (axis: 'columns' | 'rows', delta: number) => {
+    setSettings((previous) => {
+      const key = axis === 'columns' ? 'mainViewColumnSplit' : 'mainViewRowSplit';
+      return { ...previous, [key]: Math.min(80, Math.max(20, (previous[key] || 50) + delta)) };
+    });
+  };
 
   const renderModule = (content: MainViewSlotContentId, slot: MainViewSlotId) => {
     if (content === 'calendar-media') {
@@ -75,10 +104,20 @@ export function MainWorkspace() {
         </div>
       );
     }
-    if (content === 'focus') {
+    if (content === 'clock-media-timeline') {
+      return (
+        <div className="grid h-full min-h-0 grid-rows-[minmax(5rem,0.8fr)_auto_minmax(7rem,1fr)] gap-3">
+          {renderModule('clock', slot)}
+          {renderModule('media', slot)}
+          {renderModule('timeline', slot)}
+        </div>
+      );
+    }
+    if (content === 'focus' || content === 'focus-current') {
       return (
         <MainFocusModule
           slot={slot}
+          showCurrent={content === 'focus-current'}
           settings={settings}
           now={now}
           currentTask={currentTask}
@@ -100,10 +139,36 @@ export function MainWorkspace() {
         />
       );
     }
+    if (content === 'activity-current') {
+      return (
+        <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_minmax(7rem,1fr)] gap-3">
+          {renderModule('activity', slot)}
+          <div className="custom-scrollbar min-h-0 overflow-y-auto">
+            <CurrentTaskPin
+              task={currentTask}
+              now={now}
+              onOpen={setSelectedTaskId}
+              onAdd={() => addTask('backlog')}
+              onToggleTimer={updateTaskTimer}
+              onComplete={completeTask}
+            />
+          </div>
+        </div>
+      );
+    }
     if (content === 'activity') {
       return (
         <div data-testid="main-activity-module" data-slot={slot} className="h-full min-h-0">
-          <ActivityGraph tasks={tasks} now={now} compact fill />
+          <ActivityGraph
+            tasks={tasks}
+            now={now}
+            compact
+            fill
+            petId={settings.activityPetId}
+            showPet={settings.activityPetVisible}
+            animateFlame={settings.activityFlameAnimationEnabled && settings.animationsEnabled}
+            animatePet={settings.animationsEnabled}
+          />
         </div>
       );
     }
@@ -119,7 +184,16 @@ export function MainWorkspace() {
       );
     }
     if (content === 'media') {
-      return <MainMediaModule slot={slot} url={settings.focusMediaUrl} onOpen={openMediaPlayer} />;
+      return (
+        <MainMediaModule
+          slot={slot}
+          url={settings.focusMediaUrl}
+          active={isMediaPlayerActive}
+          expanded={isMediaPlayerExpanded}
+          isDockHost={slot === mediaSlot}
+          onOpen={openMediaPlayer}
+        />
+      );
     }
     if (content === 'timeline') {
       return (
@@ -184,19 +258,111 @@ export function MainWorkspace() {
 
       <div
         data-testid="main-view-grid"
-        className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-3 lg:gap-4"
+        className="grid min-h-0 flex-1"
+        style={{
+          gridTemplateColumns: `minmax(0, ${columnSplit}fr) 0.75rem minmax(0, ${100 - columnSplit}fr)`,
+          gridTemplateRows: `minmax(0, ${rowSplit}fr) 0.75rem minmax(0, ${100 - rowSplit}fr)`
+        }}
       >
-        {mainViewSlotDefinitions.map(({ id }) => (
-          <div
-            key={id}
-            data-testid={`main-view-slot-${id}`}
-            data-slot={id}
-            data-module={slots[id]}
-            className="min-h-0 min-w-0 overflow-hidden"
-          >
-            {renderModule(slots[id], id)}
-          </div>
-        ))}
+        {mainViewSlotDefinitions.map(({ id, label }) => {
+          const collapsed = collapsedSlots.includes(id);
+          const moduleLabel = mainViewSlotContentDefinitions.find(
+            ({ id: content }) => content === slots[id]
+          )?.label;
+          const position = {
+            topLeft: { gridColumn: 1, gridRow: 1 },
+            topRight: { gridColumn: 3, gridRow: 1 },
+            bottomLeft: { gridColumn: 1, gridRow: 3 },
+            bottomRight: { gridColumn: 3, gridRow: 3 }
+          }[id];
+          return (
+            <div
+              key={id}
+              data-testid={`main-view-slot-${id}`}
+              data-slot={id}
+              data-module={slots[id]}
+              data-collapsed={collapsed ? 'true' : 'false'}
+              className="relative min-h-0 min-w-0 overflow-hidden"
+              style={position}
+            >
+              {collapsed ? (
+                <div className="ui-surface flex min-h-11 items-center gap-2 rounded-xl border px-3 shadow-sm">
+                  <span className="truncate text-sm font-semibold text-[var(--ui-text-primary)]">
+                    {moduleLabel}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={`Expand ${label}`}
+                    onClick={() => toggleSlot(id)}
+                    className="ui-icon-button ui-control ml-auto size-8"
+                  >
+                    <Maximize2 size={14} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    aria-label={`Collapse ${label}`}
+                    onClick={() => toggleSlot(id)}
+                    className={`ui-icon-button ui-control absolute top-1/2 z-20 size-8 -translate-y-1/2 opacity-75 hover:opacity-100 ${
+                      id === 'topLeft' || id === 'bottomLeft' ? 'right-1' : 'left-1'
+                    }`}
+                  >
+                    <Minimize2 size={14} />
+                  </button>
+                  {renderModule(slots[id], id)}
+                </>
+              )}
+            </div>
+          );
+        })}
+        {settings.resizeHandleVisible !== false && (
+          <>
+            <div
+              role="separator"
+              aria-label="Resize main view columns"
+              aria-orientation="vertical"
+              aria-valuemin={20}
+              aria-valuemax={80}
+              aria-valuenow={Math.round(columnSplit)}
+              tabIndex={0}
+              className="resize-handle resize-handle-vertical group flex cursor-col-resize items-center justify-center justify-self-center rounded"
+              style={{ gridColumn: 2, gridRow: '1 / 4' }}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                startResize('main-view-columns');
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowLeft') resizeWithKeyboard('columns', -2);
+                if (event.key === 'ArrowRight') resizeWithKeyboard('columns', 2);
+              }}
+            >
+              <div className="resize-grip resize-grip-vertical rounded-full" />
+            </div>
+            <div
+              role="separator"
+              aria-label="Resize main view rows"
+              aria-orientation="horizontal"
+              aria-valuemin={20}
+              aria-valuemax={80}
+              aria-valuenow={Math.round(rowSplit)}
+              tabIndex={0}
+              className="resize-handle resize-handle-horizontal group flex cursor-row-resize items-center justify-center self-center rounded"
+              style={{ gridColumn: '1 / 4', gridRow: 2 }}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                startResize('main-view-rows');
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowUp') resizeWithKeyboard('rows', -2);
+                if (event.key === 'ArrowDown') resizeWithKeyboard('rows', 2);
+              }}
+            >
+              <div className="resize-grip resize-grip-horizontal rounded-full" />
+            </div>
+          </>
+        )}
       </div>
 
       <Dialog.Root open={kanbanOpen} onOpenChange={setKanbanOpen}>
@@ -277,6 +443,7 @@ export function MainWorkspace() {
 
 function MainFocusModule({
   slot,
+  showCurrent,
   settings,
   now,
   currentTask,
@@ -289,6 +456,7 @@ function MainFocusModule({
   onPomodoroComplete
 }: {
   slot: MainViewSlotId;
+  showCurrent: boolean;
   settings: ReturnType<typeof useSettingsContext>['settings'];
   now: number;
   currentTask: Task | null;
@@ -321,7 +489,7 @@ function MainFocusModule({
           <Target size={16} /> Immerse
         </button>
       </div>
-      <div className="mt-3 grid min-h-0 flex-1 grid-cols-2 gap-3">
+      <div className={`mt-3 grid min-h-0 flex-1 gap-3 ${showCurrent ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <div className="ui-surface custom-scrollbar min-h-0 overflow-y-auto rounded-2xl border p-3 shadow-sm">
           <PomodoroTimer compact onComplete={onPomodoroComplete} />
           <label className="mt-2 flex items-center gap-2 border-t border-[var(--ui-border-subtle)] pt-2">
@@ -335,16 +503,18 @@ function MainFocusModule({
             />
           </label>
         </div>
-        <div className="custom-scrollbar min-h-0 overflow-y-auto">
-          <CurrentTaskPin
-            task={currentTask}
-            now={now}
-            onOpen={onOpenTask}
-            onAdd={onAddTask}
-            onToggleTimer={onToggleTimer}
-            onComplete={onCompleteTask}
-          />
-        </div>
+        {showCurrent && (
+          <div className="custom-scrollbar min-h-0 overflow-y-auto">
+            <CurrentTaskPin
+              task={currentTask}
+              now={now}
+              onOpen={onOpenTask}
+              onAdd={onAddTask}
+              onToggleTimer={onToggleTimer}
+              onComplete={onCompleteTask}
+            />
+          </div>
+        )}
       </div>
     </section>
   );
@@ -422,7 +592,31 @@ function MainCalendarModule({
   );
 }
 
-function MainMediaModule({ slot, url, onOpen }: { slot: MainViewSlotId; url: string; onOpen: () => void }) {
+function MainMediaModule({
+  slot,
+  url,
+  active,
+  expanded,
+  isDockHost,
+  onOpen
+}: {
+  slot: MainViewSlotId;
+  url: string;
+  active: boolean;
+  expanded: boolean;
+  isDockHost: boolean;
+  onOpen: () => void;
+}) {
+  if (isDockHost && active && !expanded) {
+    return (
+      <div
+        id="main-focus-media-host"
+        data-testid="main-media-dock-host"
+        data-slot={slot}
+        className="flex h-full min-h-0 items-center"
+      />
+    );
+  }
   let source = 'Saved focus source';
   try {
     source = new URL(url).hostname.replace(/^www\./, '');

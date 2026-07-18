@@ -39,6 +39,28 @@ export function useResizableLayout(setSettings) {
       const boardWidth = document.getElementById('kanban-board')?.clientWidth || 1000;
 
       setSettings((prev) => {
+        if (activeResizer === 'main-view-columns') {
+          const gridWidth = document.getElementById('main-view-grid')?.clientWidth || 1000;
+          return {
+            ...prev,
+            mainViewColumnSplit: Math.min(
+              80,
+              Math.max(20, (prev.mainViewColumnSplit || 50) + (e.movementX / gridWidth) * 100)
+            )
+          };
+        }
+
+        if (activeResizer === 'main-view-rows') {
+          const gridHeight = document.getElementById('main-view-grid')?.clientHeight || 800;
+          return {
+            ...prev,
+            mainViewRowSplit: Math.min(
+              80,
+              Math.max(20, (prev.mainViewRowSplit || 50) + (e.movementY / gridHeight) * 100)
+            )
+          };
+        }
+
         if (activeResizer === 'main-sidebar') {
           return {
             ...prev,
@@ -146,6 +168,7 @@ export function useResizableLayout(setSettings) {
       document.body.style.cursor =
         activeResizer.startsWith('stack:') ||
         activeResizer.includes('vertical') ||
+        activeResizer === 'main-view-rows' ||
         activeResizer === 'sidebar-clock'
           ? 'row-resize'
           : 'col-resize';

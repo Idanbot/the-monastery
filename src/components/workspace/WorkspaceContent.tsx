@@ -296,6 +296,7 @@ export function WorkspaceContent() {
               />
             )}
           </div>
+          <div id="board-focus-media-host" className="mt-2 w-full shrink-0 empty:hidden" />
         </>
       )}
     </div>

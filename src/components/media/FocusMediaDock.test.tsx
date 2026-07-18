@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { forwardRef, useState, type ReactEventHandler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -158,6 +158,35 @@ describe('FocusMediaDock', () => {
     await user.click(screen.getByRole('button', { name: 'Unmute media' }));
     expect(playerPropsSpy).toHaveBeenLastCalledWith(expect.objectContaining({ muted: false }));
     expect(screen.getByRole('slider', { name: 'Media volume' })).toHaveValue('0.4');
+  });
+
+  it('docks the minimized controls into the active workspace host', async () => {
+    const host = document.createElement('div');
+    host.id = 'workspace-media-host';
+    document.body.appendChild(host);
+
+    render(
+      <FocusMediaDock
+        active
+        expanded={false}
+        dockTargetId="workspace-media-host"
+        url={youtubeUrl}
+        onChangeUrl={vi.fn()}
+        onExpand={vi.fn()}
+        onMinimize={vi.fn()}
+        onStop={vi.fn()}
+      />
+    );
+
+    const dock = await screen.findByTestId('focus-media-dock');
+    expect(dock).toHaveAttribute('data-docked', 'true');
+    expect(host).toContainElement(screen.getByTestId('compact-media-controls'));
+
+    const replacement = document.createElement('div');
+    replacement.id = host.id;
+    host.replaceWith(replacement);
+    await waitFor(() => expect(replacement).toContainElement(dock));
+    replacement.remove();
   });
 
   it('surfaces player failures and clears them once media is ready', () => {

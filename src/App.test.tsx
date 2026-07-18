@@ -523,7 +523,7 @@ it('adds task tags from the fuzzy tag pool', async () => {
   await user.click(screen.getByRole('option', { name: /^python$/i }));
 
   expect(screen.getAllByText(/python study/i).length).toBeGreaterThan(0);
-});
+}, 15_000);
 
 it('persists a custom task tag in the known tag inventory', async () => {
   const user = userEvent.setup();

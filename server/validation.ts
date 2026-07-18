@@ -88,7 +88,10 @@ const mainViewSlotContentSchema = z.enum([
   'clock',
   'timeline',
   'calendar-media',
-  'clock-timeline'
+  'clock-timeline',
+  'focus-current',
+  'activity-current',
+  'clock-media-timeline'
 ]);
 
 const goalCadenceSchema = z.object({
@@ -149,6 +152,12 @@ export const appSettingsSchema = z.object({
       bottomRight: mainViewSlotContentSchema
     })
     .optional(),
+  mainViewColumnSplit: z.number().min(20).max(80).optional(),
+  mainViewRowSplit: z.number().min(20).max(80).optional(),
+  collapsedMainViewSlots: z.array(z.enum(['topLeft', 'topRight', 'bottomLeft', 'bottomRight'])).optional(),
+  activityPetId: z.enum(['cat', 'owl', 'rabbit']).optional(),
+  activityPetVisible: z.boolean().optional(),
+  activityFlameAnimationEnabled: z.boolean().optional(),
   mainViewModules: z.array(mainViewModuleSchema).max(5),
   focusMediaUrl: z.string().max(2048),
   sidebarWidth: z.number(),

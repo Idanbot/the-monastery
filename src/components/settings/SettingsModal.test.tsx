@@ -200,6 +200,25 @@ describe('SettingsModal', () => {
       ...props.settings,
       mainViewSlots: { ...props.settings.mainViewSlots, topLeft: 'calendar' }
     });
+
+    await user.click(screen.getByRole('button', { name: 'Move Top left later' }));
+    const moveUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(moveUpdate(props.settings).mainViewSlots).toEqual({
+      ...props.settings.mainViewSlots,
+      topLeft: props.settings.mainViewSlots.topRight,
+      topRight: props.settings.mainViewSlots.topLeft
+    });
+
+    await user.selectOptions(screen.getByLabelText('Activity pet'), 'owl');
+    const petUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(petUpdate(props.settings)).toEqual({ ...props.settings, activityPetId: 'owl' });
+
+    await user.click(screen.getByLabelText('Animate streak flame'));
+    const flameUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(flameUpdate(props.settings)).toEqual({
+      ...props.settings,
+      activityFlameAnimationEnabled: false
+    });
   });
 
   it('requests permission before enabling browser notifications', async () => {

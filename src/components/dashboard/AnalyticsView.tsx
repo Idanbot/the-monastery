@@ -117,12 +117,14 @@ type AnalyticsResult = ReturnType<typeof calculateAnalytics>;
 function MobileAnalyticsSummary({
   analytics,
   tasks,
+  settings,
   activeProfile,
   currentTask,
   openRoleSettings
 }: {
   analytics: AnalyticsResult;
   tasks: Task[];
+  settings: AppSettings;
   activeProfile: Profile | null;
   currentTask: Task | null;
   openRoleSettings: () => void;
@@ -181,7 +183,14 @@ function MobileAnalyticsSummary({
       </section>
 
       <div className="mt-3">
-        <ActivityGraph tasks={tasks} compact />
+        <ActivityGraph
+          tasks={tasks}
+          compact
+          petId={settings.activityPetId}
+          showPet={settings.activityPetVisible}
+          animateFlame={settings.activityFlameAnimationEnabled && settings.animationsEnabled}
+          animatePet={settings.animationsEnabled}
+        />
       </div>
 
       <details className="ui-surface mt-3 rounded-2xl border shadow-sm">
@@ -265,6 +274,7 @@ export function AnalyticsView({
       <MobileAnalyticsSummary
         analytics={analytics}
         tasks={tasks}
+        settings={settings}
         activeProfile={activeProfile}
         currentTask={currentTask}
         openRoleSettings={openRoleSettings}
@@ -316,7 +326,13 @@ export function AnalyticsView({
           ))}
         </div>
 
-        <ActivityGraph tasks={tasks} />
+        <ActivityGraph
+          tasks={tasks}
+          petId={settings.activityPetId}
+          showPet={settings.activityPetVisible}
+          animateFlame={settings.activityFlameAnimationEnabled && settings.animationsEnabled}
+          animatePet={settings.animationsEnabled}
+        />
 
         <section
           data-testid="analytics-status-chart"

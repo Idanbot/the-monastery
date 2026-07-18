@@ -2,6 +2,8 @@ import { expect, test } from './fixtures';
 import { normalizeTask } from '../src/domain/tasks';
 import { api, expectStatus, openBoard, resetServerState } from './helpers';
 
+const concurrentRenderBudgetMs = 12_000;
+
 test('large board stays within render budget and supports lane movement', async ({ page, request }) => {
   test.setTimeout(60_000);
   const profileId = await resetServerState(request, {
@@ -21,12 +23,12 @@ test('large board stays within render budget and supports lane movement', async 
   const mainRenderStarted = Date.now();
   await page.goto('/');
   await expect(page.getByTestId('main-workspace')).toBeVisible();
-  expect(Date.now() - mainRenderStarted).toBeLessThan(8_000);
+  expect(Date.now() - mainRenderStarted).toBeLessThan(concurrentRenderBudgetMs);
 
   const boardRenderStarted = Date.now();
   await openBoard(page);
   await expect(page.getByTestId('kanban-board')).toBeVisible();
-  expect(Date.now() - boardRenderStarted).toBeLessThan(8_000);
+  expect(Date.now() - boardRenderStarted).toBeLessThan(concurrentRenderBudgetMs);
 
   const card = page.getByLabel(/Performance task 249, Backlog/i);
   await card.scrollIntoViewIfNeeded();

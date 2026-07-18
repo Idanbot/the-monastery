@@ -1,22 +1,34 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { CheckCheck, CheckCircle2, Clock3, Flame } from 'lucide-react';
-import type { Task } from '../../domain/types';
+import type { ActivityPetId, Task } from '../../domain/types';
 import { formatDurationString } from '../../domain/tasks';
 import { buildActivitySummary } from '../../domain/activityTracking';
+import { ActivityPet } from './ActivityPet';
 
 interface ActivityGraphProps {
   tasks: Task[];
   compact?: boolean;
   fill?: boolean;
   now?: number;
+  petId?: ActivityPetId;
+  showPet?: boolean;
+  animateFlame?: boolean;
+  animatePet?: boolean;
 }
 
 export function ActivityGraph({
   tasks,
   compact = false,
   fill = false,
-  now = Date.now()
+  now = Date.now(),
+  petId = 'cat',
+  showPet = true,
+  animateFlame = true,
+  animatePet = true
 }: ActivityGraphProps) {
+  const [activeDay, setActiveDay] = useState<ReturnType<typeof buildActivitySummary>['days'][number] | null>(
+    null
+  );
   const summary = useMemo(() => buildActivitySummary(tasks, { now, days: 90 }), [tasks, now]);
   const visibleActivity = compact ? summary.days.slice(-28) : summary.days;
   const maxScore = Math.max(1, ...visibleActivity.map((day) => day.score));
@@ -32,6 +44,10 @@ export function ActivityGraph({
 
   const detailLabel = (day: (typeof visibleActivity)[number]) =>
     `${day.date}: ${formatDurationString(day.trackedMs)} tracked, ${day.completedSubtasks} subtask${day.completedSubtasks === 1 ? '' : 's'} completed, ${day.completedTasks} task${day.completedTasks === 1 ? '' : 's'} completed`;
+  const formatActivityDate = (date: string) => {
+    const [year, month, day] = date.split('-');
+    return `${day}.${month}.${year.slice(-2)}`;
+  };
 
   return (
     <section
@@ -41,9 +57,20 @@ export function ActivityGraph({
     >
       <div className="mb-4 flex items-center justify-between gap-3">
         <h3 className="text-base font-bold">Activity</h3>
-        <span className="ui-muted-chip inline-flex items-center gap-1.5 text-sm font-medium text-[var(--ui-success)]">
-          <Flame size={14} /> {summary.currentStreak} day streak
-        </span>
+        <div className="flex items-center gap-2">
+          {showPet && (
+            <ActivityPet petId={petId} streakActive={summary.currentStreak > 0} animated={animatePet} />
+          )}
+          <span className="ui-muted-chip inline-flex items-center gap-1.5 text-sm font-medium text-[var(--ui-success)]">
+            <Flame
+              data-testid="streak-flame"
+              data-animated={animateFlame && summary.currentStreak > 0 ? 'true' : 'false'}
+              className={animateFlame && summary.currentStreak > 0 ? 'streak-flame-active' : ''}
+              size={14}
+            />{' '}
+            {summary.currentStreak} day streak
+          </span>
+        </div>
       </div>
       <div className="mb-4 grid grid-cols-3 gap-2">
         <ActivityMetric
@@ -65,21 +92,46 @@ export function ActivityGraph({
           value={String(summary.completedTasks)}
         />
       </div>
-      <div
-        className={
-          compact ? 'grid grid-cols-[repeat(7,1rem)] justify-end gap-1.5' : 'flex flex-wrap justify-end gap-1'
-        }
-        data-testid="activity-days"
-      >
-        {visibleActivity.map((day) => (
+      <div className="relative">
+        {activeDay && (
           <div
-            key={day.date}
-            role="img"
-            aria-label={detailLabel(day)}
-            className={`h-4 w-4 rounded-[3px] transition-colors ${getColorClass(day.score)}`}
-            title={detailLabel(day)}
-          />
-        ))}
+            role="tooltip"
+            className="ui-surface absolute bottom-full right-0 z-20 mb-2 min-w-40 rounded-lg border px-3 py-2 text-left shadow-lg"
+          >
+            <div className="font-mono text-xs font-bold text-[var(--ui-text-primary)]">
+              {formatActivityDate(activeDay.date)}
+            </div>
+            <div className="mt-1 text-xs text-[var(--ui-text-secondary)]">
+              {formatDurationString(activeDay.trackedMs)} focused
+            </div>
+            <div className="text-[11px] text-[var(--ui-text-secondary)]">
+              {activeDay.completedTasks} tasks / {activeDay.completedSubtasks} subtasks
+            </div>
+          </div>
+        )}
+        <div
+          className={
+            compact
+              ? 'grid grid-cols-[repeat(7,1rem)] justify-end gap-1.5'
+              : 'flex flex-wrap justify-end gap-1'
+          }
+          data-testid="activity-days"
+        >
+          {visibleActivity.map((day) => (
+            <span
+              key={day.date}
+              role="img"
+              tabIndex={day.score > 0 ? 0 : -1}
+              aria-label={detailLabel(day)}
+              className={`h-4 w-4 rounded-[3px] transition-colors focus:outline-2 focus:outline-offset-1 focus:outline-[var(--ui-focus-ring)] ${getColorClass(day.score)}`}
+              title={detailLabel(day)}
+              onMouseEnter={() => setActiveDay(day)}
+              onMouseLeave={() => setActiveDay(null)}
+              onFocus={() => setActiveDay(day)}
+              onBlur={() => setActiveDay(null)}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );

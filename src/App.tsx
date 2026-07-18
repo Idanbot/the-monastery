@@ -17,6 +17,7 @@ import { PlanningImportDialog } from './components/app/PlanningImportDialog';
 import { ImportPreviewDialog } from './components/app/ImportPreviewDialog';
 import { MobileAppShell } from './components/app/MobileAppShell';
 import { FocusMediaDock } from './components/media/FocusMediaDock';
+import { useMediaQuery } from './hooks/useMediaQuery';
 
 export default function App({ authEnabled }: { authEnabled?: boolean } = {}) {
   return (
@@ -62,6 +63,7 @@ function AppShell() {
   } = useProfileContext();
 
   const {
+    view,
     isShortcutHelpOpen,
     setIsShortcutHelpOpen,
     isMediaPlayerActive,
@@ -70,6 +72,17 @@ function AppShell() {
     minimizeMediaPlayer,
     stopMediaPlayer
   } = useUIContext();
+  const isDesktopLayout = useMediaQuery('(min-width: 768px)');
+  const mediaDockTargetId =
+    view === 'main'
+      ? isDesktopLayout
+        ? 'main-focus-media-host'
+        : 'board-focus-media-host'
+      : view === 'board'
+        ? isDesktopLayout && settings.sidebarVisible && settings.sidebarWidgets.includes('media')
+          ? 'sidebar-focus-media-host'
+          : 'board-focus-media-host'
+        : undefined;
 
   return (
     <div
@@ -162,6 +175,7 @@ function AppShell() {
           onExpand={openMediaPlayer}
           onMinimize={minimizeMediaPlayer}
           onStop={stopMediaPlayer}
+          dockTargetId={mediaDockTargetId}
         />
 
         <ShortcutHelpDialog open={isShortcutHelpOpen} onClose={() => setIsShortcutHelpOpen(false)} />

@@ -210,6 +210,12 @@ describe('task domain helpers', () => {
       resizeHandleThickness: -1,
       resizeHandleLength: -1,
       resizeHandleColor: '  #ff2d55  ',
+      mainViewColumnSplit: 99,
+      mainViewRowSplit: 1,
+      collapsedMainViewSlots: ['topLeft', 'invalid', 'topLeft', 'bottomRight'],
+      activityPetId: 'owl',
+      activityPetVisible: false,
+      activityFlameAnimationEnabled: false,
       timelineHourLinesVisible: false,
       colorScheme: { main: ' #007aff ', secondary: ' #34c759 ', text: ' #1d1d1f ' },
       timelineNowLineVisible: false
@@ -225,6 +231,12 @@ describe('task domain helpers', () => {
     expect(settings.resizeHandleThickness).toBe(1);
     expect(settings.resizeHandleLength).toBe(1);
     expect(settings.resizeHandleColor).toBe('#ff2d55');
+    expect(settings.mainViewColumnSplit).toBe(80);
+    expect(settings.mainViewRowSplit).toBe(20);
+    expect(settings.collapsedMainViewSlots).toEqual(['topLeft', 'bottomRight']);
+    expect(settings.activityPetId).toBe('owl');
+    expect(settings.activityPetVisible).toBe(false);
+    expect(settings.activityFlameAnimationEnabled).toBe(false);
     expect(settings.timelineHourLinesVisible).toBe(false);
     expect(settings.timelineNowLineVisible).toBe(false);
   });

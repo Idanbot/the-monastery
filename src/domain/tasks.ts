@@ -179,6 +179,12 @@ export const defaultSettings: AppSettings = {
   shutdownChecklist: { review: false, plan: false, clear: false },
   sidebarWidgets: ['now', 'clock', 'media', 'agenda'],
   mainViewSlots: defaultMainViewSlots,
+  mainViewColumnSplit: 50,
+  mainViewRowSplit: 50,
+  collapsedMainViewSlots: [],
+  activityPetId: 'cat',
+  activityPetVisible: true,
+  activityFlameAnimationEnabled: true,
   mainViewModules: defaultMainViewModules,
   focusMediaUrl: 'https://youtu.be/4e839orj52w',
   sidebarWidth: 320,
@@ -338,6 +344,26 @@ export const mergeSettings = (saved) => ({
       : {})
   },
   mainViewSlots: normalizeMainViewSlots(saved?.mainViewSlots, saved?.mainViewModules),
+  mainViewColumnSplit: clampNumber(saved?.mainViewColumnSplit, 20, 80, 50),
+  mainViewRowSplit: clampNumber(saved?.mainViewRowSplit, 20, 80, 50),
+  collapsedMainViewSlots: Array.from(
+    new Set(
+      normalizeStringArray(saved?.collapsedMainViewSlots).filter((slot) =>
+        ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].includes(slot)
+      )
+    )
+  ) as AppSettings['collapsedMainViewSlots'],
+  activityPetId: ['cat', 'owl', 'rabbit'].includes(saved?.activityPetId)
+    ? saved.activityPetId
+    : defaultSettings.activityPetId,
+  activityPetVisible:
+    saved?.activityPetVisible === undefined
+      ? defaultSettings.activityPetVisible
+      : Boolean(saved.activityPetVisible),
+  activityFlameAnimationEnabled:
+    saved?.activityFlameAnimationEnabled === undefined
+      ? defaultSettings.activityFlameAnimationEnabled
+      : Boolean(saved.activityFlameAnimationEnabled),
   mainViewModules: normalizeMainViewModules(saved?.mainViewModules),
   animationsEnabled:
     saved?.animationsEnabled === undefined
