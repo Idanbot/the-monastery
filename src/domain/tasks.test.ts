@@ -213,7 +213,7 @@ describe('task domain helpers', () => {
       mainViewColumnSplit: 99,
       mainViewRowSplit: 1,
       collapsedMainViewSlots: ['topLeft', 'invalid', 'topLeft', 'bottomRight'],
-      activityPetId: 'owl',
+      activityPetId: 'aurelius',
       activityPetVisible: false,
       activityFlameAnimationEnabled: false,
       timelineHourLinesVisible: false,
@@ -234,11 +234,16 @@ describe('task domain helpers', () => {
     expect(settings.mainViewColumnSplit).toBe(80);
     expect(settings.mainViewRowSplit).toBe(20);
     expect(settings.collapsedMainViewSlots).toEqual(['topLeft', 'bottomRight']);
-    expect(settings.activityPetId).toBe('owl');
+    expect(settings.activityPetId).toBe('aurelius');
     expect(settings.activityPetVisible).toBe(false);
     expect(settings.activityFlameAnimationEnabled).toBe(false);
     expect(settings.timelineHourLinesVisible).toBe(false);
     expect(settings.timelineNowLineVisible).toBe(false);
+  });
+
+  it('migrates removed activity pets to Aurelius', () => {
+    expect(mergeSettings({ activityPetId: 'owl' as never }).activityPetId).toBe('aurelius');
+    expect(mergeSettings({ activityPetId: 'rabbit' as never }).activityPetId).toBe('aurelius');
   });
 
   it('normalizes auto promotion setting', () => {

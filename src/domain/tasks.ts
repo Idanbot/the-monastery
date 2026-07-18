@@ -182,7 +182,7 @@ export const defaultSettings: AppSettings = {
   mainViewColumnSplit: 50,
   mainViewRowSplit: 50,
   collapsedMainViewSlots: [],
-  activityPetId: 'cat',
+  activityPetId: 'aurelius',
   activityPetVisible: true,
   activityFlameAnimationEnabled: true,
   mainViewModules: defaultMainViewModules,
@@ -353,9 +353,7 @@ export const mergeSettings = (saved) => ({
       )
     )
   ) as AppSettings['collapsedMainViewSlots'],
-  activityPetId: ['cat', 'owl', 'rabbit'].includes(saved?.activityPetId)
-    ? saved.activityPetId
-    : defaultSettings.activityPetId,
+  activityPetId: saved?.activityPetId === 'aurelius' ? saved.activityPetId : defaultSettings.activityPetId,
   activityPetVisible:
     saved?.activityPetVisible === undefined
       ? defaultSettings.activityPetVisible

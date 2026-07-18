@@ -4,6 +4,7 @@ import type { ActivityPetId, Task } from '../../domain/types';
 import { formatDurationString } from '../../domain/tasks';
 import { buildActivitySummary } from '../../domain/activityTracking';
 import { ActivityPet } from './ActivityPet';
+import { MajesticFlame } from './MajesticFlame';
 
 interface ActivityGraphProps {
   tasks: Task[];
@@ -21,7 +22,7 @@ export function ActivityGraph({
   compact = false,
   fill = false,
   now = Date.now(),
-  petId = 'cat',
+  petId = 'aurelius',
   showPet = true,
   animateFlame = true,
   animatePet = true
@@ -59,18 +60,16 @@ export function ActivityGraph({
         <h3 className="text-base font-bold">Activity</h3>
         <div className="flex items-center gap-2">
           {showPet && (
-            <ActivityPet petId={petId} streakActive={summary.currentStreak > 0} animated={animatePet} />
+            <ActivityPet
+              petId={petId}
+              streakActive={summary.currentStreak > 0}
+              activityScore={Math.min(100, (summary.days.at(-1)?.score || 0) * 20)}
+              animated={animatePet}
+            />
           )}
           <span className="ui-muted-chip inline-flex items-center gap-1.5 text-sm font-medium text-[var(--ui-success)]">
             {animateFlame && summary.currentStreak > 0 ? (
-              <img
-                data-testid="streak-flame"
-                data-animated="true"
-                src="/activity/flame-animated.svg"
-                alt=""
-                aria-hidden="true"
-                className="size-4"
-              />
+              <MajesticFlame />
             ) : (
               <Flame data-testid="streak-flame" data-animated="false" size={14} />
             )}{' '}

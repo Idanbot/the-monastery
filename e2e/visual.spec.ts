@@ -55,6 +55,7 @@ test('compact desktop header remains visually stable', async ({ page }) => {
 test('customizable main workspace remains visually stable', async ({ page }) => {
   await page.goto('/');
   await stabilizePage(page);
+  await expect(page.getByTestId('activity-pet')).toHaveAttribute('data-atlas-loaded', 'true');
   await expect(page.getByTestId('main-workspace')).toHaveScreenshot('main-workspace.png', {
     ...screenshotOptions,
     maxDiffPixels: 200
@@ -140,6 +141,7 @@ test('mobile analytics summary remains visually stable', async ({ page }) => {
   await createTask(page, 'Analytics visual task');
   await page.getByTestId('mobile-shell').getByRole('button', { name: 'More' }).click();
   await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Analytics' }).click();
+  await expect(page.getByTestId('activity-pet')).toHaveAttribute('data-atlas-loaded', 'true');
   await expect(page.locator('.app-main')).toHaveScreenshot('mobile-analytics.png', screenshotOptions);
 });
 

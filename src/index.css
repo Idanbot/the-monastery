@@ -522,34 +522,24 @@ h6,
   background: transparent !important;
 }
 
-@keyframes activity-pet-frames {
-  to {
-    background-position-x: -256px;
-  }
+.activity-pet-frame {
+  pointer-events: none;
+  user-select: none;
+  border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 82%, rgb(255 255 255));
+  background: rgb(248 248 246);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.68),
+    0 3px 10px rgb(15 23 42 / 0.12);
 }
 
 .activity-pet-sprite {
   background-repeat: no-repeat;
-  background-size: 256px 160px;
   image-rendering: pixelated;
-}
-
-.activity-pet[data-animated='true'] .activity-pet-sprite {
-  animation: activity-pet-frames 0.96s steps(8) infinite;
+  transform: translateZ(0);
 }
 
 .activity-pet[data-streak-active='false'] {
   opacity: 0.64;
-}
-
-[data-animations-enabled='false'] .activity-pet-sprite {
-  animation: none !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .activity-pet-sprite {
-    animation: none !important;
-  }
 }
 
 .timeline-current-button {

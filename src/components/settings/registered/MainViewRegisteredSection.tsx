@@ -92,7 +92,7 @@ export default function MainViewRegisteredSection(props: RegisteredSectionProps)
           Activity pet
           <select
             aria-label="Activity pet"
-            value={settings.activityPetId || 'cat'}
+            value={settings.activityPetId || 'aurelius'}
             onChange={(event) => {
               const activityPetId = event.target.value as ActivityPetId;
               setSettings((previous) => ({

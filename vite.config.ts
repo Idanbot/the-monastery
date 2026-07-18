@@ -32,9 +32,15 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        // Analytics and the YouTube provider are loaded on demand, then cached
-        // after first use instead of inflating the install precache.
-        globIgnores: ['**/charts-*.js', '**/AnalyticsView-*.js', '**/media-player-youtube-*.js'],
+        // Heavy optional surfaces load on demand, then use runtime caches instead
+        // of inflating the initial PWA install.
+        globIgnores: [
+          '**/charts-*.js',
+          '**/AnalyticsView-*.js',
+          '**/media-player-youtube-*.js',
+          '**/three-*.js',
+          '**/pets/**/*.png'
+        ],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.destination === 'script',
@@ -42,6 +48,14 @@ export default defineConfig({
             options: {
               cacheName: 'on-demand-scripts',
               expiration: { maxEntries: 20, maxAgeSeconds: 30 * 24 * 60 * 60 }
+            }
+          },
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/pets/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pet-atlases',
+              expiration: { maxEntries: 8, maxAgeSeconds: 30 * 24 * 60 * 60 }
             }
           }
         ]

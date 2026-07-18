@@ -261,9 +261,9 @@ describe('SettingsModal', () => {
       topRight: props.settings.mainViewSlots.topLeft
     });
 
-    await user.selectOptions(screen.getByLabelText('Activity pet'), 'owl');
+    await user.selectOptions(screen.getByLabelText('Activity pet'), 'aurelius');
     const petUpdate = props.setSettings.mock.lastCall?.[0];
-    expect(petUpdate(props.settings)).toEqual({ ...props.settings, activityPetId: 'owl' });
+    expect(petUpdate(props.settings)).toEqual({ ...props.settings, activityPetId: 'aurelius' });
 
     await user.click(screen.getByLabelText('Animate streak flame'));
     const flameUpdate = props.setSettings.mock.lastCall?.[0];

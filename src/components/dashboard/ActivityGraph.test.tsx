@@ -40,7 +40,7 @@ describe('ActivityGraph', () => {
       ]
     });
 
-    render(<ActivityGraph tasks={[task]} now={now} compact petId="owl" showPet animateFlame />);
+    render(<ActivityGraph tasks={[task]} now={now} compact petId="aurelius" showPet animateFlame />);
 
     expect(screen.getByTestId('activity-tracked-time')).toHaveTextContent('1h 0m');
     expect(screen.getByTestId('activity-subtasks-completed')).toHaveTextContent('1');
@@ -52,15 +52,16 @@ describe('ActivityGraph', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('17.07.26');
     expect(screen.getByRole('tooltip')).toHaveTextContent('1h 0m focused');
     expect(screen.getByTestId('streak-flame')).toHaveAttribute('data-animated', 'true');
-    expect(screen.getByTestId('streak-flame')).toHaveAttribute('src', '/activity/flame-animated.svg');
-    expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'owl');
+    expect(screen.getByTestId('streak-flame-canvas')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'aurelius');
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-streak-active', 'true');
   });
 
   it('keeps the pet sleepy and the flame static when there is no current streak', () => {
     render(<ActivityGraph tasks={[]} now={new Date('2026-07-17T12:00:00.000Z').getTime()} />);
 
-    expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-activity', 'sleepy');
+    expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-pet-state', 'dormant');
+    expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-animation', 'sleep');
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-streak-active', 'false');
     expect(screen.getByTestId('streak-flame')).toHaveAttribute('data-animated', 'false');
   });
