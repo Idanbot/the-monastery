@@ -7,7 +7,8 @@
     "x": 64,
     "y": 116
   },
-  "version": "1eec970b061d",
+  "format": "webp",
+  "version": "b4463abcf66f",
   "animations": {
     "idle_breathe": {
       "row": 0,
@@ -73,5 +74,12 @@
       "row": 15,
       "frameCount": 9
     }
+  },
+  "validation": {
+    "expectedFrames": 134,
+    "opaqueFrames": 134,
+    "transparentCorners": true,
+    "maxCentroidDrift": 1.38,
+    "maxBaselineDrift": 1
   }
 }

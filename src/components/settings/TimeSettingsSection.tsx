@@ -3,6 +3,7 @@ import { Clock, Hash } from 'lucide-react';
 import type { AppSettings } from '../../domain/types';
 import { requestNotificationPermission, sendBrowserNotification } from '../../domain/notifications';
 import { SettingSection } from './SettingSection';
+import { SettingsSelect } from './SettingsSelect';
 
 type Props = {
   settings: AppSettings;
@@ -49,14 +50,15 @@ export function TimeSettingsSection({
       motionDuration={motionDuration}
       motionEase={motionEase}
     >
-      <select
+      <SettingsSelect
+        ariaLabel="Clock format"
         value={settings.clockFormat}
-        onChange={(event) => updateSetting('clockFormat', event.target.value as AppSettings['clockFormat'])}
-        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-      >
-        <option value="12h">12 hour</option>
-        <option value="24h">24 hour</option>
-      </select>
+        onValueChange={(value) => updateSetting('clockFormat', value as AppSettings['clockFormat'])}
+        options={[
+          { id: '12h', label: '12 hour' },
+          { id: '24h', label: '24 hour' }
+        ]}
+      />
       <Toggle
         label="Seconds"
         ariaLabel="Show seconds"

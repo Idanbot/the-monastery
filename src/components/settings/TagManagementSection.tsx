@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { AppSettings } from '../../domain/types';
 import type { TagTaxonomyCommand } from '../../domain/tagTaxonomy';
 import { SettingSection } from './SettingSection';
+import { SettingsSelect } from './SettingsSelect';
 
 type Props = {
   settings: AppSettings;
@@ -60,21 +61,15 @@ export function TagManagementSection({
         </div>
       ) : (
         <>
-          <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+          <div className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
             <span>Manage tag</span>
-            <select
-              aria-label="Manage tag"
+            <SettingsSelect
+              ariaLabel="Manage tag"
               value={selectedTag}
-              onChange={(event) => setSelectedTag(event.target.value)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900"
-            >
-              {tags.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </select>
-          </label>
+              onValueChange={setSelectedTag}
+              options={tags.map((tag) => ({ id: tag, label: tag }))}
+            />
+          </div>
 
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <input
@@ -98,20 +93,13 @@ export function TagManagementSection({
           </div>
 
           <div className="grid grid-cols-[1fr_auto] gap-2">
-            <select
-              aria-label="Merge selected tag into"
+            <SettingsSelect
+              ariaLabel="Merge selected tag into"
               value={mergeTarget}
-              onChange={(event) => setMergeTarget(event.target.value)}
+              onValueChange={setMergeTarget}
               className="min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-            >
-              {tags
-                .filter((tag) => tag !== selectedTag)
-                .map((tag) => (
-                  <option key={tag} value={tag}>
-                    {tag}
-                  </option>
-                ))}
-            </select>
+              options={tags.filter((tag) => tag !== selectedTag).map((tag) => ({ id: tag, label: tag }))}
+            />
             <button
               type="button"
               disabled={!mergeTarget}

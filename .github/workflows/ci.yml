@@ -58,6 +58,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Validate pet atlases
+        run: npm run pets:validate
+
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest

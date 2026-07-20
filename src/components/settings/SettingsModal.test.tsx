@@ -169,6 +169,15 @@ const renderSettings = (overrides = {}) => {
   return props;
 };
 
+const chooseOption = async (
+  user: ReturnType<typeof userEvent.setup>,
+  label: string | RegExp,
+  option: string
+) => {
+  await user.click(await screen.findByRole('combobox', { name: label }, { timeout: 5000 }));
+  await user.click(screen.getByRole('option', { name: option }));
+};
+
 describe('SettingsModal', () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -191,6 +200,10 @@ describe('SettingsModal', () => {
     const blurUpdate = props.setSettings.mock.lastCall?.[0];
     expect(blurUpdate(props.settings)).toEqual({ ...props.settings, modalBlur: 12 });
 
+    await chooseOption(user, 'Base text size', 'Large text');
+    const textSizeUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(textSizeUpdate(props.settings)).toEqual({ ...props.settings, textSize: 'large' });
+
     await user.click(screen.getByRole('button', { name: /close settings/i }));
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
@@ -198,6 +211,10 @@ describe('SettingsModal', () => {
   it('updates compact time and clock controls', async () => {
     const user = userEvent.setup();
     const props = renderSettings({ initialSection: 'time' });
+
+    await chooseOption(user, 'Clock format', '12 hour');
+    const formatUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(formatUpdate(props.settings)).toEqual({ ...props.settings, clockFormat: '12h' });
 
     await user.click(await screen.findByLabelText(/show seconds/i, {}, { timeout: 5000 }));
     const secondsUpdate = props.setSettings.mock.lastCall?.[0];
@@ -323,6 +340,32 @@ describe('SettingsModal', () => {
     expect(added.projects[0]).toMatchObject({ name: 'New project', status: 'active', taskIds: [] });
   });
 
+  it('updates project status and links a task through shared dropdowns', async () => {
+    const user = userEvent.setup();
+    const project = {
+      id: 'project-a',
+      name: 'Migration',
+      description: '',
+      status: 'active' as const,
+      tags: [],
+      taskIds: [],
+      milestones: []
+    };
+    const props = renderSettings({
+      initialSection: 'projects',
+      tasks: [{ id: 'task-a', title: 'Migration lab' }],
+      settings: { ...defaultSettings, projects: [project], animationsEnabled: false }
+    });
+
+    await chooseOption(user, 'Project status', 'Paused');
+    const statusUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(statusUpdate(props.settings).projects[0].status).toBe('paused');
+
+    await chooseOption(user, 'Link task to project', 'Migration lab');
+    const taskUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(taskUpdate(props.settings).projects[0].taskIds).toEqual(['task-a']);
+  });
+
   it('renames a known tag from tag management', async () => {
     const user = userEvent.setup();
     const props = renderSettings({
@@ -335,7 +378,7 @@ describe('SettingsModal', () => {
       }
     });
 
-    await user.selectOptions(await screen.findByLabelText(/manage tag/i), 'otel');
+    await chooseOption(user, /manage tag/i, 'otel');
     await user.clear(screen.getByLabelText(/rename selected tag/i));
     await user.type(screen.getByLabelText(/rename selected tag/i), 'telemetry');
     await user.click(screen.getByRole('button', { name: /^rename tag$/i }));
@@ -369,8 +412,8 @@ describe('SettingsModal', () => {
       }
     });
 
-    await user.selectOptions(await screen.findByLabelText(/manage tag/i), 'otel');
-    await user.selectOptions(screen.getByLabelText(/merge selected tag into/i), 'observability');
+    await chooseOption(user, /manage tag/i, 'otel');
+    await chooseOption(user, /merge selected tag into/i, 'observability');
     await user.click(screen.getByRole('button', { name: /^merge tags$/i }));
     await user.type(screen.getByLabelText(/new alias/i), 'open-telemetry');
     await user.click(screen.getByRole('button', { name: /^add alias$/i }));
@@ -388,11 +431,10 @@ describe('SettingsModal', () => {
   });
 
   it('updates board lane order controls', async () => {
+    const user = userEvent.setup();
     const props = renderSettings({ initialSection: 'board' });
 
-    fireEvent.change(await screen.findByLabelText(/compact active top lane/i), {
-      target: { value: 'in-progress' }
-    });
+    await chooseOption(user, /compact active top lane/i, 'In-Progress');
     const compactUpdate = props.setSettings.mock.lastCall?.[0];
     expect(compactUpdate(props.settings)).toEqual({
       ...props.settings,
@@ -410,6 +452,20 @@ describe('SettingsModal', () => {
         ...props.settings.boardColumnOrder,
         full: ['in-progress', 'backlog', 'done', 'rejected']
       }
+    });
+  });
+
+  it('selects a role preset through the shared settings dropdown', async () => {
+    const user = userEvent.setup();
+    const props = renderSettings({ initialSection: 'roles' });
+
+    await chooseOption(user, 'Role preset', 'Cloud');
+    await user.click(screen.getByRole('button', { name: 'Preset' }));
+
+    const presetUpdate = props.setSettings.mock.lastCall?.[0];
+    expect(presetUpdate(props.settings).roles.at(-1)).toMatchObject({
+      name: 'Cloud',
+      tags: ['aws', 'gcp', 'azure', 'networking', 'infrastructure']
     });
   });
 

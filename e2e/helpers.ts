@@ -92,6 +92,11 @@ export const openSettingsSection = async (page, sectionName: string | RegExp) =>
   await page.getByTestId('settings-content').getByRole('button', { name: sectionName, exact: true }).click();
 };
 
+export const chooseSettingsOption = async (page, label: string | RegExp, option: string | RegExp) => {
+  await page.getByRole('combobox', { name: label }).click();
+  await page.getByRole('option', { name: option, exact: typeof option === 'string' }).click();
+};
+
 export const chooseTheme = async (page, themeId: string) => {
   const themeCard = page.locator('[data-theme-card="' + themeId + '"]');
   if ((await themeCard.count()) === 0) {

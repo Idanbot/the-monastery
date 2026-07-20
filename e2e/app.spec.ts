@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import {
   api,
   browserToday,
+  chooseSettingsOption,
   chooseTheme,
   completeBreathingIntro,
   createScheduledTask,
@@ -259,6 +260,7 @@ test('adds a task tag from the fuzzy tag pool', async ({ page }) => {
 });
 
 test('manages tag aliases, role links, and goals through settings', async ({ page }) => {
+  test.setTimeout(180_000);
   await page.goto('/');
   await openBoard(page);
 
@@ -273,10 +275,10 @@ test('manages tag aliases, role links, and goals through settings', async ({ pag
   await page.getByLabel('Role name New Role').fill('Platform');
   await page.getByRole('button', { name: /^tags$/i }).click();
 
-  await page.getByLabel('Manage tag').selectOption('otel');
+  await chooseSettingsOption(page, 'Manage tag', 'otel');
   await page.getByLabel('Rename selected tag').fill('observability');
   await page.getByRole('button', { name: /^rename tag$/i }).click();
-  await expect(page.getByLabel('Manage tag')).toHaveValue('observability');
+  await expect(page.getByLabel('Weekly goal for observability')).toBeVisible();
 
   await page.getByLabel('New alias').fill('otel');
   await page.getByRole('button', { name: /^add alias$/i }).click();

@@ -25,6 +25,7 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "env -u NO_COLOR playwright test",
     "performance:budget": "npm run build && node scripts/check-performance-budgets.mjs",
+    "pets:validate": "node scripts/validate-pet-atlases.mjs",
     "test:watch": "vitest",
     "prepare": "node -e \"const fs=require('fs');const cp=require('child_process');const p='node_modules/simple-git-hooks/cli.js';if(fs.existsSync('.git')&&fs.existsSync(p)){const r=cp.spawnSync(process.execPath,[p],{stdio:'inherit'});process.exit(r.status??1)}\""
   },
@@ -39,7 +40,7 @@
   },
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged",
-    "pre-push": "npm run typecheck && npm test && npm run dockerfile:lint"
+    "pre-push": "npm run typecheck && npm test && npm run pets:validate && npm run dockerfile:lint"
   },
   "dependencies": {
     "@fastify/rate-limit": "^11.0.0",

@@ -6,13 +6,14 @@ anchored; only the sprite inside it changes.
 
 ## Pets
 
-- `aurelius/aurelius-spritesheet.png` — marble bust.
-- `kitten/kitten-spritesheet.png` — ginger kitten.
-- `puppy/puppy-spritesheet.png` — golden retriever puppy.
+- `aurelius/aurelius-spritesheet.webp` - marble bust.
+- `kitten/kitten-spritesheet.webp` - ginger kitten.
+- `puppy/puppy-spritesheet.webp` - golden retriever puppy.
 
-All atlases are true transparent 2048 x 2048 PNGs generated from the raw exports in `assets/pets/`
-by `scripts/normalize-pet-atlas.py`. Never edit the generated atlases by hand; change the raw export
-or the animation mapping and regenerate.
+All runtime atlases are transparent, lossless 2048 x 2048 WebP images generated from the raw PNG
+exports in `assets/pets/` by `scripts/normalize-pet-atlas.py`. WebP reduces the current atlas payloads
+by 26-37% without changing pixels. Never edit generated atlases by hand; change the raw export or
+animation mapping and regenerate.
 
 ## Display contract
 
@@ -28,7 +29,7 @@ or the animation mapping and regenerate.
 
 ## Atlas contract
 
-Every pet atlas is a lossless transparent PNG:
+Every pet atlas is a lossless transparent WebP:
 
 - 2048 x 2048 atlas, 16 columns x 16 rows, 128 x 128 cells with no gutter.
 - One animation per row, frames compacted from column 0, unused cells fully transparent.
@@ -38,10 +39,14 @@ Because the contract is enforced at build time, the runtime uses plain grid math
 (`x = frame / 15`, `y = row / 15` as percentages) and never sees slices of neighboring sprites.
 
 The runtime appends the manifest's content-hash `version` to the atlas URL
-(`/pets/<id>/<id>-spritesheet.png?v=<hash>`): the PWA serves `/pets/*` cache-first, so regenerating
+(`/pets/<id>/<id>-spritesheet.webp?v=<hash>`): the PWA serves `/pets/*` cache-first, so regenerating
 an atlas without a new URL would keep showing the stale cached sheet (misaligned frames, neighbor
 slices, baked background) for weeks. The normalizer rehashes on every run, so always regenerate the
-manifest together with the PNG and commit both.
+manifest together with the WebP and commit both.
+
+`npm run pets:validate` is the CI contract gate. It verifies WebP structure and dimensions, content
+hashes, file size, animation rows and frame counts, transparent corners, complete opaque frames,
+and the normalizer's centroid and baseline drift limits.
 
 | Row | Animation          | FPS | Playback         |
 | --: | ------------------ | --: | ---------------- |
@@ -110,14 +115,15 @@ should collapse rather than queue indefinitely.
 3. Regenerate the atlas and manifest:
 
    ```sh
-   python3 scripts/normalize-pet-atlas.py assets/pets/<pet-id>.png \
-     --pet <pet-id> --animations assets/pets/<pet-id>.animations.json \
-     --out public/pets/<pet-id>/<pet-id>-spritesheet.png \
+     python3 scripts/normalize-pet-atlas.py assets/pets/<pet-id>.png \
+       --pet <pet-id> --animations assets/pets/<pet-id>.animations.json \
+     --out public/pets/<pet-id>/<pet-id>-spritesheet.webp \
      --manifest src/domain/generated/<pet-id>Atlas.json
    ```
 
 4. Extend `ActivityPetId` in `src/domain/types.ts`, the settings schema in `server/validation.ts`,
    the merge allow-list in `src/domain/tasks.ts`, and the registry in `src/domain/activityPets.ts`.
    Unknown stored IDs keep migrating to `aurelius`.
-5. Add manifest, frame progression, reduced-motion, and visual framing tests.
+5. Run `npm run pets:validate` and add manifest, frame progression, reduced-motion, and visual
+   framing tests.
 6. Verify the desktop 80 px and mobile 56 px frames without clipping or layout overlap.

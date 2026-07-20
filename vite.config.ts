@@ -31,7 +31,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
         // Heavy optional surfaces load on demand, then use runtime caches instead
         // of inflating the initial PWA install.
         globIgnores: [
@@ -39,7 +39,7 @@ export default defineConfig({
           '**/AnalyticsView-*.js',
           '**/media-player-youtube-*.js',
           '**/three-*.js',
-          '**/pets/**/*.png'
+          '**/pets/**/*.{png,webp}'
         ],
         runtimeCaching: [
           {

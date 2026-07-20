@@ -104,6 +104,7 @@ type GeneratedAtlas = {
   frameHeight: number;
   columns: number;
   rows: number;
+  format?: string;
   version?: string;
   animations: Record<string, { row: number; frameCount: number }>;
 };
@@ -121,7 +122,7 @@ function buildManifest(id: ActivityPetId, label: string, atlas: GeneratedAtlas):
   return {
     id,
     label,
-    src: `/pets/${id}/${id}-spritesheet.png?v=${atlas.version ?? '1'}`,
+    src: `/pets/${id}/${id}-spritesheet.${atlas.format ?? 'png'}?v=${atlas.version ?? '1'}`,
     frameWidth: atlas.frameWidth,
     frameHeight: atlas.frameHeight,
     columns: atlas.columns,

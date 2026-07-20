@@ -1,5 +1,11 @@
 import { expect, test } from './fixtures';
-import { browserToday, createTask, openSettingsSection, resetServerState } from './helpers';
+import {
+  browserToday,
+  chooseSettingsOption,
+  createTask,
+  openSettingsSection,
+  resetServerState
+} from './helpers';
 
 test.beforeEach(async ({ page, request }) => {
   const activeProfileId = await resetServerState(request);
@@ -102,10 +108,7 @@ test('limits the calendar grid to one 24-hour day', async ({ page }) => {
 test('uses the clock format setting for calendar labels', async ({ page }) => {
   await page.goto('/');
   await openSettingsSection(page, 'Time');
-  await page
-    .getByRole('combobox')
-    .filter({ has: page.locator('option[value="12h"]') })
-    .selectOption('12h');
+  await chooseSettingsOption(page, 'Clock format', '12 hour');
   await page.getByRole('button', { name: /close settings/i }).click();
 
   await page.getByTestId('view-switch-calendar').click();

@@ -23,7 +23,7 @@ describe('ActivityPet', () => {
       backgroundImage: `url(${activityPetManifests.aurelius.src})`,
       backgroundSize: '1600% 1600%'
     });
-    expect(activityPetManifests.aurelius.src).toMatch(/^\/pets\/aurelius\/aurelius-spritesheet\.png\?v=.+/);
+    expect(activityPetManifests.aurelius.src).toMatch(/^\/pets\/aurelius\/aurelius-spritesheet\.webp\?v=.+/);
     expect(screen.getByTestId('activity-pet-sprite')).toHaveAttribute('aria-hidden', 'true');
     act(() => vi.advanceTimersByTime(1000 / activityPetManifests.aurelius.animations.powered_idle.fps));
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-frame', '1');
@@ -74,7 +74,7 @@ describe('ActivityPet', () => {
     expect(screen.getByTestId('activity-pet-sprite')).toHaveStyle({
       backgroundImage: `url(${activityPetManifests.puppy.src})`
     });
-    expect(activityPetManifests.puppy.src).toMatch(/^\/pets\/puppy\/puppy-spritesheet\.png\?v=.+/);
+    expect(activityPetManifests.puppy.src).toMatch(/^\/pets\/puppy\/puppy-spritesheet\.webp\?v=.+/);
   });
 
   it('returns to the persistent loop after a one-shot reaction', () => {

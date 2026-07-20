@@ -1,6 +1,7 @@
 import { expect, test } from './fixtures';
 import {
   browserToday,
+  chooseSettingsOption,
   chooseTheme,
   completeBreathingIntro,
   createScheduledTask,
@@ -160,7 +161,7 @@ test('collapsed full-layout lanes remain visually stable', async ({ page }) => {
   await stabilizePage(page);
   await createTask(page, 'Collapsed lane task');
   await openSettingsSection(page, 'Board');
-  await page.getByLabel('Board layout', { exact: true }).selectOption('full');
+  await chooseSettingsOption(page, 'Board layout', 'Full: 4 columns');
   await page.getByRole('checkbox', { name: 'Collapse Backlog lane' }).check();
   await page.getByRole('checkbox', { name: 'Collapse Done lane' }).check();
   await page.keyboard.press('Escape');

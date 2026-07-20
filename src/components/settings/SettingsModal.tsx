@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import * as Select from '@radix-ui/react-select';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { motion } from 'motion/react';
 import {
   Calendar,
-  ChevronDown,
   ChevronsDown,
   ChevronsUp,
   Download,
@@ -32,6 +30,7 @@ import { createThemeRecipe, themeRecipeSchema } from '../../domain/themeStudio';
 import { generateId } from '../../domain/tasks';
 import { useThemeStyle } from '../../hooks/useThemeStyle';
 import { themeChoiceOptions } from '../../domain/themeGallery';
+import { SettingsSelect } from './SettingsSelect';
 
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import { useTaskContext } from '../../contexts/TaskContext';
@@ -70,6 +69,52 @@ const sectionNavigation = [
   ['integrations', 'Integrations', 'Alerts and automation'],
   ['data', 'Data', 'Import, export, and backup']
 ] as const;
+
+const textSizeOptions = [
+  { id: 'small', label: 'Small text' },
+  { id: 'medium', label: 'Medium text' },
+  { id: 'large', label: 'Large text' }
+] as const;
+
+const mainFontOptions = [
+  { id: '', label: 'Default Main Font' },
+  {
+    id: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter, sans-serif",
+    label: 'Apple Inspired'
+  },
+  { id: "'FiraCode Nerd Font', 'Fira Code', monospace", label: 'Terminal Nerd Font' },
+  { id: 'Inter, sans-serif', label: 'Inter' },
+  { id: 'Roboto, sans-serif', label: 'Roboto' },
+  { id: 'Outfit, sans-serif', label: 'Outfit' },
+  { id: 'Poppins, sans-serif', label: 'Poppins' },
+  { id: 'Lato, sans-serif', label: 'Lato' },
+  { id: 'Merriweather, serif', label: 'Merriweather' },
+  { id: "'Playfair Display', serif", label: 'Playfair Display' },
+  { id: "'Space Grotesk', sans-serif", label: 'Space Grotesk' }
+] as const;
+
+const headingFontOptions = mainFontOptions.map((option) =>
+  option.id === ''
+    ? { ...option, label: 'Default Heading Font' }
+    : option.label === 'Apple Inspired'
+      ? {
+          ...option,
+          id: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, sans-serif"
+        }
+      : option
+);
+
+const uiFontOptions = [
+  { id: '', label: 'Default UI Font' },
+  { id: "'FiraCode Nerd Font', 'Fira Code', ui-monospace, monospace", label: 'Terminal Nerd Font' },
+  {
+    id: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter, sans-serif",
+    label: 'Apple Inspired'
+  },
+  ...mainFontOptions.filter((option) =>
+    ['Inter', 'Roboto', 'Outfit', 'Poppins', 'Lato', 'Space Grotesk'].includes(option.label)
+  )
+];
 
 export function SettingsModal({
   initialSection = null,
@@ -243,7 +288,7 @@ export function SettingsModal({
             }}
           />
         </Dialog.Overlay>
-        <Dialog.Content asChild>
+        <Dialog.Content asChild onInteractOutside={(event) => event.preventDefault()}>
           <motion.div
             data-visual-theme={settings.visualTheme}
             data-animations-enabled={animationsEnabled ? 'true' : 'false'}
@@ -346,88 +391,42 @@ export function SettingsModal({
                       Typography
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                      <div className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
                         <span className="font-semibold text-xs">Base text size</span>
-                        <select
+                        <SettingsSelect
+                          ariaLabel="Base text size"
                           value={settings.textSize}
-                          onChange={(e) => updateSetting('textSize', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                        >
-                          <option value="small">Small text</option>
-                          <option value="medium">Medium text</option>
-                          <option value="large">Large text</option>
-                        </select>
-                      </label>
-                      <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                          onValueChange={(value) => updateSetting('textSize', value)}
+                          options={textSizeOptions}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
                         <span className="font-semibold text-xs">Main Text Font</span>
-                        <select
+                        <SettingsSelect
+                          ariaLabel="Main text font"
                           value={settings.fontMain || ''}
-                          onChange={(e) => updateSetting('fontMain', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                        >
-                          <option value="">Default Main Font</option>
-                          <option value="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter, sans-serif">
-                            Apple Inspired
-                          </option>
-                          <option value="'FiraCode Nerd Font', 'Fira Code', monospace">
-                            Terminal Nerd Font
-                          </option>
-                          <option value="Inter, sans-serif">Inter</option>
-                          <option value="Roboto, sans-serif">Roboto</option>
-                          <option value="Outfit, sans-serif">Outfit</option>
-                          <option value="Poppins, sans-serif">Poppins</option>
-                          <option value="Lato, sans-serif">Lato</option>
-                          <option value="Merriweather, serif">Merriweather</option>
-                          <option value="'Playfair Display', serif">Playfair Display</option>
-                          <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
-                        </select>
-                      </label>
-                      <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                          onValueChange={(value) => updateSetting('fontMain', value)}
+                          options={mainFontOptions}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
                         <span className="font-semibold text-xs">Secondary / Headers Font</span>
-                        <select
+                        <SettingsSelect
+                          ariaLabel="Secondary and headers font"
                           value={settings.fontSecondary || ''}
-                          onChange={(e) => updateSetting('fontSecondary', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                        >
-                          <option value="">Default Heading Font</option>
-                          <option value="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, sans-serif">
-                            Apple Inspired
-                          </option>
-                          <option value="'FiraCode Nerd Font', 'Fira Code', monospace">
-                            Terminal Nerd Font
-                          </option>
-                          <option value="Inter, sans-serif">Inter</option>
-                          <option value="Roboto, sans-serif">Roboto</option>
-                          <option value="Outfit, sans-serif">Outfit</option>
-                          <option value="Poppins, sans-serif">Poppins</option>
-                          <option value="Lato, sans-serif">Lato</option>
-                          <option value="Merriweather, serif">Merriweather</option>
-                          <option value="'Playfair Display', serif">Playfair Display</option>
-                          <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
-                        </select>
-                      </label>
-                      <label className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
+                          onValueChange={(value) => updateSetting('fontSecondary', value)}
+                          options={headingFontOptions}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2 text-sm text-slate-700 dark:text-slate-300">
                         <span className="font-semibold text-xs">UI & Monospace Elements</span>
-                        <select
+                        <SettingsSelect
+                          ariaLabel="UI and monospace font"
                           value={settings.fontUI || ''}
-                          onChange={(e) => updateSetting('fontUI', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                        >
-                          <option value="">Default UI Font</option>
-                          <option value="'FiraCode Nerd Font', 'Fira Code', ui-monospace, monospace">
-                            Terminal Nerd Font
-                          </option>
-                          <option value="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter, sans-serif">
-                            Apple Inspired
-                          </option>
-                          <option value="Inter, sans-serif">Inter</option>
-                          <option value="Roboto, sans-serif">Roboto</option>
-                          <option value="Outfit, sans-serif">Outfit</option>
-                          <option value="Poppins, sans-serif">Poppins</option>
-                          <option value="Lato, sans-serif">Lato</option>
-                          <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
-                        </select>
-                      </label>
+                          onValueChange={(value) => updateSetting('fontUI', value)}
+                          options={uiFontOptions}
+                        />
+                      </div>
                     </div>
 
                     <div className="mt-8 mb-4 border-t border-slate-200 dark:border-slate-700"></div>
@@ -614,42 +613,12 @@ export function SettingsModal({
                     motionEase={motionEase}
                   >
                     <div className="grid grid-cols-[1fr_auto] gap-2">
-                      <Select.Root value={selectedRolePresetId} onValueChange={setSelectedRolePresetId}>
-                        <Select.Trigger
-                          aria-label="Role preset"
-                          className="min-w-0 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400 flex items-center justify-between gap-2"
-                        >
-                          <Select.Value />
-                          <Select.Icon>
-                            <ChevronDown size={14} />
-                          </Select.Icon>
-                        </Select.Trigger>
-                        <Select.Portal>
-                          <Select.Content
-                            data-visual-theme={settings.visualTheme}
-                            data-animations-enabled={animationsEnabled ? 'true' : 'false'}
-                            style={themeStyle}
-                            position="popper"
-                            sideOffset={6}
-                            className={themedSurfaceClassName(
-                              'menu',
-                              `${themeScopeClassName} z-[130] min-w-[14rem] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl p-1`
-                            )}
-                          >
-                            <Select.Viewport>
-                              {rolePresets.map((preset) => (
-                                <Select.Item
-                                  key={preset.id}
-                                  value={preset.id}
-                                  className="px-3 py-2 text-sm rounded-lg outline-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"
-                                >
-                                  <Select.ItemText>{preset.name}</Select.ItemText>
-                                </Select.Item>
-                              ))}
-                            </Select.Viewport>
-                          </Select.Content>
-                        </Select.Portal>
-                      </Select.Root>
+                      <SettingsSelect
+                        ariaLabel="Role preset"
+                        value={selectedRolePresetId}
+                        onValueChange={setSelectedRolePresetId}
+                        options={rolePresets.map((preset) => ({ id: preset.id, label: preset.name }))}
+                      />
                       <Button onClick={addRolePreset} variant="secondary">
                         <Plus size={13} /> Preset
                       </Button>
@@ -854,17 +823,15 @@ export function SettingsModal({
                   >
                     {isBackendAvailable ? (
                       <div className="space-y-3">
-                        <select
+                        <SettingsSelect
+                          ariaLabel="Active profile"
                           value={activeProfileId}
-                          onChange={(e) => selectProfile(e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-400"
-                        >
-                          {profiles.map((profile) => (
-                            <option key={profile.id} value={profile.id}>
-                              {profile.name} ({profile.taskCount ?? 0})
-                            </option>
-                          ))}
-                        </select>
+                          onValueChange={selectProfile}
+                          options={profiles.map((profile) => ({
+                            id: profile.id,
+                            label: `${profile.name} (${profile.taskCount ?? 0})`
+                          }))}
+                        />
 
                         <div className="flex gap-2">
                           <input

@@ -6,6 +6,7 @@ import { parseTagString } from '../../../domain/tags';
 import type { Project } from '../../../domain/types';
 import { Button } from '../../ui/Button';
 import { SettingSection } from '../SettingSection';
+import { SettingsSelect } from '../SettingsSelect';
 import type { RegisteredSectionProps } from './types';
 
 export default function ProjectsRegisteredSection(props: RegisteredSectionProps) {
@@ -73,18 +74,16 @@ export default function ProjectsRegisteredSection(props: RegisteredSectionProps)
             className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
           />
           <div className="grid grid-cols-2 gap-2">
-            <select
-              aria-label="Project status"
+            <SettingsSelect
+              ariaLabel="Project status"
               value={project.status}
-              onChange={(event) =>
-                updateProject(project.id, { status: event.target.value as Project['status'] })
-              }
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-            >
-              <option value="active">Active</option>
-              <option value="paused">Paused</option>
-              <option value="completed">Completed</option>
-            </select>
+              onValueChange={(value) => updateProject(project.id, { status: value as Project['status'] })}
+              options={[
+                { id: 'active', label: 'Active' },
+                { id: 'paused', label: 'Paused' },
+                { id: 'completed', label: 'Completed' }
+              ]}
+            />
             <input
               aria-label="Project tags"
               value={project.tags.join(', ')}
@@ -93,26 +92,20 @@ export default function ProjectsRegisteredSection(props: RegisteredSectionProps)
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
             />
           </div>
-          <select
-            aria-label="Link task to project"
+          <SettingsSelect
+            ariaLabel="Link task to project"
             value=""
-            onChange={(event) => {
-              if (event.target.value)
+            onValueChange={(value) => {
+              if (value)
                 updateProject(project.id, {
-                  taskIds: Array.from(new Set([...project.taskIds, event.target.value]))
+                  taskIds: Array.from(new Set([...project.taskIds, value]))
                 });
             }}
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-          >
-            <option value="">Link task...</option>
-            {tasks
+            placeholder="Link task..."
+            options={tasks
               .filter((task) => !project.taskIds.includes(task.id))
-              .map((task) => (
-                <option key={task.id} value={task.id}>
-                  {task.title || 'Untitled task'}
-                </option>
-              ))}
-          </select>
+              .map((task) => ({ id: task.id, label: task.title || 'Untitled task' }))}
+          />
           <div className="flex flex-wrap gap-1">
             {project.taskIds.map((taskId) => (
               <button

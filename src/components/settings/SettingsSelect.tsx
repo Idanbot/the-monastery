@@ -16,6 +16,7 @@ type SettingsSelectProps = {
   options: readonly SettingsSelectOption[];
   disabled?: boolean;
   className?: string;
+  placeholder?: string;
 };
 
 /**
@@ -31,9 +32,12 @@ export function SettingsSelect({
   onValueChange,
   options,
   disabled = false,
-  className = ''
+  className = '',
+  placeholder
 }: SettingsSelectProps) {
   const { settings, isDarkMode } = useSettingsContext();
+  const emptyOption = options.find((option) => option.id === '');
+  const selectableOptions = options.filter((option) => option.id !== '');
   const {
     animationsEnabled,
     themeStyle: resolvedThemeStyle,
@@ -47,7 +51,7 @@ export function SettingsSelect({
         className={`ui-control ui-focus-ring flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       >
         <span className="min-w-0 truncate">
-          <Select.Value />
+          <Select.Value placeholder={placeholder || emptyOption?.label} />
         </span>
         <Select.Icon className="shrink-0 text-[var(--ui-text-secondary)]">
           <ChevronDown size={14} />
@@ -55,6 +59,7 @@ export function SettingsSelect({
       </Select.Trigger>
       <Select.Portal>
         <Select.Content
+          data-settings-select-content
           data-visual-theme={settings.visualTheme}
           data-animations-enabled={animationsEnabled ? 'true' : 'false'}
           style={{ ...resolvedThemeStyle, ...modalEffectStyle }}
@@ -67,7 +72,7 @@ export function SettingsSelect({
           )}
         >
           <Select.Viewport>
-            {options.map((option) => (
+            {selectableOptions.map((option) => (
               <Select.Item
                 key={option.id}
                 value={option.id}

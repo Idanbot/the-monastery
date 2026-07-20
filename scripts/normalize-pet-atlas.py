@@ -18,7 +18,7 @@ anchored. This script:
 Usage:
     python3 scripts/normalize-pet-atlas.py assets/pets/kitten.png \
         --pet kitten --animations assets/pets/kitten.animations.json \
-        --out public/pets/kitten/kitten-spritesheet.png \
+        --out public/pets/kitten/kitten-spritesheet.webp \
         --manifest src/domain/generated/kittenAtlas.json
 
 `--animations` maps animation names to
@@ -195,7 +195,7 @@ def render_atlas(rgb, alpha, labels, cells, animations):
                     "y0": y0,
                     "body_h": main_body["bbox"][3] - main_body["bbox"][1],
                     "body_w": main_body["bbox"][2] - main_body["bbox"][0],
-                    "body_bottom": max(b["bbox"][3] for b in bodies),
+                    "body_bottom": main_body["bbox"][3],
                     "centroid_x": centroid_x,
                 }
             )
@@ -222,7 +222,7 @@ def render_atlas(rgb, alpha, labels, cells, animations):
             sprite = np.dstack([f["rgb"], f["alpha"][..., None] * 255.0]).astype(np.uint8)
             image = Image.fromarray(sprite, "RGBA").resize((new_w, new_h), Image.LANCZOS)
             tile = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
-            # The lowest body bottom stays on the baseline so hops rise off the ground.
+            # The character body stays on the baseline; effects cannot move it.
             py = BASELINE_Y - int(round((f["body_bottom"] - f["y0"]) * fit))
             tile.paste(image, (px, py), image)
             atlas_image.paste(tile, (placed * CELL, anim_index * CELL), tile)
@@ -230,6 +230,46 @@ def render_atlas(rgb, alpha, labels, cells, animations):
         if placed:
             manifest[anim["name"]] = {"row": anim_index, "frameCount": placed}
     return atlas_image, manifest
+
+
+def validate_atlas(atlas_image, animations):
+    atlas = np.asarray(atlas_image)
+    max_centroid_drift = 0.0
+    max_baseline_drift = 0
+    expected_frames = 0
+    opaque_frames = 0
+
+    for animation in animations.values():
+        centers = []
+        baselines = []
+        expected_frames += animation["frameCount"]
+        row = animation["row"]
+        for frame in range(animation["frameCount"]):
+            alpha = atlas[row * CELL : (row + 1) * CELL, frame * CELL : (frame + 1) * CELL, 3]
+            frame_labels, count = ndimage.label(alpha > 16, structure=EIGHT_WAY)
+            components = []
+            for label in range(1, count + 1):
+                ys, xs = np.where(frame_labels == label)
+                if xs.size >= 100:
+                    components.append((xs.size, xs, ys))
+            if not components:
+                continue
+            _, xs, ys = max(components, key=lambda component: component[0])
+            opaque_frames += 1
+            centers.append(float(xs.mean()))
+            baselines.append(int(ys.max()))
+        if centers:
+            max_centroid_drift = max(max_centroid_drift, max(centers) - min(centers))
+            max_baseline_drift = max(max_baseline_drift, max(baselines) - min(baselines))
+
+    corner_alpha = [atlas[0, 0, 3], atlas[0, -1, 3], atlas[-1, 0, 3], atlas[-1, -1, 3]]
+    return {
+        "expectedFrames": expected_frames,
+        "opaqueFrames": opaque_frames,
+        "transparentCorners": all(value == 0 for value in corner_alpha),
+        "maxCentroidDrift": round(max_centroid_drift, 2),
+        "maxBaselineDrift": max_baseline_drift,
+    }
 
 
 def main() -> None:
@@ -256,7 +296,9 @@ def main() -> None:
     atlas_image, manifest_anims = render_atlas(rgb, alpha, labels, cells, animations)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    atlas_image.save(args.out, optimize=True)
+    if args.out.suffix.lower() != ".webp":
+        raise SystemExit("Pet atlases must use the lossless .webp runtime format")
+    atlas_image.save(args.out, "WEBP", lossless=True, method=6, exact=True)
 
     # Content-hash the atlas so the runtime can version the URL and bypass
     # stale caches (the PWA serves /pets/* cache-first for 30 days).
@@ -269,8 +311,10 @@ def main() -> None:
         "columns": GRID,
         "rows": GRID,
         "pivot": {"x": PIVOT_X, "y": BASELINE_Y},
+        "format": "webp",
         "version": version,
         "animations": manifest_anims,
+        "validation": validate_atlas(atlas_image, manifest_anims),
     }
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")
 
