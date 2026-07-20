@@ -75,4 +75,35 @@ describe('activity tracking', () => {
       expect.objectContaining({ date: '2026-07-17', trackedMs: 30 * 60 * 1000 })
     ]);
   });
+
+  it('hides activity before a persisted clear cutoff without deleting task history', () => {
+    const task = normalizeTask({
+      id: 'retained-history',
+      status: 'done',
+      logs: [
+        { start: '2026-07-17T09:00:00.000Z', end: '2026-07-17T10:00:00.000Z' },
+        { start: '2026-07-17T11:00:00.000Z', end: '2026-07-17T12:00:00.000Z' }
+      ],
+      activity: [
+        {
+          id: 'done-before-clear',
+          type: 'system',
+          kind: 'task-completed',
+          text: 'Marked done',
+          timestamp: '2026-07-17T09:30:00.000Z'
+        }
+      ]
+    });
+
+    const summary = buildActivitySummary([task], {
+      now: new Date('2026-07-17T13:00:00.000Z').getTime(),
+      days: 1,
+      clearedBefore: '2026-07-17T10:30:00.000Z'
+    });
+
+    expect(summary.totalTrackedMs).toBe(60 * 60 * 1000);
+    expect(summary.completedTasks).toBe(0);
+    expect(task.logs).toHaveLength(2);
+    expect(task.activity).toHaveLength(1);
+  });
 });

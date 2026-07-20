@@ -103,6 +103,47 @@ test('desktop activity renders a live Three.js flame and framed Aurelius pet', a
   await page.goto('/');
   await expect(page.getByTestId('main-activity-module')).toBeVisible();
   await verifyActivityVisuals(page, testInfo, 80);
+
+  await page.getByRole('button', { name: 'Customize main view' }).click();
+  const petSelect = page.getByRole('combobox', { name: 'Activity pet' });
+  await petSelect.click();
+  const puppyOption = page.getByRole('option', { name: 'Puppy' });
+  await expect(puppyOption).toBeVisible();
+  expect(
+    await puppyOption.evaluate((option) =>
+      Number(getComputedStyle(option.closest('[role="listbox"]') as HTMLElement).zIndex)
+    )
+  ).toBe(130);
+  expect(
+    await puppyOption.evaluate((option) => {
+      const bounds = option.getBoundingClientRect();
+      return (
+        document
+          .elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2)
+          ?.closest('[role="option"]') === option
+      );
+    })
+  ).toBe(true);
+  await puppyOption.click();
+  await expect(page.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'puppy');
+  await expect(page.getByTestId('activity-pet')).toHaveAttribute('data-atlas-loaded', 'true');
+  await testInfo.attach('puppy-80px.png', {
+    body: await page.getByTestId('activity-pet').screenshot(),
+    contentType: 'image/png'
+  });
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Clear activity' }).click();
+  await page.getByRole('button', { name: 'Close settings' }).click();
+  await expect(page.getByTestId('activity-tracked-time')).toContainText('0s');
+  await expect(page.getByTestId('activity-tasks-completed')).toContainText('0');
+  await expect(page.getByTestId('streak-flame')).toHaveAttribute('data-animated', 'false');
+
+  const settingsResponse = await page.request.get(api(`/api/profiles/${profileId}/settings`));
+  await expectStatus(settingsResponse, 200);
+  const savedSettings = (await settingsResponse.json()).settings;
+  expect(savedSettings.activityPetId).toBe('puppy');
+  expect(new Date(savedSettings.activityClearedBefore).getTime()).toBeGreaterThan(0);
 });
 
 test('mobile activity keeps the live flame and pet framed without overlap', async ({

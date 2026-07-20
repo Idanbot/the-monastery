@@ -97,7 +97,10 @@ test('opens a customizable desktop main workspace with Kanban on demand', async 
 
   await page.getByRole('button', { name: 'Customize main view' }).click();
   const settings = page.getByRole('dialog', { name: /preferences/i });
-  await settings.getByLabel('Top right quarter').selectOption('timeline');
+  await settings.getByRole('combobox', { name: 'Top right quarter' }).click();
+  const timelineOption = page.getByRole('option', { name: 'Timeline', exact: true });
+  await expect(timelineOption).toBeVisible();
+  await timelineOption.click();
   await settings.getByRole('button', { name: /close settings/i }).click();
   await expect(page.getByTestId('main-view-slot-topRight')).toHaveAttribute('data-module', 'timeline');
   await expect(page.getByTestId('main-activity-module')).toHaveCount(0);

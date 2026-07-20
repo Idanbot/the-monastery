@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eraser } from 'lucide-react';
 import { useSettingsContext } from '../../../contexts/SettingsContext';
 import { activityPetOptions } from '../../../domain/activityPets';
 import {
@@ -10,6 +10,7 @@ import {
 } from '../../../domain/mainView';
 import type { ActivityPetId, MainViewSlotContentId } from '../../../domain/types';
 import { SettingSection } from '../SettingSection';
+import { SettingsSelect } from '../SettingsSelect';
 import type { RegisteredSectionProps } from './types';
 
 export default function MainViewRegisteredSection(props: RegisteredSectionProps) {
@@ -62,52 +63,39 @@ export default function MainViewRegisteredSection(props: RegisteredSectionProps)
                 </button>
               </div>
             </div>
-            <select
-              aria-label={`${label} quarter`}
+            <SettingsSelect
+              ariaLabel={`${label} quarter`}
               value={slots[id]}
-              onChange={(event) => {
-                const content = event.target.value as MainViewSlotContentId;
+              onValueChange={(content) => {
                 setSettings((previous) => ({
                   ...previous,
                   mainViewSlots: updateMainViewSlot(
                     normalizeMainViewSlots(previous.mainViewSlots, previous.mainViewModules),
                     id,
-                    content
+                    content as MainViewSlotContentId
                   )
                 }));
               }}
-              className="w-full rounded-lg border border-[var(--ui-border-subtle)] bg-[var(--ui-surface-raised)] px-3 py-2 outline-none"
-            >
-              {mainViewSlotContentDefinitions.map((definition) => (
-                <option key={definition.id} value={definition.id}>
-                  {definition.label}
-                </option>
-              ))}
-            </select>
+              options={mainViewSlotContentDefinitions}
+            />
           </div>
         ))}
       </div>
       <div className="ui-control grid gap-3 rounded-xl p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
         <label className="flex min-w-0 flex-col gap-1 text-sm font-semibold text-[var(--ui-text-primary)]">
           Activity pet
-          <select
-            aria-label="Activity pet"
+          <SettingsSelect
+            ariaLabel="Activity pet"
             value={settings.activityPetId || 'aurelius'}
-            onChange={(event) => {
-              const activityPetId = event.target.value as ActivityPetId;
+            onValueChange={(activityPetId) => {
               setSettings((previous) => ({
                 ...previous,
-                activityPetId
+                activityPetId: activityPetId as ActivityPetId
               }));
             }}
-            className="rounded-lg border border-[var(--ui-border-subtle)] bg-[var(--ui-surface-raised)] px-3 py-2 font-normal outline-none"
-          >
-            {activityPetOptions.map(({ id, label }) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
+            options={activityPetOptions}
+            className="font-normal"
+          />
         </label>
         <label className="flex min-h-10 items-center gap-2 text-sm font-medium">
           <input
@@ -127,15 +115,38 @@ export default function MainViewRegisteredSection(props: RegisteredSectionProps)
             checked={settings.activityFlameAnimationEnabled !== false}
             onChange={(event) => {
               const activityFlameAnimationEnabled = event.target.checked;
-              setSettings((previous) => ({
-                ...previous,
-                activityFlameAnimationEnabled
-              }));
+              setSettings((previous) => ({ ...previous, activityFlameAnimationEnabled }));
             }}
             className="size-4 accent-[var(--ui-info)]"
           />
           Animate streak flame
         </label>
+      </div>
+      <div className="ui-control flex flex-col gap-3 rounded-xl p-3 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-[var(--ui-text-primary)]">Activity totals</div>
+          <p className="text-xs text-[var(--ui-text-secondary)]">
+            Reset streaks and totals while keeping tasks and time logs.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (
+              !window.confirm(
+                'Clear activity totals and streaks? Tasks, time logs, and completion history will be kept.'
+              )
+            )
+              return;
+            setSettings((previous) => ({
+              ...previous,
+              activityClearedBefore: new Date().toISOString()
+            }));
+          }}
+          className="ui-focus-ring inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[var(--ui-danger)] px-3 text-sm font-semibold text-[var(--ui-danger)] hover:bg-red-500/10"
+        >
+          <Eraser size={15} /> Clear activity
+        </button>
       </div>
       <p className="text-xs text-[var(--ui-text-secondary)]">
         Assign each quarter directly or use the arrows to swap its position.

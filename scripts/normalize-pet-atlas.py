@@ -137,68 +137,95 @@ def detect_cells(parts: list[dict]) -> tuple[dict[tuple[int, int], list[dict]], 
     return cells, len(rows)
 
 
+def _extract_frame(rgb, alpha, labels, parts):
+    """Crop the sprite region covering all parts, keyed to the parts only."""
+    member_labels = {p["label"] for p in parts}
+    x0 = min(p["bbox"][0] for p in parts)
+    y0 = min(p["bbox"][1] for p in parts)
+    x1 = max(p["bbox"][2] for p in parts)
+    y1 = max(p["bbox"][3] for p in parts)
+    pad = 3
+    x0, y0 = max(0, x0 - pad), max(0, y0 - pad)
+    x1, y1 = min(rgb.shape[1], x1 + pad), min(rgb.shape[0], y1 + pad)
+    member_mask = np.isin(labels[y0:y1, x0:x1], list(member_labels))
+    region_alpha = np.where(member_mask, alpha[y0:y1, x0:x1], 0.0)
+    region_rgb = defringe(rgb[y0:y1, x0:x1].astype(np.float64), region_alpha)
+    return region_rgb, region_alpha, x0, y0
+
+
 def render_atlas(rgb, alpha, labels, cells, animations):
     atlas_image = Image.new("RGBA", (ATLAS, ATLAS), (0, 0, 0, 0))
     manifest = {}
-
-    # Per-source-row scale normalization: the median body height of the row
-    # defines 100% scale; individual frames are clamped so bounce rows keep a
-    # hint of squash without the head sliding around.
-    row_median_h: dict[int, float] = {}
-    for (row, _col), parts in cells.items():
-        bodies = [p for p in parts if p["area"] >= MIN_BODY_AREA]
-        if bodies:
-            row_median_h[row] = float(np.median([p["bbox"][3] - p["bbox"][1] for p in bodies]))
 
     for anim_index, anim in enumerate(animations):
         src_row = anim["row"]
         start = anim.get("startFrame", 0)
         count = anim.get("frameCount", GRID)
-        median_h = row_median_h.get(src_row)
-        placed = 0
+
+        # First pass: extract every frame of the row so scale and anchor are
+        # decided per *row*, not per frame. A constant row scale stops size
+        # pumping; the shared centroid and baseline stop lateral idle jiggle.
+        frames = []
         for frame in range(count):
             parts = cells.get((src_row, start + frame))
             bodies = [p for p in parts or [] if p["area"] >= MIN_BODY_AREA]
             if not bodies:
                 continue
-            member_labels = {p["label"] for p in parts}
-            x0 = min(p["bbox"][0] for p in parts)
-            y0 = min(p["bbox"][1] for p in parts)
-            x1 = max(p["bbox"][2] for p in parts)
-            y1 = max(p["bbox"][3] for p in parts)
-            pad = 3
-            x0, y0 = max(0, x0 - pad), max(0, y0 - pad)
-            x1, y1 = min(rgb.shape[1], x1 + pad), min(rgb.shape[0], y1 + pad)
-
-            member_mask = np.isin(labels[y0:y1, x0:x1], list(member_labels))
-            region_alpha = np.where(member_mask, alpha[y0:y1, x0:x1], 0.0)
-            region_rgb = defringe(rgb[y0:y1, x0:x1].astype(np.float64), region_alpha)
-
+            region_rgb, region_alpha, x0, y0 = _extract_frame(rgb, alpha, labels, parts)
             # Scale and anchor from the largest body only (the character
             # itself). Secondary bodies (dust clouds, debris) and attachments
             # (sparkles, "Z"s) ride along and are clipped to the frame cell so
             # they can never pull the character off-center or bleed into a
             # neighbor frame.
             main_body = max(bodies, key=lambda b: b["area"])
-            body_h = main_body["bbox"][3] - main_body["bbox"][1]
-            body_w = main_body["bbox"][2] - main_body["bbox"][0]
-            scale = 1.0 if not median_h else float(np.clip(median_h / body_h, 0.78, 1.28))
-            fit = min(MAX_SPRITE_H / body_h, MAX_SPRITE_W / body_w) * scale
-            h, w = region_alpha.shape
+            my0, mx0 = main_body["bbox"][1] - y0, main_body["bbox"][0] - x0
+            my1 = my0 + (main_body["bbox"][3] - main_body["bbox"][1])
+            mx1 = mx0 + (main_body["bbox"][2] - main_body["bbox"][0])
+            body_alpha = region_alpha[my0:my1, mx0:mx1]
+            # Alpha-mass centroid of the main body, in region coordinates:
+            # stable under pose lean, unlike the bbox center which swings
+            # with outstretched parts.
+            total = max(float(body_alpha.sum()), 1e-6)
+            centroid_x = float((body_alpha * np.arange(mx0, mx1)[None, :]).sum() / total)
+            frames.append(
+                {
+                    "rgb": region_rgb,
+                    "alpha": region_alpha,
+                    "x0": x0,
+                    "y0": y0,
+                    "body_h": main_body["bbox"][3] - main_body["bbox"][1],
+                    "body_w": main_body["bbox"][2] - main_body["bbox"][0],
+                    "body_bottom": max(b["bbox"][3] for b in bodies),
+                    "centroid_x": centroid_x,
+                }
+            )
+        if not frames:
+            continue
+
+        median_h = float(np.median([f["body_h"] for f in frames]))
+        median_w = float(np.median([f["body_w"] for f in frames]))
+        fit = min(MAX_SPRITE_H / median_h, MAX_SPRITE_W / median_w)
+        # Cap the row scale so the largest region (body + attachments) can
+        # never overflow its cell.
+        fit = min(fit, *(min((CELL - 2) / f["alpha"].shape[1], (CELL - 2) / f["alpha"].shape[0]) for f in frames))
+
+        # Anchor every frame's body centroid exactly to the shared pivot. The
+        # pet is a fixed dashboard avatar, so lateral travel reads as jitter;
+        # pose, squash, and vertical motion remain visible inside the frame.
+        raw_offsets = [PIVOT_X - f["centroid_x"] * fit for f in frames]
+        placed = 0
+        for frame_index, f in enumerate(frames):
+            px = int(round(raw_offsets[frame_index]))
+            h, w = f["alpha"].shape
             new_w = max(1, int(round(w * fit)))
             new_h = max(1, int(round(h * fit)))
-
-            sprite = np.dstack([region_rgb, region_alpha[..., None] * 255.0]).astype(np.uint8)
+            sprite = np.dstack([f["rgb"], f["alpha"][..., None] * 255.0]).astype(np.uint8)
             image = Image.fromarray(sprite, "RGBA").resize((new_w, new_h), Image.LANCZOS)
             tile = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
-            # Anchor: main body bbox center lands on the pivot; the lowest
-            # body bottom stays on the baseline so hops rise off the ground.
-            body_cx = (main_body["bbox"][0] + main_body["bbox"][2]) / 2
-            body_bottom = max(b["bbox"][3] for b in bodies)
-            px = PIVOT_X - int(round((body_cx - x0) * fit))
-            py = BASELINE_Y - int(round((body_bottom - y0) * fit))
+            # The lowest body bottom stays on the baseline so hops rise off the ground.
+            py = BASELINE_Y - int(round((f["body_bottom"] - f["y0"]) * fit))
             tile.paste(image, (px, py), image)
-            atlas_image.paste(tile, (frame * CELL, anim_index * CELL), tile)
+            atlas_image.paste(tile, (placed * CELL, anim_index * CELL), tile)
             placed += 1
         if placed:
             manifest[anim["name"]] = {"row": anim_index, "frameCount": placed}

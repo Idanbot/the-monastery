@@ -54,4 +54,26 @@ describe('calculateAnalytics', () => {
 
     expect(analytics.tagRows[0]).toMatchObject({ tag: 'python', hours: 1.5, weeklyTargetHours: 5 });
   });
+
+  it('excludes tracked time before the activity clear cutoff but keeps task status counts', () => {
+    const analytics = calculateAnalytics({
+      tasks: [
+        normalizeTask({
+          status: 'done',
+          tags: ['python'],
+          logs: [
+            { start: '2026-06-17T09:00:00.000Z', end: '2026-06-17T10:00:00.000Z' },
+            { start: '2026-06-17T11:00:00.000Z', end: '2026-06-17T12:00:00.000Z' }
+          ]
+        })
+      ],
+      now: new Date('2026-06-17T13:00:00.000Z').getTime(),
+      clearedBefore: '2026-06-17T10:30:00.000Z',
+      roles: []
+    });
+
+    expect(analytics.totalTrackedMs).toBe(60 * 60 * 1000);
+    expect(analytics.tagRows[0]).toMatchObject({ tag: 'python', hours: 1 });
+    expect(analytics.statusCounts.done).toBe(1);
+  });
 });

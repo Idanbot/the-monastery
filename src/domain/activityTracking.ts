@@ -16,7 +16,7 @@ export type ActivitySummary = {
   currentStreak: number;
 };
 
-type ActivityOptions = { now?: number; days?: number };
+type ActivityOptions = { now?: number; days?: number; clearedBefore?: string };
 
 const dateKey = (value: number | string) => new Date(value).toISOString().slice(0, 10);
 const validTimestamp = (value: string | null | undefined) => {
@@ -30,8 +30,9 @@ const isTaskCompletion = (entry: ActivityEntry) =>
 
 export const buildActivitySummary = (
   tasks: Task[],
-  { now = Date.now(), days = 90 }: ActivityOptions = {}
+  { now = Date.now(), days = 90, clearedBefore }: ActivityOptions = {}
 ): ActivitySummary => {
+  const cutoff = validTimestamp(clearedBefore);
   const safeDays = Math.max(1, Math.floor(days));
   const today = new Date(now);
   today.setUTCHours(0, 0, 0, 0);
@@ -47,9 +48,11 @@ export const buildActivitySummary = (
   }
 
   const addTrackedLog = (log: TimeLog, activeEnd = now) => {
-    const start = validTimestamp(log.start);
+    const parsedStart = validTimestamp(log.start);
     const end = validTimestamp(log.end) ?? activeEnd;
-    if (start === null || !Number.isFinite(end) || end <= start) return;
+    if (parsedStart === null || !Number.isFinite(end)) return;
+    const start = cutoff === null ? parsedStart : Math.max(parsedStart, cutoff);
+    if (end <= start) return;
     let cursor = start;
     while (cursor < end) {
       const current = new Date(cursor);
@@ -63,7 +66,7 @@ export const buildActivitySummary = (
 
   const addCompletion = (timestamp: string, kind: 'subtask' | 'task', amount = 1) => {
     const parsed = validTimestamp(timestamp);
-    if (parsed === null) return;
+    if (parsed === null || (cutoff !== null && parsed <= cutoff)) return;
     const day = byDate.get(dateKey(parsed));
     if (!day) return;
     if (kind === 'subtask') day.completedSubtasks += amount;

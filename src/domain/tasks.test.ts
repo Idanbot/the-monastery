@@ -241,6 +241,10 @@ describe('task domain helpers', () => {
     expect(settings.timelineNowLineVisible).toBe(false);
   });
 
+  it('keeps the puppy activity pet selection', () => {
+    expect(mergeSettings({ activityPetId: 'puppy' }).activityPetId).toBe('puppy');
+  });
+
   it('migrates removed activity pets to Aurelius', () => {
     expect(mergeSettings({ activityPetId: 'owl' as never }).activityPetId).toBe('aurelius');
     expect(mergeSettings({ activityPetId: 'rabbit' as never }).activityPetId).toBe('aurelius');

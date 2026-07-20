@@ -67,6 +67,16 @@ describe('ActivityPet', () => {
     });
   });
 
+  it('renders the puppy pet with its own normalized atlas', () => {
+    render(<ActivityPet petId="puppy" streakActive />);
+
+    expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'puppy');
+    expect(screen.getByTestId('activity-pet-sprite')).toHaveStyle({
+      backgroundImage: `url(${activityPetManifests.puppy.src})`
+    });
+    expect(activityPetManifests.puppy.src).toMatch(/^\/pets\/puppy\/puppy-spritesheet\.png\?v=.+/);
+  });
+
   it('returns to the persistent loop after a one-shot reaction', () => {
     vi.useFakeTimers();
     render(<ActivityPet petId="aurelius" streakActive reaction="streak-started" />);

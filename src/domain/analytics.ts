@@ -1,6 +1,8 @@
-import { calculateTotalDuration, taskStatuses } from './tasks';
+import { taskStatuses } from './tasks';
 
-export const calculateAnalytics = ({ tasks, roles, tagGoals = [], now }) => {
+export const calculateAnalytics = ({ tasks, roles, tagGoals = [], now, clearedBefore = undefined }) => {
+  const parsedCutoff = clearedBefore ? new Date(clearedBefore).getTime() : Number.NaN;
+  const cutoff = Number.isFinite(parsedCutoff) ? parsedCutoff : null;
   const tagDurations = new Map<string, number>();
   const statusCounts = Object.fromEntries(taskStatuses.map((status) => [status, 0]));
 
@@ -14,9 +16,16 @@ export const calculateAnalytics = ({ tasks, roles, tagGoals = [], now }) => {
     });
   };
 
+  const durationSinceCutoff = (startValue, endValue = now) => {
+    const parsedStart = new Date(startValue).getTime();
+    const parsedEnd = endValue ? new Date(endValue).getTime() : now;
+    if (!Number.isFinite(parsedStart) || !Number.isFinite(parsedEnd)) return 0;
+    const start = cutoff === null ? parsedStart : Math.max(parsedStart, cutoff);
+    return Math.max(0, parsedEnd - start);
+  };
   const itemDuration = (item) =>
-    calculateTotalDuration(item.logs || []) +
-    (item.activeLogStart ? Math.max(0, now - new Date(item.activeLogStart).getTime()) : 0);
+    (item.logs || []).reduce((total, log) => total + durationSinceCutoff(log.start, log.end), 0) +
+    (item.activeLogStart ? durationSinceCutoff(item.activeLogStart) : 0);
 
   tasks.forEach((task) => {
     statusCounts[task.status] = (statusCounts[task.status] || 0) + 1;

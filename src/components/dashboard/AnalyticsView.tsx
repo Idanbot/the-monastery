@@ -190,6 +190,7 @@ function MobileAnalyticsSummary({
           showPet={settings.activityPetVisible}
           animateFlame={settings.activityFlameAnimationEnabled && settings.animationsEnabled}
           animatePet={settings.animationsEnabled}
+          clearedBefore={settings.activityClearedBefore}
         />
       </div>
 
@@ -262,7 +263,13 @@ export function AnalyticsView({
   currentTask: Task | null;
   openRoleSettings: () => void;
 }) {
-  const analytics = calculateAnalytics({ tasks, roles: settings.roles, tagGoals: settings.tagGoals, now });
+  const analytics = calculateAnalytics({
+    tasks,
+    roles: settings.roles,
+    tagGoals: settings.tagGoals,
+    now,
+    clearedBefore: settings.activityClearedBefore
+  });
   const isPhoneLayout = useMediaQuery('(max-width: 639px)');
   const statusChartData = taskStatuses.map((status) => ({
     name: statusLabels[status],
@@ -332,6 +339,7 @@ export function AnalyticsView({
           showPet={settings.activityPetVisible}
           animateFlame={settings.activityFlameAnimationEnabled && settings.animationsEnabled}
           animatePet={settings.animationsEnabled}
+          clearedBefore={settings.activityClearedBefore}
         />
 
         <section

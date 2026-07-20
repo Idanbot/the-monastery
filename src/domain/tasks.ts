@@ -353,7 +353,7 @@ export const mergeSettings = (saved) => ({
       )
     )
   ) as AppSettings['collapsedMainViewSlots'],
-  activityPetId: ['aurelius', 'kitten'].includes(saved?.activityPetId)
+  activityPetId: ['aurelius', 'kitten', 'puppy'].includes(saved?.activityPetId)
     ? saved.activityPetId
     : defaultSettings.activityPetId,
   activityPetVisible:
@@ -364,6 +364,8 @@ export const mergeSettings = (saved) => ({
     saved?.activityFlameAnimationEnabled === undefined
       ? defaultSettings.activityFlameAnimationEnabled
       : Boolean(saved.activityFlameAnimationEnabled),
+  activityClearedBefore:
+    typeof saved?.activityClearedBefore === 'string' ? saved.activityClearedBefore : undefined,
   mainViewModules: normalizeMainViewModules(saved?.mainViewModules),
   animationsEnabled:
     saved?.animationsEnabled === undefined

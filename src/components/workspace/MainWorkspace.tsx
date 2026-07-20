@@ -168,6 +168,7 @@ export function MainWorkspace() {
             showPet={settings.activityPetVisible}
             animateFlame={settings.activityFlameAnimationEnabled && settings.animationsEnabled}
             animatePet={settings.animationsEnabled}
+            clearedBefore={settings.activityClearedBefore}
           />
         </div>
       );

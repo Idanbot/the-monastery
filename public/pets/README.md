@@ -8,15 +8,11 @@ anchored; only the sprite inside it changes.
 
 - `aurelius/aurelius-spritesheet.png` — marble bust.
 - `kitten/kitten-spritesheet.png` — ginger kitten.
+- `puppy/puppy-spritesheet.png` — golden retriever puppy.
 
-Both atlases are true transparent 2048 x 2048 PNGs generated from the raw exports in `assets/pets/`
+All atlases are true transparent 2048 x 2048 PNGs generated from the raw exports in `assets/pets/`
 by `scripts/normalize-pet-atlas.py`. Never edit the generated atlases by hand; change the raw export
 or the animation mapping and regenerate.
-
-A `puppy` pet is planned: the first download attempt saved an expired-URL error message instead of
-the artwork (`public/pets/puppy/puppy.png` is not a valid image). To add the puppy, save the real
-export as `assets/pets/puppy.png`, add `assets/pets/puppy.animations.json`, then follow
-"Adding a pet" below.
 
 ## Display contract
 

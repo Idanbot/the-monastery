@@ -15,6 +15,7 @@ interface ActivityGraphProps {
   showPet?: boolean;
   animateFlame?: boolean;
   animatePet?: boolean;
+  clearedBefore?: string;
 }
 
 export function ActivityGraph({
@@ -25,12 +26,16 @@ export function ActivityGraph({
   petId = 'aurelius',
   showPet = true,
   animateFlame = true,
-  animatePet = true
+  animatePet = true,
+  clearedBefore
 }: ActivityGraphProps) {
   const [activeDay, setActiveDay] = useState<ReturnType<typeof buildActivitySummary>['days'][number] | null>(
     null
   );
-  const summary = useMemo(() => buildActivitySummary(tasks, { now, days: 90 }), [tasks, now]);
+  const summary = useMemo(
+    () => buildActivitySummary(tasks, { now, days: 90, clearedBefore }),
+    [tasks, now, clearedBefore]
+  );
   const visibleActivity = compact ? summary.days.slice(-28) : summary.days;
   const maxScore = Math.max(1, ...visibleActivity.map((day) => day.score));
 

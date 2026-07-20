@@ -116,7 +116,7 @@ export type MainViewSlotContentId =
   | 'activity-current'
   | 'clock-media-timeline';
 export type MainViewSlots = Record<MainViewSlotId, MainViewSlotContentId>;
-export type ActivityPetId = 'aurelius' | 'kitten';
+export type ActivityPetId = 'aurelius' | 'kitten' | 'puppy';
 
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';
@@ -142,6 +142,7 @@ export type AppSettings = {
   activityPetId: ActivityPetId;
   activityPetVisible: boolean;
   activityFlameAnimationEnabled: boolean;
+  activityClearedBefore?: string;
   /** Legacy layout retained so profiles created before the slot grid can be migrated. */
   mainViewModules: MainViewModule[];
   focusMediaUrl: string;

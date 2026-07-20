@@ -1,0 +1,18 @@
+[
+  { "name": "idle_breathe", "row": 0, "frameCount": 9 },
+  { "name": "idle_blink", "row": 1, "frameCount": 9 },
+  { "name": "look_left_right", "row": 2, "frameCount": 9 },
+  { "name": "idle_fidget", "row": 3, "startFrame": 5, "frameCount": 4 },
+  { "name": "yawn", "row": 3, "startFrame": 2, "frameCount": 4 },
+  { "name": "sleep", "row": 4, "frameCount": 9 },
+  { "name": "wake_up", "row": 5, "frameCount": 9 },
+  { "name": "streak_lost", "row": 6, "frameCount": 9 },
+  { "name": "ready_bounce", "row": 7, "frameCount": 9 },
+  { "name": "focused_idle", "row": 8, "frameCount": 9 },
+  { "name": "energized_bounce", "row": 9, "frameCount": 9 },
+  { "name": "small_success", "row": 10, "frameCount": 9 },
+  { "name": "big_success", "row": 13, "frameCount": 9 },
+  { "name": "power_up", "row": 11, "frameCount": 9 },
+  { "name": "powered_idle", "row": 12, "frameCount": 9 },
+  { "name": "celebrate", "row": 13, "frameCount": 9 }
+]

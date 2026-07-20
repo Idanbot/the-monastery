@@ -199,7 +199,7 @@ describe('SettingsModal', () => {
     const user = userEvent.setup();
     const props = renderSettings({ initialSection: 'time' });
 
-    await user.click(await screen.findByLabelText(/show seconds/i));
+    await user.click(await screen.findByLabelText(/show seconds/i, {}, { timeout: 5000 }));
     const secondsUpdate = props.setSettings.mock.lastCall?.[0];
     expect(secondsUpdate(props.settings)).toEqual({ ...props.settings, showSeconds: false });
 
@@ -246,7 +246,8 @@ describe('SettingsModal', () => {
     const user = userEvent.setup();
     const props = renderSettings({ initialSection: 'main' });
 
-    await user.selectOptions(await screen.findByLabelText('Top left quarter'), 'calendar');
+    await user.click(await screen.findByRole('combobox', { name: 'Top left quarter' }, { timeout: 5000 }));
+    await user.click(screen.getByRole('option', { name: 'Calendar' }));
     const slotUpdate = props.setSettings.mock.lastCall?.[0];
     expect(slotUpdate(props.settings)).toEqual({
       ...props.settings,
@@ -261,9 +262,10 @@ describe('SettingsModal', () => {
       topRight: props.settings.mainViewSlots.topLeft
     });
 
-    await user.selectOptions(screen.getByLabelText('Activity pet'), 'aurelius');
+    await user.click(screen.getByRole('combobox', { name: 'Activity pet' }));
+    await user.click(screen.getByRole('option', { name: 'Kitten' }));
     const petUpdate = props.setSettings.mock.lastCall?.[0];
-    expect(petUpdate(props.settings)).toEqual({ ...props.settings, activityPetId: 'aurelius' });
+    expect(petUpdate(props.settings)).toEqual({ ...props.settings, activityPetId: 'kitten' });
 
     await user.click(screen.getByLabelText('Animate streak flame'));
     const flameUpdate = props.setSettings.mock.lastCall?.[0];
@@ -271,6 +273,23 @@ describe('SettingsModal', () => {
       ...props.settings,
       activityFlameAnimationEnabled: false
     });
+  });
+
+  it('clears dashboard activity without deleting task history', async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const props = renderSettings({ initialSection: 'main' });
+    const before = Date.now();
+
+    await user.click(await screen.findByRole('button', { name: 'Clear activity' }));
+
+    expect(confirm).toHaveBeenCalledWith(
+      'Clear activity totals and streaks? Tasks, time logs, and completion history will be kept.'
+    );
+    const clearUpdate = props.setSettings.mock.lastCall?.[0];
+    const cleared = clearUpdate(props.settings);
+    expect(new Date(cleared.activityClearedBefore).getTime()).toBeGreaterThanOrEqual(before);
+    expect(props.tasks).toEqual([]);
   });
 
   it('requests permission before enabling browser notifications', async () => {

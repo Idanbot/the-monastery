@@ -41,6 +41,12 @@ if (typeof window !== 'undefined') {
     Element.prototype.scrollIntoView = vi.fn();
   }
 
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = () => false;
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+  }
+
   Object.defineProperty(window, 'scrollTo', {
     writable: true,
     value: vi.fn()

@@ -633,7 +633,7 @@ export function SettingsModal({
                             sideOffset={6}
                             className={themedSurfaceClassName(
                               'menu',
-                              `${themeScopeClassName} z-[90] min-w-[14rem] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl p-1`
+                              `${themeScopeClassName} z-[130] min-w-[14rem] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl p-1`
                             )}
                           >
                             <Select.Viewport>
