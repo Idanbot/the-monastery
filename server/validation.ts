@@ -155,7 +155,7 @@ export const appSettingsSchema = z.object({
   mainViewColumnSplit: z.number().min(20).max(80).optional(),
   mainViewRowSplit: z.number().min(20).max(80).optional(),
   collapsedMainViewSlots: z.array(z.enum(['topLeft', 'topRight', 'bottomLeft', 'bottomRight'])).optional(),
-  activityPetId: z.literal('aurelius').optional(),
+  activityPetId: z.enum(['aurelius', 'kitten']).optional(),
   activityPetVisible: z.boolean().optional(),
   activityFlameAnimationEnabled: z.boolean().optional(),
   mainViewModules: z.array(mainViewModuleSchema).max(5),

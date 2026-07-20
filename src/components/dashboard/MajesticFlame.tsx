@@ -49,20 +49,20 @@ export function MajesticFlame() {
       data-animated="true"
       data-renderer={status}
       aria-hidden="true"
-      className="relative inline-grid size-10 shrink-0 place-items-center"
+      className="relative inline-grid size-7 shrink-0 place-items-center"
     >
       <canvas
         ref={canvasRef}
         data-testid="streak-flame-canvas"
         aria-hidden="true"
-        width="80"
-        height="80"
+        width="56"
+        height="56"
         className={`pointer-events-none absolute inset-0 size-full transition-opacity ${
           status === 'ready' ? 'opacity-100' : 'opacity-0'
         }`}
       />
       {showFallback && (
-        <Flame data-testid="streak-flame-fallback" size={18} className="text-amber-500" fill="currentColor" />
+        <Flame data-testid="streak-flame-fallback" size={14} className="text-amber-500" fill="currentColor" />
       )}
     </span>
   );

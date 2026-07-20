@@ -4,61 +4,64 @@ Activity pets are fixed, framed spritesheet avatars that react to activity, stre
 inactivity, and future interaction events without moving across the application. The frame remains
 anchored; only the sprite inside it changes.
 
-## Current pet
+## Pets
 
-`aurelius/aurelius-spritesheet.png` is the only supported pet. The application renders it through a
-data-driven manifest in `src/domain/activityPets.ts` and migrates the removed `cat`, `owl`, and
-`rabbit` settings to `aurelius`.
+- `aurelius/aurelius-spritesheet.png` — marble bust.
+- `kitten/kitten-spritesheet.png` — ginger kitten.
 
-The current Aurelius source is a 1254 x 1254 RGB export with 16 columns and 15 physical rows. The
-runtime maps the 16 logical animations onto those rows (the ready and focused loops share source row 8) and records explicit vertical offsets because the rows are unevenly packed. Horizontal cells use
-percentage positions so their fractional widths stay aligned. Its checkerboard is baked into the
-image. Replace it with a true transparent 2048 x 2048 PNG when the source artwork is available; do
-not flatten a transparency preview into the exported image.
+Both atlases are true transparent 2048 x 2048 PNGs generated from the raw exports in `assets/pets/`
+by `scripts/normalize-pet-atlas.py`. Never edit the generated atlases by hand; change the raw export
+or the animation mapping and regenerate.
+
+A `puppy` pet is planned: the first download attempt saved an expired-URL error message instead of
+the artwork (`public/pets/puppy/puppy.png` is not a valid image). To add the puppy, save the real
+export as `assets/pets/puppy.png`, add `assets/pets/puppy.animations.json`, then follow
+"Adding a pet" below.
 
 ## Display contract
 
 - Desktop avatar frame: 80 x 80 CSS px.
 - Mobile avatar frame: 56 x 56 CSS px.
 - Source frame: 128 x 128 px.
-- Anchor and pivot: bottom-center, nominally `(64, 116)` in each source cell.
+- Anchor and pivot: bottom-center, `(64, 116)` in each source cell, baked in by the normalizer.
 - Container overflow: hidden.
-- Every frame must keep the pet at the same scale and anchor.
+- Every frame keeps the pet at the same scale and anchor; animations read as pose changes, not
+  sliding.
 - The pet may move inside its frame but must never translate across the screen.
 - The frame must not block controls or carry information available only through animation.
 
 ## Atlas contract
 
-Future sheets must use:
+Every pet atlas is a lossless transparent PNG:
 
-- Lossless transparent PNG or WebP.
-- 2048 x 2048 atlas.
-- 16 columns x 16 rows.
-- 128 x 128 cells with no gutter.
-- One animation per row and transparent unused cells.
-- Consistent bottom-center pivot, resting pose, and scale.
+- 2048 x 2048 atlas, 16 columns x 16 rows, 128 x 128 cells with no gutter.
+- One animation per row, frames compacted from column 0, unused cells fully transparent.
+- Consistent bottom-center pivot, resting pose, and scale across all rows.
 
-| Row | Animation          | Frames | FPS | Playback         |
-| --: | ------------------ | -----: | --: | ---------------- |
-|   0 | `idle_breathe`     |      8 |   6 | loop             |
-|   1 | `idle_blink`       |      6 |   8 | one-shot ambient |
-|   2 | `look_left_right`  |      8 |   8 | one-shot ambient |
-|   3 | `idle_fidget`      |      8 |   6 | one-shot ambient |
-|   4 | `yawn`             |     10 |   8 | one-shot ambient |
-|   5 | `sleep`            |      8 |   5 | loop             |
-|   6 | `wake_up`          |     10 |  10 | transition       |
-|   7 | `streak_lost`      |     12 |  10 | transition       |
-|   8 | `ready_bounce`     |      8 |  10 | loop             |
-|   9 | `focused_idle`     |      8 |   8 | loop             |
-|  10 | `energized_bounce` |     10 |  12 | loop             |
-|  11 | `small_success`    |      8 |  12 | one-shot         |
-|  12 | `big_success`      |     14 |  14 | one-shot         |
-|  13 | `power_up`         |     14 |  16 | transition       |
-|  14 | `powered_idle`     |      8 |  10 | loop             |
-|  15 | `celebrate`        |     14 |  14 | one-shot         |
+Because the contract is enforced at build time, the runtime uses plain grid math
+(`x = frame / 15`, `y = row / 15` as percentages) and never sees slices of neighboring sprites.
 
-Do not hard-code these ranges in UI components. Add each pet's source and manifest to the domain
-registry, then add its ID to `ActivityPetId`.
+| Row | Animation          | FPS | Playback         |
+| --: | ------------------ | --: | ---------------- |
+|   0 | `idle_breathe`     |   6 | loop             |
+|   1 | `idle_blink`       |   8 | one-shot ambient |
+|   2 | `look_left_right`  |   8 | one-shot ambient |
+|   3 | `idle_fidget`      |   6 | one-shot ambient |
+|   4 | `yawn`             |   8 | one-shot ambient |
+|   5 | `sleep`            |   5 | loop             |
+|   6 | `wake_up`          |  10 | transition       |
+|   7 | `streak_lost`      |  10 | transition       |
+|   8 | `ready_bounce`     |  10 | loop             |
+|   9 | `focused_idle`     |   8 | loop             |
+|  10 | `energized_bounce` |  12 | loop             |
+|  11 | `small_success`    |  12 | one-shot         |
+|  12 | `big_success`      |  14 | one-shot         |
+|  13 | `power_up`         |  16 | transition       |
+|  14 | `powered_idle`     |  10 | loop             |
+|  15 | `celebrate`        |  14 | one-shot         |
+
+Frame counts per pet live in the generated manifests (`src/domain/generated/*Atlas.json`), not in
+UI components. Behavior (FPS, playback, priority, transitions) lives in `src/domain/activityPets.ts`.
 
 ## State model
 
@@ -97,9 +100,22 @@ should collapse rather than queue indefinitely.
 
 ## Adding a pet
 
-1. Export a transparent 2048 x 2048 atlas that follows the row table and pivot contract.
-2. Add it under `public/pets/<pet-id>/<pet-id>-spritesheet.png`.
-3. Add a typed manifest and option in `src/domain/activityPets.ts`.
-4. Extend `ActivityPetId` and preserve migration behavior for removed IDs.
+1. Save the raw export (an unevenly packed AI sheet on a light background is fine) as
+   `assets/pets/<pet-id>.png`.
+2. Map the standard animations to its rows in `assets/pets/<pet-id>.animations.json`
+   (`{"name", "row", "startFrame", "frameCount"}` per animation; several animations may share one
+   source row). Rows and frames index the auto-detected grid, top to bottom, left to right.
+3. Regenerate the atlas and manifest:
+
+   ```sh
+   python3 scripts/normalize-pet-atlas.py assets/pets/<pet-id>.png \
+     --pet <pet-id> --animations assets/pets/<pet-id>.animations.json \
+     --out public/pets/<pet-id>/<pet-id>-spritesheet.png \
+     --manifest src/domain/generated/<pet-id>Atlas.json
+   ```
+
+4. Extend `ActivityPetId` in `src/domain/types.ts`, the settings schema in `server/validation.ts`,
+   the merge allow-list in `src/domain/tasks.ts`, and the registry in `src/domain/activityPets.ts`.
+   Unknown stored IDs keep migrating to `aurelius`.
 5. Add manifest, frame progression, reduced-motion, and visual framing tests.
 6. Verify the desktop 80 px and mobile 56 px frames without clipping or layout overlap.

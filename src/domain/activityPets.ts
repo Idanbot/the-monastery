@@ -1,8 +1,28 @@
 import type { ActivityPetId } from './types';
+import aureliusAtlas from './generated/aureliusAtlas.json';
+import kittenAtlas from './generated/kittenAtlas.json';
 
 export type ActivityPetState = 'dormant' | 'calm' | 'engaged' | 'energized' | 'powered';
 export type ActivityPetAnimationCategory = 'loop' | 'one-shot' | 'transition' | 'ambient';
-export type ActivityPetAnimationName = keyof typeof aureliusAnimations;
+export const activityPetAnimationNames = [
+  'idle_breathe',
+  'idle_blink',
+  'look_left_right',
+  'idle_fidget',
+  'yawn',
+  'sleep',
+  'wake_up',
+  'streak_lost',
+  'ready_bounce',
+  'focused_idle',
+  'energized_bounce',
+  'small_success',
+  'big_success',
+  'power_up',
+  'powered_idle',
+  'celebrate'
+] as const;
+export type ActivityPetAnimationName = (typeof activityPetAnimationNames)[number];
 export type ActivityPetEvent =
   | 'task-completed'
   | 'milestone-reached'
@@ -10,33 +30,53 @@ export type ActivityPetEvent =
   | 'streak-lost'
   | 'user-returned';
 
-// The supplied Aurelius export is packed unevenly despite its regular logical manifest.
-// Explicit source offsets keep neighboring rows out of the fixed avatar frame.
-const aureliusSourceRowY = [0, 98, 183, 268, 345, 410, 493, 575, 653, 731, 811, 891, 971, 1050, 1147];
+export type ActivityPetAnimation = {
+  row: number;
+  frameCount: number;
+  fps: number;
+  loop: boolean;
+  category: ActivityPetAnimationCategory;
+  priority: number;
+  interruptible: boolean;
+  next?: ActivityPetAnimationName;
+};
 
-const aureliusAnimations = {
-  idle_breathe: animation(0, 0, 8, 6, true, 'loop', 10),
-  idle_blink: animation(1, 1, 6, 8, false, 'ambient', 10),
-  look_left_right: animation(2, 2, 8, 8, false, 'ambient', 10),
-  idle_fidget: animation(3, 3, 8, 6, false, 'ambient', 10),
-  yawn: animation(4, 4, 10, 8, false, 'ambient', 30),
-  sleep: animation(5, 5, 8, 5, true, 'loop', 10),
-  wake_up: animation(6, 6, 10, 10, false, 'transition', 100, 'idle_breathe'),
-  streak_lost: animation(7, 7, 12, 10, false, 'transition', 95, 'idle_breathe'),
-  ready_bounce: animation(8, 8, 8, 10, true, 'loop', 10),
-  focused_idle: animation(9, 8, 8, 8, true, 'loop', 10),
-  energized_bounce: animation(10, 9, 10, 12, true, 'loop', 10),
-  small_success: animation(11, 10, 8, 12, false, 'one-shot', 70),
-  big_success: animation(12, 11, 14, 14, false, 'one-shot', 90),
-  power_up: animation(13, 12, 14, 16, false, 'transition', 100, 'powered_idle'),
-  powered_idle: animation(14, 13, 8, 10, true, 'loop', 10),
-  celebrate: animation(15, 14, 14, 14, false, 'one-shot', 85)
+export type ActivityPetManifest = {
+  id: ActivityPetId;
+  label: string;
+  src: string;
+  frameWidth: number;
+  frameHeight: number;
+  columns: number;
+  rows: number;
+  animations: Record<ActivityPetAnimationName, ActivityPetAnimation>;
+};
+
+// Every pet atlas is normalized by scripts/normalize-pet-atlas.py into the
+// same contract: a transparent 2048x2048 PNG, a 16x16 grid of 128x128 cells,
+// one animation per row, frames compacted from column 0, and a shared
+// bottom-center pivot. Frame windows can therefore use plain grid math and
+// never see slices of neighboring sprites.
+const animationBehavior = {
+  idle_breathe: behavior(6, true, 'loop', 10),
+  idle_blink: behavior(8, false, 'ambient', 10),
+  look_left_right: behavior(8, false, 'ambient', 10),
+  idle_fidget: behavior(6, false, 'ambient', 10),
+  yawn: behavior(8, false, 'ambient', 30),
+  sleep: behavior(5, true, 'loop', 10),
+  wake_up: behavior(10, false, 'transition', 100, 'idle_breathe'),
+  streak_lost: behavior(10, false, 'transition', 95, 'idle_breathe'),
+  ready_bounce: behavior(10, true, 'loop', 10),
+  focused_idle: behavior(8, true, 'loop', 10),
+  energized_bounce: behavior(12, true, 'loop', 10),
+  small_success: behavior(12, false, 'one-shot', 70),
+  big_success: behavior(14, false, 'one-shot', 90),
+  power_up: behavior(16, false, 'transition', 100, 'powered_idle'),
+  powered_idle: behavior(10, true, 'loop', 10),
+  celebrate: behavior(14, false, 'one-shot', 85)
 } as const;
 
-function animation<Next extends string | undefined = undefined>(
-  row: number,
-  sourceRow: number,
-  frameCount: number,
+function behavior<Next extends ActivityPetAnimationName | undefined = undefined>(
   fps: number,
   loop: boolean,
   category: ActivityPetAnimationCategory,
@@ -44,11 +84,6 @@ function animation<Next extends string | undefined = undefined>(
   next?: Next
 ) {
   return {
-    row,
-    sourceRow,
-    sourceY: aureliusSourceRowY[sourceRow],
-    startFrame: 0,
-    frameCount,
     fps,
     loop,
     category,
@@ -58,22 +93,44 @@ function animation<Next extends string | undefined = undefined>(
   } as const;
 }
 
-export const aureliusPetManifest = {
-  id: 'aurelius',
-  label: 'Aurelius',
-  src: '/pets/aurelius/aurelius-spritesheet.png',
-  frameWidth: 128,
-  frameHeight: 128,
-  columns: 16,
-  rows: 16,
-  sourceRows: 15,
-  sourceSize: 1254,
-  pivot: { x: 64, y: 116 },
-  animations: aureliusAnimations
-} as const;
+type GeneratedAtlas = {
+  frameWidth: number;
+  frameHeight: number;
+  columns: number;
+  rows: number;
+  animations: Record<string, { row: number; frameCount: number }>;
+};
+
+function buildManifest(id: ActivityPetId, label: string, atlas: GeneratedAtlas): ActivityPetManifest {
+  const animations = {} as Record<ActivityPetAnimationName, ActivityPetAnimation>;
+  for (const [name, behaviorDef] of Object.entries(animationBehavior) as [
+    ActivityPetAnimationName,
+    (typeof animationBehavior)[ActivityPetAnimationName]
+  ][]) {
+    const layout = atlas.animations[name];
+    if (!layout) throw new Error(`Atlas for ${id} is missing animation ${name}`);
+    animations[name] = { ...behaviorDef, row: layout.row, frameCount: layout.frameCount };
+  }
+  return {
+    id,
+    label,
+    src: `/pets/${id}/${id}-spritesheet.png`,
+    frameWidth: atlas.frameWidth,
+    frameHeight: atlas.frameHeight,
+    columns: atlas.columns,
+    rows: atlas.rows,
+    animations
+  };
+}
+
+export const activityPetManifests = {
+  aurelius: buildManifest('aurelius', 'Aurelius', aureliusAtlas),
+  kitten: buildManifest('kitten', 'Kitten', kittenAtlas)
+} as const satisfies Record<ActivityPetId, ActivityPetManifest>;
 
 export const activityPetOptions = [
-  { id: aureliusPetManifest.id, label: aureliusPetManifest.label }
+  { id: 'aurelius', label: activityPetManifests.aurelius.label },
+  { id: 'kitten', label: activityPetManifests.kitten.label }
 ] as const satisfies readonly { id: ActivityPetId; label: string }[];
 
 export const activityPetEventAnimations = {

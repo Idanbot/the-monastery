@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   activityPetEventAnimations,
+  activityPetManifests,
   activityPetStateAnimations,
-  aureliusPetManifest,
   resolveActivityPetState,
   type ActivityPetAnimationName,
   type ActivityPetEvent
@@ -24,7 +24,7 @@ export function ActivityPet({
   animated = true,
   reaction = null
 }: ActivityPetProps) {
-  const definition = aureliusPetManifest;
+  const definition = activityPetManifests[petId] ?? activityPetManifests.aurelius;
   const petState = resolveActivityPetState(activityScore, streakActive);
   const persistentAnimation = activityPetStateAnimations[petState];
   const [reactionAnimation, setReactionAnimation] = useState<ActivityPetAnimationName | null>(null);
@@ -98,11 +98,10 @@ export function ActivityPet({
   }, [animation, shouldAnimate]);
 
   const backgroundPosition = useMemo(() => {
-    const x = ((animation.startFrame + frame) / (definition.columns - 1)) * 100;
-    const y =
-      (animation.sourceY * definition.columns * 100) / (definition.sourceSize * (definition.columns - 1));
+    const x = (frame / (definition.columns - 1)) * 100;
+    const y = (animation.row / (definition.rows - 1)) * 100;
     return `${x}% ${y}%`;
-  }, [animation.sourceY, animation.startFrame, definition.columns, definition.sourceSize, frame]);
+  }, [animation.row, definition.columns, definition.rows, frame]);
 
   return (
     <div
@@ -113,8 +112,6 @@ export function ActivityPet({
       data-streak-active={streakActive ? 'true' : 'false'}
       data-animated={shouldAnimate ? 'true' : 'false'}
       data-sprite-row={animation.row}
-      data-source-row={animation.sourceRow}
-      data-source-y={animation.sourceY}
       data-frame={frame}
       data-atlas-loaded={atlasStatus === 'loaded' ? 'true' : 'false'}
       data-atlas-status={atlasStatus}

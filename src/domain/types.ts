@@ -116,7 +116,7 @@ export type MainViewSlotContentId =
   | 'activity-current'
   | 'clock-media-timeline';
 export type MainViewSlots = Record<MainViewSlotId, MainViewSlotContentId>;
-export type ActivityPetId = 'aurelius';
+export type ActivityPetId = 'aurelius' | 'kitten';
 
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';

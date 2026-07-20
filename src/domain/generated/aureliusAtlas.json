@@ -1,0 +1,76 @@
+{
+  "frameWidth": 128,
+  "frameHeight": 128,
+  "columns": 16,
+  "rows": 16,
+  "pivot": {
+    "x": 64,
+    "y": 116
+  },
+  "animations": {
+    "idle_breathe": {
+      "row": 0,
+      "frameCount": 10
+    },
+    "idle_blink": {
+      "row": 1,
+      "frameCount": 8
+    },
+    "look_left_right": {
+      "row": 2,
+      "frameCount": 11
+    },
+    "idle_fidget": {
+      "row": 3,
+      "frameCount": 9
+    },
+    "yawn": {
+      "row": 4,
+      "frameCount": 12
+    },
+    "sleep": {
+      "row": 5,
+      "frameCount": 10
+    },
+    "wake_up": {
+      "row": 6,
+      "frameCount": 11
+    },
+    "streak_lost": {
+      "row": 7,
+      "frameCount": 9
+    },
+    "ready_bounce": {
+      "row": 8,
+      "frameCount": 10
+    },
+    "focused_idle": {
+      "row": 9,
+      "frameCount": 10
+    },
+    "energized_bounce": {
+      "row": 10,
+      "frameCount": 12
+    },
+    "small_success": {
+      "row": 11,
+      "frameCount": 10
+    },
+    "big_success": {
+      "row": 12,
+      "frameCount": 8
+    },
+    "power_up": {
+      "row": 13,
+      "frameCount": 13
+    },
+    "powered_idle": {
+      "row": 14,
+      "frameCount": 10
+    },
+    "celebrate": {
+      "row": 15,
+      "frameCount": 13
+    }
+  }
+}

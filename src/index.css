@@ -146,6 +146,12 @@ body {
   color: var(--ui-text-primary);
 }
 
+.ui-icon-button-sm {
+  width: 1.6875rem;
+  height: 1.6875rem;
+  border-radius: 0.5rem;
+}
+
 .ui-icon-button:active,
 .ui-accent-button:active {
   transform: scale(0.96);

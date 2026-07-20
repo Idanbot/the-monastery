@@ -17,83 +17,60 @@ const fragmentShader = /* glsl */ `
   uniform float uTime;
   varying vec2 vUv;
 
-  float hash(vec2 point) {
-    return fract(sin(dot(point, vec2(127.1, 311.7))) * 43758.5453123);
-  }
-
-  float noise(vec2 point) {
-    vec2 cell = floor(point);
-    vec2 local = fract(point);
-    local = local * local * (3.0 - 2.0 * local);
-    return mix(
-      mix(hash(cell), hash(cell + vec2(1.0, 0.0)), local.x),
-      mix(hash(cell + vec2(0.0, 1.0)), hash(cell + vec2(1.0, 1.0)), local.x),
-      local.y
-    );
-  }
-
-  float fbm(vec2 point) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    for (int octave = 0; octave < 4; octave++) {
-      value += amplitude * noise(point);
-      point = point * 2.03 + vec2(7.1, 3.7);
-      amplitude *= 0.5;
-    }
-    return value;
-  }
-
-  float flameLobe(
-    vec2 uv,
-    float offset,
-    float width,
-    float height,
-    float phase,
-    float time
-  ) {
-    float normalizedY = clamp(uv.y / height, 0.0, 1.0);
-    float turbulence = fbm(vec2((uv.x + phase) * 5.6, uv.y * 3.6 - time * 2.0 + phase));
-    float sway = sin(uv.y * 8.5 + time * 2.4 + phase * 7.0) * (0.02 + normalizedY * 0.07);
-    float center = (uv.x - 0.5 - offset) + sway + (turbulence - 0.5) * 0.13 * normalizedY;
-    float taper = width * pow(max(0.0, 1.0 - normalizedY), 0.62);
-    float edge = taper * (0.78 + turbulence * 0.34);
-    float shape = 1.0 - smoothstep(edge - 0.018, edge + 0.04, abs(center));
-    shape *= smoothstep(0.005, 0.075, uv.y);
-    shape *= 1.0 - smoothstep(height - 0.14, height + 0.02, uv.y + turbulence * 0.055);
+  // Cartoon flame silhouette in flame-local space: base at y = 0, tip near
+  // y = 1, centered on x = 0. Scale and phase vary per ring so the cel bands
+  // wobble independently.
+  float silhouette(vec2 p, float scale, float phase, float time) {
+    vec2 q = p / scale;
+    float ny = clamp(q.y, 0.0, 1.0);
+    float sway = sin(time * 3.2 + phase + ny * 4.6) * 0.06 * ny
+      + sin(time * 6.9 + phase * 1.7 + ny * 9.5) * 0.022 * ny * ny;
+    float cx = q.x + sway;
+    float width = mix(0.30, 0.015, pow(ny, 0.82));
+    width *= 1.0 + 0.16 * sin(time * 7.3 + phase + ny * 11.0);
+    float shape = 1.0 - smoothstep(width * 0.72, width, abs(cx));
+    shape *= smoothstep(0.0, 0.05, ny);
+    shape *= 1.0 - smoothstep(0.82, 1.0, ny);
     return shape;
   }
 
   void main() {
     vec2 uv = vUv;
     float time = uTime * 0.001;
-    float mainFlame = flameLobe(uv, 0.0, 0.34, 1.0, 0.0, time);
-    float leftTongue = flameLobe(uv, -0.16, 0.18, 0.72, 1.7, time);
-    float rightTongue = flameLobe(uv, 0.16, 0.16, 0.62, 3.1, time);
-    float body = max(mainFlame, max(leftTongue * 0.92, rightTongue * 0.88));
-    float middle = flameLobe(uv, 0.0, 0.245, 0.82, 0.8, time);
-    float core = flameLobe(uv, -0.01, 0.125, 0.58, 2.2, time);
-    float aura = flameLobe(uv, 0.0, 0.43, 1.03, 1.1, time) * 0.2;
 
-    vec3 ruby = vec3(0.72, 0.015, 0.008);
-    vec3 ember = vec3(0.98, 0.14, 0.005);
-    vec3 gold = vec3(1.0, 0.55, 0.025);
-    vec3 sunlight = vec3(1.0, 0.91, 0.38);
-    vec3 whiteHot = vec3(1.0, 0.995, 0.86);
-    vec3 color = mix(ruby, ember, clamp(body * 1.2, 0.0, 1.0));
-    color = mix(color, gold, clamp(middle * 0.9, 0.0, 1.0));
-    color = mix(color, sunlight, clamp(core * 0.82, 0.0, 1.0));
-    color = mix(color, whiteHot, clamp(core * core * 0.72, 0.0, 1.0));
+    // Playful squash-and-stretch bounce around the base.
+    float bounce = sin(time * 5.1);
+    float stretchY = 1.0 + 0.085 * bounce;
+    float squashX = 1.0 - 0.055 * bounce;
+    vec2 p = vec2((uv.x - 0.5) * squashX, (uv.y - 0.07) / (0.86 * stretchY));
 
-    vec2 sparkSpace = vec2(uv.x * 12.0, (uv.y + time * 0.28) * 15.0);
-    vec2 sparkCell = floor(sparkSpace);
-    vec2 sparkPoint = vec2(hash(sparkCell + 3.4), hash(sparkCell + 9.7));
-    float spark = 1.0 - smoothstep(0.025, 0.12, distance(fract(sparkSpace), sparkPoint));
-    spark *= step(0.9, hash(sparkCell + 12.6));
-    spark *= smoothstep(0.3, 0.96, uv.y) * (1.0 - smoothstep(0.22, 0.48, abs(uv.x - 0.5)));
-    color += vec3(1.0, 0.62, 0.08) * spark;
+    // Nested silhouettes give crisp cartoon bands.
+    float outer = silhouette(p, 1.0, 0.0, time);
+    float mid = silhouette(p, 0.68, 1.9, time);
+    float core = silhouette(p, 0.4, 3.8, time);
 
-    float baseGlow = (1.0 - smoothstep(0.08, 0.48, distance(uv, vec2(0.5, 0.14)))) * 0.2;
-    float alpha = clamp(body * 0.96 + aura + baseGlow + spark * 0.9, 0.0, 1.0);
+    vec3 ruby = vec3(0.87, 0.11, 0.02);
+    vec3 ember = vec3(1.0, 0.44, 0.02);
+    vec3 gold = vec3(1.0, 0.83, 0.24);
+    vec3 color = ruby;
+    color = mix(color, ember, clamp(mid * 1.2, 0.0, 1.0));
+    color = mix(color, gold, clamp(core * 1.2, 0.0, 1.0));
+    float alpha = clamp(outer * 0.98 + mid * 0.4 + core * 0.3, 0.0, 1.0);
+
+    // Rising ember sparks.
+    for (int i = 0; i < 3; i++) {
+      float fi = float(i);
+      float cycle = fract(time * 0.5 + fi * 0.37);
+      vec2 sparkPos = vec2(
+        sin(fi * 17.3 + time * (1.2 + fi * 0.35)) * 0.13 * cycle,
+        0.62 + cycle * 0.34
+      );
+      float radius = 0.022 * (1.0 - cycle * 0.55);
+      float spark = 1.0 - smoothstep(radius * 0.55, radius, distance(p, sparkPos));
+      spark *= smoothstep(0.02, 0.18, cycle) * (1.0 - smoothstep(0.6, 1.0, cycle));
+      color = mix(color, gold, spark * 0.9);
+      alpha = clamp(alpha + spark, 0.0, 1.0);
+    }
 
     gl_FragColor = vec4(color, alpha);
   }

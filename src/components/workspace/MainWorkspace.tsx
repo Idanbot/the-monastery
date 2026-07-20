@@ -282,7 +282,7 @@ export function MainWorkspace() {
               data-slot={id}
               data-module={slots[id]}
               data-collapsed={collapsed ? 'true' : 'false'}
-              className="relative min-h-0 min-w-0 overflow-hidden"
+              className="group relative min-h-0 min-w-0 overflow-hidden"
               style={position}
             >
               {collapsed ? (
@@ -305,11 +305,9 @@ export function MainWorkspace() {
                     type="button"
                     aria-label={`Collapse ${label}`}
                     onClick={() => toggleSlot(id)}
-                    className={`ui-icon-button ui-control absolute top-1/2 z-20 size-8 -translate-y-1/2 opacity-75 hover:opacity-100 ${
-                      id === 'topLeft' || id === 'bottomLeft' ? 'right-1' : 'left-1'
-                    }`}
+                    className="ui-icon-button ui-icon-button-sm ui-control absolute left-1 top-1 z-20 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
                   >
-                    <Minimize2 size={14} />
+                    <Minimize2 size={11} />
                   </button>
                   {renderModule(slots[id], id)}
                 </>
