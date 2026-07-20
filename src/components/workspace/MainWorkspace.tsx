@@ -307,7 +307,7 @@ export function MainWorkspace() {
                     onClick={() => toggleSlot(id)}
                     className="ui-icon-button ui-icon-button-sm ui-control absolute left-1 top-1 z-20 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
                   >
-                    <Minimize2 size={11} />
+                    <Minimize2 size={7} />
                   </button>
                   {renderModule(slots[id], id)}
                 </>

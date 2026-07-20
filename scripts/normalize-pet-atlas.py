@@ -30,6 +30,7 @@ per detected source row.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -173,11 +174,14 @@ def render_atlas(rgb, alpha, labels, cells, animations):
             region_alpha = np.where(member_mask, alpha[y0:y1, x0:x1], 0.0)
             region_rgb = defringe(rgb[y0:y1, x0:x1].astype(np.float64), region_alpha)
 
-            # Scale from the body only; attachments (sparkles, "Z"s) ride
-            # along and are clipped to the frame cell so they can never bleed
-            # into a neighbor frame.
-            body_h = max(b["bbox"][3] - b["bbox"][1] for b in bodies)
-            body_w = max(b["bbox"][2] - b["bbox"][0] for b in bodies)
+            # Scale and anchor from the largest body only (the character
+            # itself). Secondary bodies (dust clouds, debris) and attachments
+            # (sparkles, "Z"s) ride along and are clipped to the frame cell so
+            # they can never pull the character off-center or bleed into a
+            # neighbor frame.
+            main_body = max(bodies, key=lambda b: b["area"])
+            body_h = main_body["bbox"][3] - main_body["bbox"][1]
+            body_w = main_body["bbox"][2] - main_body["bbox"][0]
             scale = 1.0 if not median_h else float(np.clip(median_h / body_h, 0.78, 1.28))
             fit = min(MAX_SPRITE_H / body_h, MAX_SPRITE_W / body_w) * scale
             h, w = region_alpha.shape
@@ -187,8 +191,9 @@ def render_atlas(rgb, alpha, labels, cells, animations):
             sprite = np.dstack([region_rgb, region_alpha[..., None] * 255.0]).astype(np.uint8)
             image = Image.fromarray(sprite, "RGBA").resize((new_w, new_h), Image.LANCZOS)
             tile = Image.new("RGBA", (CELL, CELL), (0, 0, 0, 0))
-            # Anchor: body bbox center lands on the pivot, body bottom on the baseline.
-            body_cx = sum((b["bbox"][0] + b["bbox"][2]) / 2 for b in bodies) / len(bodies)
+            # Anchor: main body bbox center lands on the pivot; the lowest
+            # body bottom stays on the baseline so hops rise off the ground.
+            body_cx = (main_body["bbox"][0] + main_body["bbox"][2]) / 2
             body_bottom = max(b["bbox"][3] for b in bodies)
             px = PIVOT_X - int(round((body_cx - x0) * fit))
             py = BASELINE_Y - int(round((body_bottom - y0) * fit))
@@ -226,6 +231,10 @@ def main() -> None:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     atlas_image.save(args.out, optimize=True)
 
+    # Content-hash the atlas so the runtime can version the URL and bypass
+    # stale caches (the PWA serves /pets/* cache-first for 30 days).
+    version = hashlib.sha256(args.out.read_bytes()).hexdigest()[:12]
+
     args.manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest = {
         "frameWidth": CELL,
@@ -233,6 +242,7 @@ def main() -> None:
         "columns": GRID,
         "rows": GRID,
         "pivot": {"x": PIVOT_X, "y": BASELINE_Y},
+        "version": version,
         "animations": manifest_anims,
     }
     args.manifest.write_text(json.dumps(manifest, indent=2) + "\n")

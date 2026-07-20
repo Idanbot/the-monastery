@@ -57,23 +57,28 @@ export type ActivityPetManifest = {
 // one animation per row, frames compacted from column 0, and a shared
 // bottom-center pivot. Frame windows can therefore use plain grid math and
 // never see slices of neighboring sprites.
+//
+// The atlas URL carries a content-hash version query because the PWA service
+// worker serves /pets/* cache-first: without it, a regenerated atlas keeps
+// showing the stale cached sheet (misaligned frames, baked background) for
+// weeks.
 const animationBehavior = {
-  idle_breathe: behavior(6, true, 'loop', 10),
-  idle_blink: behavior(8, false, 'ambient', 10),
-  look_left_right: behavior(8, false, 'ambient', 10),
-  idle_fidget: behavior(6, false, 'ambient', 10),
-  yawn: behavior(8, false, 'ambient', 30),
-  sleep: behavior(5, true, 'loop', 10),
-  wake_up: behavior(10, false, 'transition', 100, 'idle_breathe'),
-  streak_lost: behavior(10, false, 'transition', 95, 'idle_breathe'),
-  ready_bounce: behavior(10, true, 'loop', 10),
-  focused_idle: behavior(8, true, 'loop', 10),
-  energized_bounce: behavior(12, true, 'loop', 10),
-  small_success: behavior(12, false, 'one-shot', 70),
-  big_success: behavior(14, false, 'one-shot', 90),
-  power_up: behavior(16, false, 'transition', 100, 'powered_idle'),
-  powered_idle: behavior(10, true, 'loop', 10),
-  celebrate: behavior(14, false, 'one-shot', 85)
+  idle_breathe: behavior(3, true, 'loop', 10),
+  idle_blink: behavior(4, false, 'ambient', 10),
+  look_left_right: behavior(4, false, 'ambient', 10),
+  idle_fidget: behavior(3, false, 'ambient', 10),
+  yawn: behavior(4, false, 'ambient', 30),
+  sleep: behavior(2.5, true, 'loop', 10),
+  wake_up: behavior(5, false, 'transition', 100, 'idle_breathe'),
+  streak_lost: behavior(5, false, 'transition', 95, 'idle_breathe'),
+  ready_bounce: behavior(5, true, 'loop', 10),
+  focused_idle: behavior(4, true, 'loop', 10),
+  energized_bounce: behavior(6, true, 'loop', 10),
+  small_success: behavior(6, false, 'one-shot', 70),
+  big_success: behavior(7, false, 'one-shot', 90),
+  power_up: behavior(8, false, 'transition', 100, 'powered_idle'),
+  powered_idle: behavior(5, true, 'loop', 10),
+  celebrate: behavior(7, false, 'one-shot', 85)
 } as const;
 
 function behavior<Next extends ActivityPetAnimationName | undefined = undefined>(
@@ -98,6 +103,7 @@ type GeneratedAtlas = {
   frameHeight: number;
   columns: number;
   rows: number;
+  version?: string;
   animations: Record<string, { row: number; frameCount: number }>;
 };
 
@@ -114,7 +120,7 @@ function buildManifest(id: ActivityPetId, label: string, atlas: GeneratedAtlas):
   return {
     id,
     label,
-    src: `/pets/${id}/${id}-spritesheet.png`,
+    src: `/pets/${id}/${id}-spritesheet.png?v=${atlas.version ?? '1'}`,
     frameWidth: atlas.frameWidth,
     frameHeight: atlas.frameHeight,
     columns: atlas.columns,

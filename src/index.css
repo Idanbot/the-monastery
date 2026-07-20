@@ -147,9 +147,9 @@ body {
 }
 
 .ui-icon-button-sm {
-  width: 1.6875rem;
-  height: 1.6875rem;
-  border-radius: 0.5rem;
+  width: 1.0125rem;
+  height: 1.0125rem;
+  border-radius: 0.3rem;
 }
 
 .ui-icon-button:active,

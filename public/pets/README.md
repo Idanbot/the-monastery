@@ -41,24 +41,30 @@ Every pet atlas is a lossless transparent PNG:
 Because the contract is enforced at build time, the runtime uses plain grid math
 (`x = frame / 15`, `y = row / 15` as percentages) and never sees slices of neighboring sprites.
 
+The runtime appends the manifest's content-hash `version` to the atlas URL
+(`/pets/<id>/<id>-spritesheet.png?v=<hash>`): the PWA serves `/pets/*` cache-first, so regenerating
+an atlas without a new URL would keep showing the stale cached sheet (misaligned frames, neighbor
+slices, baked background) for weeks. The normalizer rehashes on every run, so always regenerate the
+manifest together with the PNG and commit both.
+
 | Row | Animation          | FPS | Playback         |
 | --: | ------------------ | --: | ---------------- |
-|   0 | `idle_breathe`     |   6 | loop             |
-|   1 | `idle_blink`       |   8 | one-shot ambient |
-|   2 | `look_left_right`  |   8 | one-shot ambient |
-|   3 | `idle_fidget`      |   6 | one-shot ambient |
-|   4 | `yawn`             |   8 | one-shot ambient |
-|   5 | `sleep`            |   5 | loop             |
-|   6 | `wake_up`          |  10 | transition       |
-|   7 | `streak_lost`      |  10 | transition       |
-|   8 | `ready_bounce`     |  10 | loop             |
-|   9 | `focused_idle`     |   8 | loop             |
-|  10 | `energized_bounce` |  12 | loop             |
-|  11 | `small_success`    |  12 | one-shot         |
-|  12 | `big_success`      |  14 | one-shot         |
-|  13 | `power_up`         |  16 | transition       |
-|  14 | `powered_idle`     |  10 | loop             |
-|  15 | `celebrate`        |  14 | one-shot         |
+|   0 | `idle_breathe`     |   3 | loop             |
+|   1 | `idle_blink`       |   4 | one-shot ambient |
+|   2 | `look_left_right`  |   4 | one-shot ambient |
+|   3 | `idle_fidget`      |   3 | one-shot ambient |
+|   4 | `yawn`             |   4 | one-shot ambient |
+|   5 | `sleep`            | 2.5 | loop             |
+|   6 | `wake_up`          |   5 | transition       |
+|   7 | `streak_lost`      |   5 | transition       |
+|   8 | `ready_bounce`     |   5 | loop             |
+|   9 | `focused_idle`     |   4 | loop             |
+|  10 | `energized_bounce` |   6 | loop             |
+|  11 | `small_success`    |   6 | one-shot         |
+|  12 | `big_success`      |   7 | one-shot         |
+|  13 | `power_up`         |   8 | transition       |
+|  14 | `powered_idle`     |   5 | loop             |
+|  15 | `celebrate`        |   7 | one-shot         |
 
 Frame counts per pet live in the generated manifests (`src/domain/generated/*Atlas.json`), not in
 UI components. Behavior (FPS, playback, priority, transitions) lives in `src/domain/activityPets.ts`.

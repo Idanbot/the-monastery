@@ -20,11 +20,12 @@ describe('ActivityPet', () => {
       String(activityPetManifests.aurelius.animations.powered_idle.row)
     );
     expect(screen.getByTestId('activity-pet-sprite')).toHaveStyle({
-      backgroundImage: 'url(/pets/aurelius/aurelius-spritesheet.png)',
+      backgroundImage: `url(${activityPetManifests.aurelius.src})`,
       backgroundSize: '1600% 1600%'
     });
+    expect(activityPetManifests.aurelius.src).toMatch(/^\/pets\/aurelius\/aurelius-spritesheet\.png\?v=.+/);
     expect(screen.getByTestId('activity-pet-sprite')).toHaveAttribute('aria-hidden', 'true');
-    act(() => vi.advanceTimersByTime(100));
+    act(() => vi.advanceTimersByTime(1000 / activityPetManifests.aurelius.animations.powered_idle.fps));
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-frame', '1');
 
     rerender(<ActivityPet petId="aurelius" streakActive animated={false} />);
@@ -62,7 +63,7 @@ describe('ActivityPet', () => {
 
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'kitten');
     expect(screen.getByTestId('activity-pet-sprite')).toHaveStyle({
-      backgroundImage: 'url(/pets/kitten/kitten-spritesheet.png)'
+      backgroundImage: `url(${activityPetManifests.kitten.src})`
     });
   });
 
@@ -71,9 +72,8 @@ describe('ActivityPet', () => {
     render(<ActivityPet petId="aurelius" streakActive reaction="streak-started" />);
 
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-animation', 'power_up');
-    act(() =>
-      vi.advanceTimersByTime(activityPetManifests.aurelius.animations.power_up.frameCount * (1000 / 16))
-    );
+    const powerUp = activityPetManifests.aurelius.animations.power_up;
+    act(() => vi.advanceTimersByTime(powerUp.frameCount * (1000 / powerUp.fps)));
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-animation', 'powered_idle');
   });
 });
