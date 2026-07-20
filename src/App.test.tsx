@@ -803,9 +803,12 @@ it('opens board settings as a scoped section only', async () => {
 
   await user.click(screen.getByRole('button', { name: /board settings/i }));
 
-  expect(screen.getAllByRole('button', { name: /^board$/i }).length).toBeGreaterThan(0);
-  expect(screen.getByDisplayValue(/Compact: 2 split columns/i)).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /^appearance$/i })).not.toBeInTheDocument();
+  const dialog = screen.getByRole('dialog', { name: /preferences/i });
+  expect(await within(dialog).findByRole('button', { name: /^board$/i })).toBeInTheDocument();
+  expect(within(dialog).getByRole('combobox', { name: 'Board layout' })).toHaveTextContent(
+    'Compact: 2 split columns'
+  );
+  expect(within(dialog).queryByRole('button', { name: /^appearance$/i })).not.toBeInTheDocument();
 });
 
 it('keeps comma-separated role tags editable while typing', async () => {
