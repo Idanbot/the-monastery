@@ -1,3 +1,5 @@
+import { decodeXML } from 'entities';
+
 export type CalendarIntegrationConfig = {
   icsSubscriptionUrls?: string[];
   calDavUrl?: string;
@@ -84,13 +86,11 @@ const authHeaders = (config: CalendarIntegrationConfig) =>
     : {};
 const decodeXml = (value: string) =>
   value
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .replace(/&#13;|&#xD;/gi, '\r')
-    .replace(/&#10;|&#xA;/gi, '\n')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"');
+    .split(/(<!\[CDATA\[[\s\S]*?\]\]>)/g)
+    .map((segment) =>
+      segment.startsWith('<![CDATA[') ? segment.slice('<![CDATA['.length, -']]>'.length) : decodeXML(segment)
+    )
+    .join('');
 const extractCalendarData = (xml: string) => {
   const calendars: string[] = [];
   const pattern = /<(?:[\w-]+:)?calendar-data(?:\s[^>]*)?>([\s\S]*?)<\/(?:[\w-]+:)?calendar-data>/gi;

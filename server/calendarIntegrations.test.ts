@@ -29,6 +29,20 @@ describe('calendar integrations', () => {
     );
   });
 
+  it('decodes CalDAV XML entities once and preserves literal CDATA text', async () => {
+    const encodedEvent = event('encoded', 'Literal &amp;quot; marker');
+    const cdataEvent = event('cdata', 'Literal &lt; marker');
+    const calDavBody = `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:response><c:calendar-data>${encodedEvent}</c:calendar-data></d:response><d:response><c:calendar-data><![CDATA[${cdataEvent}]]></c:calendar-data></d:response></d:multistatus>`;
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(calDavBody, { status: 207 }));
+
+    const tasks = await pullCalendarTasks({ calDavUrl: 'https://calendar.example/caldav/' }, fetchImpl);
+
+    expect(tasks.map(({ id, title }) => ({ id, title }))).toEqual([
+      { id: 'encoded', title: 'Literal &quot; marker' },
+      { id: 'cdata', title: 'Literal &lt; marker' }
+    ]);
+  });
+
   it('pushes only scheduled tasks to CalDAV as VEVENT resources', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 201 }));
     const result = await pushTasksToCalDav(
