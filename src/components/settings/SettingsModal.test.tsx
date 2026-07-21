@@ -488,6 +488,26 @@ describe('SettingsModal', () => {
     const promoteUpdate = props.setSettings.mock.lastCall?.[0];
     expect(promoteUpdate(props.settings)).toEqual({ ...props.settings, autoPromoteNextTask: true });
   });
+
+  it('closes preferences before opening a destructive profile confirmation', async () => {
+    const user = userEvent.setup();
+    const props = renderSettings({
+      initialSection: 'profiles',
+      profiles: [
+        { id: 'profile-1', name: 'Primary', taskCount: 1 },
+        { id: 'profile-2', name: 'Secondary', taskCount: 0 }
+      ]
+    });
+
+    await user.click(await screen.findByRole('button', { name: /^reset$/i }));
+    expect(props.setProfileAction).toHaveBeenLastCalledWith('reset');
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: /^remove$/i }));
+    expect(props.setProfileAction).toHaveBeenLastCalledWith('remove');
+    expect(props.onClose).toHaveBeenCalledTimes(2);
+  });
+
   it('persists per-lane collapse settings', async () => {
     const props = renderSettings({ initialSection: 'board' });
 

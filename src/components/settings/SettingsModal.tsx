@@ -265,6 +265,11 @@ export function SettingsModal({
     updateRole(roleId, { tags: parseTagString(nextValue) });
   };
 
+  const requestProfileAction = (action: 'reset' | 'remove') => {
+    onClose();
+    setProfileAction(action);
+  };
+
   const registeredSectionProps = { openSections, toggleSection, motionDuration, motionEase };
 
   return (
@@ -882,13 +887,13 @@ export function SettingsModal({
 
                         <div className="grid grid-cols-2 gap-2">
                           <button
-                            onClick={() => setProfileAction('reset')}
+                            onClick={() => requestProfileAction('reset')}
                             className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-amber-300 text-sm font-medium flex items-center justify-center gap-2"
                           >
                             <RotateCcw size={14} /> Reset
                           </button>
                           <button
-                            onClick={() => setProfileAction('remove')}
+                            onClick={() => requestProfileAction('remove')}
                             disabled={profiles.length <= 1}
                             className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:border-rose-300 text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
