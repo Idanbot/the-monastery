@@ -51,6 +51,8 @@ const verifyActivityVisuals = async (page: Page, testInfo: TestInfo, expectedPet
   const flame = page.getByTestId('streak-flame');
   const canvas = page.getByTestId('streak-flame-canvas');
   const pet = page.getByTestId('activity-pet');
+  const activityDays = page.getByTestId('activity-days');
+  const activityMetrics = page.getByTestId('activity-metrics');
 
   await expect(flame).toHaveAttribute('data-renderer', 'ready', { timeout: 15_000 });
   await expect(canvas).toHaveAttribute('data-flame-ready', 'true');
@@ -58,6 +60,11 @@ const verifyActivityVisuals = async (page: Page, testInfo: TestInfo, expectedPet
   await expect(pet).toHaveCSS('width', `${expectedPetSize}px`);
   await expect(pet).toHaveCSS('height', `${expectedPetSize}px`);
   await expect(canvas).toHaveCSS('pointer-events', 'none');
+  expect(await activityMetrics.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  const metricRows = await activityMetrics
+    .locator(':scope > *')
+    .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().y));
+  expect(Math.max(...metricRows) - Math.min(...metricRows)).toBeLessThanOrEqual(1);
 
   const firstFrame = await readFlamePixels(canvas);
   await page.waitForTimeout(180);
@@ -66,9 +73,18 @@ const verifyActivityVisuals = async (page: Page, testInfo: TestInfo, expectedPet
   expect(secondFrame.visiblePixels).toBeGreaterThan(40);
   expect(secondFrame.hash).not.toBe(firstFrame.hash);
 
-  const [flameBox, petBox] = await Promise.all([flame.boundingBox(), pet.boundingBox()]);
+  const [flameBox, petBox, activityDaysBox] = await Promise.all([
+    flame.boundingBox(),
+    pet.boundingBox(),
+    activityDays.boundingBox()
+  ]);
   expect(flameBox).not.toBeNull();
   expect(petBox).not.toBeNull();
+  expect(activityDaysBox).not.toBeNull();
+  expect(petBox!.x + petBox!.width).toBeLessThanOrEqual(activityDaysBox!.x);
+  expect(
+    Math.abs(petBox!.y + petBox!.height - (activityDaysBox!.y + activityDaysBox!.height))
+  ).toBeLessThanOrEqual(1);
   const overlaps =
     flameBox!.x < petBox!.x + petBox!.width &&
     flameBox!.x + flameBox!.width > petBox!.x &&

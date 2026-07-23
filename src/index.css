@@ -528,14 +528,40 @@ h6,
   background: transparent !important;
 }
 
+.activity-heatmap-grid,
+.activity-weekdays {
+  grid-template-rows: repeat(7, var(--activity-cell-size));
+  grid-auto-rows: var(--activity-cell-size);
+  gap: var(--activity-cell-gap);
+}
+
+.main-view-slot-actions {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.main-view-slot:hover > .main-view-slot-actions,
+.main-view-slot:focus-within > .main-view-slot-actions {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+(hover: none) {
+  .main-view-slot-actions {
+    pointer-events: auto;
+    opacity: 1;
+  }
+}
+
 .activity-pet-frame {
   pointer-events: none;
   user-select: none;
-  border: 1px solid color-mix(in srgb, var(--ui-border-subtle) 82%, rgb(255 255 255));
-  background: rgb(248 248 246);
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--ui-info) 32%, var(--ui-border-subtle));
+  background: color-mix(in srgb, var(--ui-surface-raised) 88%, var(--ui-info) 12%);
   box-shadow:
-    inset 0 0 0 1px rgb(255 255 255 / 0.68),
-    0 3px 10px rgb(15 23 42 / 0.12);
+    inset 0 0 0 3px color-mix(in srgb, var(--ui-surface) 72%, transparent),
+    0 4px 12px rgb(15 23 42 / 0.14);
 }
 
 .activity-pet-sprite {
@@ -544,8 +570,9 @@ h6,
   transform: translateZ(0);
 }
 
-.activity-pet[data-streak-active='false'] {
-  opacity: 0.64;
+.activity-pet[data-streak-active='false'] .activity-pet-sprite {
+  opacity: 0.72 !important;
+  filter: saturate(0.72) brightness(0.92);
 }
 
 .timeline-current-button {

@@ -117,13 +117,13 @@ export function ActivityPet({
       data-atlas-status={atlasStatus}
       role="img"
       aria-label={`${definition.label} is ${petState}`}
-      className="activity-pet activity-pet-frame relative size-14 shrink-0 overflow-hidden rounded-md sm:size-20"
+      className="activity-pet activity-pet-frame relative size-14 shrink-0 overflow-hidden rounded-lg sm:size-20"
       title={`${definition.label}: ${animationName.replaceAll('_', ' ')}`}
     >
       <span
         data-testid="activity-pet-sprite"
         aria-hidden="true"
-        className={`activity-pet-sprite absolute inset-0 block size-full transition-opacity ${
+        className={`activity-pet-sprite absolute inset-1 block overflow-hidden rounded-[5px] transition-opacity ${
           atlasStatus === 'loaded' ? 'opacity-100' : 'opacity-0'
         }`}
         style={{

@@ -84,7 +84,12 @@ test('opens a customizable desktop main workspace with Kanban on demand', async 
   const columnSeparator = page.getByRole('separator', { name: 'Resize main view columns' });
   await columnSeparator.press('ArrowRight');
   await expect(columnSeparator).toHaveAttribute('aria-valuenow', '52');
-  await page.getByRole('button', { name: 'Collapse Top left' }).click();
+  const topLeftSlot = page.getByTestId('main-view-slot-topLeft');
+  const slotControls = topLeftSlot.getByRole('group', { name: 'Top left controls' });
+  await expect(slotControls).toHaveCSS('opacity', '0');
+  await topLeftSlot.hover();
+  await expect(slotControls).toHaveCSS('opacity', '1');
+  await slotControls.getByRole('button', { name: 'Collapse Top left' }).click();
   await expect(page.getByTestId('main-view-slot-topLeft')).toHaveAttribute('data-collapsed', 'true');
   await expect(page.getByTestId('main-focus-module')).toHaveCount(0);
   await page.getByRole('button', { name: 'Expand Top left' }).click();
@@ -277,11 +282,11 @@ test('manages tag aliases, role links, and goals through settings', async ({ pag
 
   await chooseSettingsOption(page, 'Manage tag', 'otel');
   await page.getByLabel('Rename selected tag').fill('observability');
-  await page.getByRole('button', { name: /^rename tag$/i }).click();
+  await page.getByRole('button', { name: /^rename tag$/i }).press('Enter');
   await expect(page.getByLabel('Weekly goal for observability')).toBeVisible();
 
   await page.getByLabel('New alias').fill('otel');
-  await page.getByRole('button', { name: /^add alias$/i }).click();
+  await page.getByRole('button', { name: /^add alias$/i }).press('Enter');
   await page.getByLabel('Connect Platform').check();
   await page.getByLabel('Weekly goal for observability').fill('4');
   await page.getByRole('button', { name: /close settings/i }).click();

@@ -283,7 +283,7 @@ export function MainWorkspace() {
               data-slot={id}
               data-module={slots[id]}
               data-collapsed={collapsed ? 'true' : 'false'}
-              className="group relative min-h-0 min-w-0 overflow-hidden"
+              className="main-view-slot group relative min-h-0 min-w-0 overflow-hidden"
               style={position}
             >
               {collapsed ? (
@@ -302,14 +302,28 @@ export function MainWorkspace() {
                 </div>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    aria-label={`Collapse ${label}`}
-                    onClick={() => toggleSlot(id)}
-                    className="ui-icon-button ui-icon-button-sm ui-control absolute left-1 top-1 z-20 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
+                  <div
+                    role="group"
+                    aria-label={label + ' controls'}
+                    className="main-view-slot-actions absolute left-1 top-1 z-20 flex items-center gap-1 transition-opacity"
                   >
-                    <Minimize2 size={7} />
-                  </button>
+                    <button
+                      type="button"
+                      aria-label={'Collapse ' + label}
+                      onClick={() => toggleSlot(id)}
+                      className="ui-icon-button ui-icon-button-sm ui-control"
+                    >
+                      <Minimize2 size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={'Customize ' + label}
+                      onClick={() => openSettings('main')}
+                      className="ui-icon-button ui-icon-button-sm ui-control"
+                    >
+                      <Settings2 size={12} />
+                    </button>
+                  </div>
                   {renderModule(slots[id], id)}
                 </>
               )}

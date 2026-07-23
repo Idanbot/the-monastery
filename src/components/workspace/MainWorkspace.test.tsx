@@ -66,6 +66,8 @@ describe('MainWorkspace', () => {
     expect(screen.getByRole('separator', { name: 'Resize main view rows' })).toBeInTheDocument();
 
     const slot = screen.getByTestId('main-view-slot-topLeft');
+    const controls = within(slot).getByRole('group', { name: 'Top left controls' });
+    expect(within(controls).getByRole('button', { name: 'Customize Top left' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Collapse Top left' }));
     expect(slot).toHaveAttribute('data-collapsed', 'true');
     expect(within(slot).queryByTestId('main-focus-module')).not.toBeInTheDocument();

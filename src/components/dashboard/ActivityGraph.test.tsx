@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { normalizeTask } from '../../domain/tasks';
@@ -55,6 +55,34 @@ describe('ActivityGraph', () => {
     expect(screen.getByTestId('streak-flame-canvas')).toBeInTheDocument();
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'aurelius');
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-streak-active', 'true');
+    const activityCompanionRow = screen.getByTestId('activity-companion-row');
+    expect(within(activityCompanionRow).getByTestId('activity-pet')).toBeInTheDocument();
+    expect(within(activityCompanionRow).getByTestId('activity-days')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /show aurelius streak progress/i }));
+    expect(screen.getByRole('status', { name: /streak milestone/i })).toHaveTextContent(
+      /2 days to 3-day milestone/i
+    );
+    expect(screen.getByRole('progressbar', { name: /streak milestone progress/i })).toHaveAttribute(
+      'aria-valuenow',
+      '1'
+    );
+  });
+
+  it('switches activity ranges and labels the heatmap intensity', async () => {
+    const user = userEvent.setup();
+    render(<ActivityGraph tasks={[]} now={new Date('2026-07-17T12:00:00.000Z').getTime()} compact />);
+
+    const days = screen.getByTestId('activity-days');
+    expect(within(days).getAllByRole('img')).toHaveLength(28);
+    expect(screen.getByTestId('activity-weekdays')).toHaveTextContent('M');
+    expect(screen.getByTestId('activity-intensity-legend')).toHaveTextContent(/less.*more/i);
+    expect(screen.getByText(/no activity in this range/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /show 3 months/i }));
+    expect(within(days).getAllByRole('img')).toHaveLength(90);
+    await user.click(screen.getByRole('button', { name: /show 1 year/i }));
+    expect(within(days).getAllByRole('img')).toHaveLength(365);
   });
 
   it('keeps the pet sleepy and the flame static when there is no current streak', () => {
