@@ -1,5 +1,6 @@
 import { Check, TriangleAlert, X } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { ThemedSurface } from '../ui/ThemedSurface';
 
 export function VisualSystemPreview() {
   return (
@@ -46,6 +47,24 @@ export function VisualSystemPreview() {
           <span className="inline-flex items-center gap-1 rounded-full border border-current px-2 py-1 text-[11px] font-semibold text-[var(--ui-danger)]">
             <X size={13} /> Attention
           </span>
+        </div>
+      </div>
+      <div className="grid gap-3 border-t border-[var(--ui-border-subtle)] p-4 sm:grid-cols-2">
+        <ThemedSurface
+          data-testid="chrome-material-preview"
+          variant="toolbar"
+          material="control"
+          className="rounded-[var(--ui-radius-control)] border p-3"
+        >
+          <div className="ui-eyebrow">Functional chrome</div>
+          <div className="mt-1 text-sm font-semibold">Navigation and floating controls</div>
+        </ThemedSurface>
+        <div
+          data-testid="content-surface-preview"
+          className="ui-surface rounded-[var(--ui-radius-control)] border p-3 shadow-[var(--ui-shadow-sm)]"
+        >
+          <div className="ui-eyebrow">Content surface</div>
+          <div className="mt-1 text-sm font-semibold">Readable tasks and settings</div>
         </div>
       </div>
     </section>

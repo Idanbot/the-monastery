@@ -135,10 +135,8 @@ export const themeContracts: Record<VisualTheme, ThemeContract> = {
     tokens: {
       light: {
         bgColor: '#edf4ff',
-        bg: `radial-gradient(circle at 14% 8%, rgb(255 255 255 / 0.92), transparent 24%),
-radial-gradient(circle at 78% 0%, rgb(198 221 255 / 0.76), transparent 28%),
-radial-gradient(circle at 100% 80%, rgb(244 215 255 / 0.52), transparent 32%),
-linear-gradient(135deg, #f8fbff 0%, #edf4ff 42%, #ffffff 100%)`,
+        bg: `linear-gradient(180deg, rgb(255 255 255 / 0.72), transparent 18%),
+linear-gradient(135deg, #f8fbff 0%, #edf4ff 48%, #f7f1ff 100%)`,
         surface: 'rgb(255 255 255 / 0.46)',
         mutedSurface: 'rgb(255 255 255 / 0.26)',
         text: '#152033',
@@ -174,10 +172,8 @@ linear-gradient(135deg, #f8fbff 0%, #edf4ff 42%, #ffffff 100%)`,
     tokens: {
       light: {
         bgColor: '#000000',
-        bg: `radial-gradient(circle at 14% 8%, rgb(30 35 60 / 0.7), transparent 30%),
-radial-gradient(circle at 78% 0%, rgb(50 30 70 / 0.6), transparent 35%),
-radial-gradient(circle at 100% 80%, rgb(20 40 60 / 0.5), transparent 40%),
-linear-gradient(135deg, #050508 0%, #000000 42%, #080812 100%)`,
+        bg: `linear-gradient(180deg, rgb(255 255 255 / 0.045), transparent 16%),
+linear-gradient(135deg, #08090d 0%, #000000 48%, #0b0910 100%)`,
         surface: 'rgb(25 25 32 / 0.45)',
         mutedSurface: 'rgb(20 20 25 / 0.3)',
         text: '#f4f4f5',
@@ -477,6 +473,8 @@ export const getThemeStyle = (
       ? 'rgb(28 28 36 / 0.9)'
       : 'rgb(241 246 253 / 0.9)'
     : tokens.mutedSurface;
+  const shadowColor = isDarkMode ? 'rgb(0 0 0 / 0.34)' : 'rgb(15 23 42 / 0.1)';
+  const uiFont = colorOverrides?.fontUI || tokens.fontUI || tokens.fontMain;
 
   return {
     '--motion-duration': animationsEnabled ? tokens.motionDuration : '0ms',
@@ -520,7 +518,18 @@ export const getThemeStyle = (
     '--ui-success': isDarkMode ? '#4ade80' : '#15803d',
     '--ui-warning': isDarkMode ? '#fbbf24' : '#b45309',
     '--ui-danger': isDarkMode ? '#fb7185' : '#be123c',
-    '--ui-info': tokens.main
+    '--ui-info': tokens.main,
+    '--ui-radius-control': tokens.radiusControl,
+    '--ui-radius-panel': tokens.radiusPanel,
+    '--ui-shadow-sm': `0 1px 2px ${shadowColor}`,
+    '--ui-shadow-md': `0 8px 24px ${shadowColor}`,
+    '--ui-shadow-lg': isGlassTheme ? tokens.glassShadow : `0 24px 64px ${shadowColor}`,
+    '--ui-font-ui': uiFont,
+    '--ui-font-heading': colorOverrides?.fontSecondary || tokens.fontSecondary,
+    '--ui-font-mono': "'SFMono-Regular', 'Cascadia Code', 'Roboto Mono', ui-monospace, monospace",
+    '--ui-leading-tight': '1.2',
+    '--ui-leading-body': '1.5',
+    '--ui-motion-ease': tokens.motionEase
   } as CSSProperties;
 };
 

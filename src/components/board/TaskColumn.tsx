@@ -1,6 +1,5 @@
 import {
   ArrowDownUp,
-  CheckSquare,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -9,6 +8,7 @@ import {
   GripHorizontal,
   Play
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { UrgencyBadge } from '../UrgencyBadge';
 import { formatLiveTimer, getEffectiveTags, statusLabels, taskStatuses } from '../../domain/tasks';
 import { statusColorClass } from './boardStyles';
@@ -59,14 +59,14 @@ export function TaskColumn({
     >
       <div className="task-lane-header flex min-h-12 shrink-0 items-center justify-between border-b px-3 py-2 sm:min-h-0 sm:py-2.5">
         <div className="flex min-w-0 items-center gap-2">
-          <h2 className="flex min-w-0 items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
+          <h2 className="flex min-w-0 items-center gap-2 text-sm font-bold text-[var(--ui-text-primary)]">
             <div className={`task-status-dot h-2 w-2 shrink-0 rounded-full ${statusColorClass(status)}`} />
             <span className="truncate">{statusLabels[status]}</span>
           </h2>
           <button
             onClick={() => cycleSort(status)}
             aria-label={`Sort tasks in ${statusLabels[status]}: ${sortType}`}
-            className={`flex h-11 w-11 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-200 dark:hover:bg-slate-700 sm:h-auto sm:w-auto sm:p-1 ${collapsed ? 'hidden' : ''}`}
+            className={`flex h-11 w-11 items-center justify-center rounded-[var(--ui-radius-control)] text-[var(--ui-text-secondary)] transition-colors hover:bg-[var(--ui-control)] sm:h-auto sm:w-auto sm:p-1 ${collapsed ? 'hidden' : ''}`}
             title={`Sort: ${sortType}`}
           >
             {sortType === 'urgency' && <Flame size={12} className="text-orange-500" />}
@@ -84,7 +84,7 @@ export function TaskColumn({
             aria-expanded={!collapsed}
             title={`${collapsed ? 'Expand' : 'Collapse'} ${statusLabels[status]} lane`}
             onClick={() => onToggleLane(status)}
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-slate-700 sm:h-8 sm:w-8 ${collapsed ? 'bg-slate-200/70 dark:bg-slate-700/70' : ''}`}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--ui-radius-control)] text-[var(--ui-text-secondary)] transition-colors hover:bg-[var(--ui-control)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ui-focus-ring)] sm:h-8 sm:w-8 ${collapsed ? 'bg-[var(--ui-control)]' : ''}`}
           >
             {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
           </button>
@@ -100,6 +100,10 @@ export function TaskColumn({
             const isDragging = draggedTaskId === task.id;
             const isKeyboardFocused = keyboardFocusedTaskId === task.id;
             const taskTags = getEffectiveTags(task);
+            const completedSubtasks = task.subtasks.filter((subtask) => subtask.status === 'done').length;
+            const subtaskProgress = task.subtasks.length
+              ? Math.round((completedSubtasks / task.subtasks.length) * 100)
+              : 0;
             const statusIndex = taskStatuses.indexOf(task.status);
             const moveWithKeyboard = (event) => {
               if (!event.altKey) return;
@@ -121,7 +125,16 @@ export function TaskColumn({
             };
 
             return (
-              <div key={task.id} onDragOver={(e) => handleDragOver(e, status, task.id)} className="relative">
+              <motion.div
+                key={task.id}
+                layout="position"
+                transition={{
+                  duration: settings.animationsEnabled === false ? 0 : 0.18,
+                  ease: [0.22, 1, 0.36, 1]
+                }}
+                onDragOver={(e) => handleDragOver(e, status, task.id)}
+                className="relative"
+              >
                 {isDragOverTop && (
                   <div className="relative z-10 mx-1 mb-2 h-1 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
                 )}
@@ -162,7 +175,7 @@ export function TaskColumn({
                         className="hidden shrink-0 cursor-grab text-slate-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-slate-600 md:block"
                       />
                       <h3
-                        className={`line-clamp-2 text-base font-semibold leading-snug sm:truncate sm:text-sm sm:leading-tight ${task.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800 dark:text-slate-200'}`}
+                        className={`line-clamp-2 text-base font-semibold leading-snug sm:truncate sm:text-sm sm:leading-tight ${task.status === 'done' ? 'text-[var(--ui-text-secondary)] line-through' : 'text-[var(--ui-text-primary)]'}`}
                       >
                         {task.title || 'Untitled Task'}
                       </h3>
@@ -232,19 +245,33 @@ export function TaskColumn({
                     </div>
                   )}
 
+                  {!settings.collapseTasks && task.subtasks.length > 0 && (
+                    <div className="task-progress mt-2 flex items-center gap-2">
+                      <div
+                        role="progressbar"
+                        aria-label={`${completedSubtasks} of ${task.subtasks.length} subtasks complete`}
+                        aria-valuemin={0}
+                        aria-valuemax={task.subtasks.length}
+                        aria-valuenow={completedSubtasks}
+                        className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--ui-control)]"
+                      >
+                        <div
+                          className="h-full rounded-full bg-[var(--ui-info)] transition-[width]"
+                          style={{ width: `${subtaskProgress}%` }}
+                        />
+                      </div>
+                      <span className="shrink-0 text-[10px] font-medium tabular-nums text-[var(--ui-text-secondary)]">
+                        {completedSubtasks}/{task.subtasks.length}
+                      </span>
+                    </div>
+                  )}
+
                   {!settings.collapseTasks && (
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <UrgencyBadge urgency={task.urgency} />
                       {task.scheduledStart && (
                         <div className="task-meta rounded-md px-1.5 py-0.5 text-[10px]">
                           {task.scheduledStart}
-                        </div>
-                      )}
-                      {task.subtasks?.length > 0 && (
-                        <div className="task-meta flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10px]">
-                          <CheckSquare size={10} />{' '}
-                          {task.subtasks.filter((subtask) => subtask.status === 'done').length}/
-                          {task.subtasks.length}
                         </div>
                       )}
                     </div>
@@ -272,7 +299,7 @@ export function TaskColumn({
                 {isDragOverBottom && (
                   <div className="relative z-10 mx-1 mt-2 h-1 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
                 )}
-              </div>
+              </motion.div>
             );
           })}
           {filtered.length === 0 && !dragOverInfo && (

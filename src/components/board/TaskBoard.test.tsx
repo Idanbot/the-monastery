@@ -216,6 +216,29 @@ describe('KanbanBoard layout controls', () => {
     expect(within(card).queryByText('kubernetes')).not.toBeInTheDocument();
     expect(within(card).getByText('+2')).toBeInTheDocument();
   });
+
+  it('shows subtask progress as one concise accessible track', () => {
+    const props = baseProps();
+    props.filteredTasks = [
+      normalizeTask({
+        id: 'progress-task',
+        title: 'Ship the platform migration',
+        status: 'in-progress',
+        subtasks: [
+          { id: 'one', title: 'Plan', status: 'done' },
+          { id: 'two', title: 'Migrate', status: 'done' },
+          { id: 'three', title: 'Verify', status: 'backlog' }
+        ]
+      })
+    ];
+
+    render(<KanbanBoard {...props} />);
+
+    const card = screen.getByLabelText(/ship the platform migration, in-progress/i);
+    const progress = within(card).getByRole('progressbar', { name: '2 of 3 subtasks complete' });
+    expect(progress).toHaveAttribute('aria-valuenow', '2');
+    expect(progress).toHaveAttribute('aria-valuemax', '3');
+  });
 });
 
 describe('MobileFocusView actions', () => {
@@ -281,7 +304,7 @@ describe('MobileFocusView actions', () => {
     expect(screen.getByRole('heading', { name: 'Today' })).toBeInTheDocument();
     expect(screen.getByText('Next task 3')).toBeInTheDocument();
     expect(screen.queryByText('Next task 4')).not.toBeInTheDocument();
-    expect(screen.getByText('2 more in Board')).toBeInTheDocument();
+    expect(screen.getByText('2 more in Tasks')).toBeInTheDocument();
   });
 });
 

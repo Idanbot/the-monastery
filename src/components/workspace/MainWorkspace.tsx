@@ -212,11 +212,8 @@ export function MainWorkspace() {
 
   return (
     <div data-testid="main-workspace" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="ui-eyebrow text-[var(--ui-info)]">Main view</div>
-          <h2 className="truncate text-xl font-semibold text-[var(--ui-text-primary)]">Focus workspace</h2>
-        </div>
+      <div className="mb-2 flex shrink-0 items-center justify-between gap-3">
+        <h2 className="truncate text-lg font-semibold text-[var(--ui-text-primary)]">Focus workspace</h2>
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
@@ -287,7 +284,7 @@ export function MainWorkspace() {
               style={position}
             >
               {collapsed ? (
-                <div className="ui-surface flex min-h-11 items-center gap-2 rounded-xl border px-3 shadow-sm">
+                <div className="ui-surface flex min-h-11 items-center gap-2 rounded-[var(--ui-radius-panel)] border px-3 shadow-[var(--ui-shadow-sm)]">
                   <span className="truncate text-sm font-semibold text-[var(--ui-text-primary)]">
                     {moduleLabel}
                   </span>
@@ -295,7 +292,7 @@ export function MainWorkspace() {
                     type="button"
                     aria-label={`Expand ${label}`}
                     onClick={() => toggleSlot(id)}
-                    className="ui-icon-button ui-control ml-auto size-8"
+                    className="ui-icon-button ui-control ml-auto"
                   >
                     <Maximize2 size={14} />
                   </button>
@@ -310,6 +307,7 @@ export function MainWorkspace() {
                     <button
                       type="button"
                       aria-label={'Collapse ' + label}
+                      title={'Collapse ' + label}
                       onClick={() => toggleSlot(id)}
                       className="ui-icon-button ui-icon-button-sm ui-control"
                     >
@@ -318,6 +316,7 @@ export function MainWorkspace() {
                     <button
                       type="button"
                       aria-label={'Customize ' + label}
+                      title={'Customize ' + label}
                       onClick={() => openSettings('main')}
                       className="ui-icon-button ui-icon-button-sm ui-control"
                     >
@@ -485,12 +484,15 @@ function MainFocusModule({
     <section
       data-testid="main-focus-module"
       data-slot={slot}
-      className="flex h-full min-h-0 flex-col overflow-hidden"
+      data-emphasis="primary"
+      data-material="panel"
+      aria-label="Focus session"
+      className="focus-module ui-surface flex h-full min-h-0 flex-col overflow-hidden rounded-[var(--ui-radius-panel)] border p-4 shadow-[var(--ui-shadow-md)]"
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="ui-eyebrow text-[var(--ui-info)]">Monk mode</div>
-          <h3 className="mt-1 text-lg font-semibold text-[var(--ui-text-primary)]">
+          <div className="ui-eyebrow text-[var(--ui-info)]">Focus session</div>
+          <h3 className="mt-1 text-xl font-semibold text-[var(--ui-text-primary)]">
             One task, full attention
           </h3>
         </div>
@@ -503,7 +505,7 @@ function MainFocusModule({
         </button>
       </div>
       <div className={`mt-3 grid min-h-0 flex-1 gap-3 ${showCurrent ? 'grid-cols-2' : 'grid-cols-1'}`}>
-        <div className="ui-surface custom-scrollbar min-h-0 overflow-y-auto rounded-2xl border p-3 shadow-sm">
+        <div className="focus-timer-well custom-scrollbar min-h-0 overflow-y-auto rounded-[var(--ui-radius-control)] p-3">
           <PomodoroTimer compact onComplete={onPomodoroComplete} />
           <label className="mt-2 flex items-center gap-2 border-t border-[var(--ui-border-subtle)] pt-2">
             <span className="ui-eyebrow shrink-0">Goal</span>
@@ -560,7 +562,7 @@ function MainCalendarModule({
     <section
       data-testid="main-calendar-module"
       data-slot={slot}
-      className="ui-surface custom-scrollbar h-full min-h-0 overflow-y-auto rounded-2xl border p-4 shadow-sm"
+      className="ui-surface custom-scrollbar h-full min-h-0 overflow-y-auto rounded-[var(--ui-radius-panel)] border p-4 shadow-[var(--ui-shadow-sm)]"
     >
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -640,7 +642,7 @@ function MainMediaModule({
     <section
       data-testid="main-media-module"
       data-slot={slot}
-      className="ui-surface flex items-center gap-3 rounded-2xl border p-4 shadow-sm"
+      className="ui-surface flex items-center gap-3 rounded-[var(--ui-radius-panel)] border p-4 shadow-[var(--ui-shadow-sm)]"
     >
       <div className="ui-accent-button grid size-10 shrink-0 place-items-center rounded-xl">
         <Music2 size={18} />

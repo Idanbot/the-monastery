@@ -47,7 +47,18 @@ const requiredStyleVariables = [
   '--ui-success',
   '--ui-warning',
   '--ui-danger',
-  '--ui-info'
+  '--ui-info',
+  '--ui-radius-control',
+  '--ui-radius-panel',
+  '--ui-shadow-sm',
+  '--ui-shadow-md',
+  '--ui-shadow-lg',
+  '--ui-font-ui',
+  '--ui-font-heading',
+  '--ui-font-mono',
+  '--ui-leading-tight',
+  '--ui-leading-body',
+  '--ui-motion-ease'
 ];
 
 describe('theme contracts', () => {

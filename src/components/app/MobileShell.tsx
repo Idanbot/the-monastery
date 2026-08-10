@@ -76,8 +76,8 @@ export function MobileShell({
         aria-label="Mobile navigation"
         className="mobile-navigation fixed inset-x-0 bottom-0 z-[75] grid grid-cols-5 border-t px-2 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden"
       >
-        <NavButton label="Today" active={todayActive} icon={ListChecks} onClick={onToday} />
-        <NavButton label="Board" active={boardActive} icon={LayoutDashboard} onClick={onBoard} />
+        <NavButton label="Focus" active={todayActive} icon={ListChecks} onClick={onToday} />
+        <NavButton label="Tasks" active={boardActive} icon={LayoutDashboard} onClick={onBoard} />
         <div aria-hidden="true" />
         <NavButton label="Calendar" active={view === 'calendar'} icon={CalendarDays} onClick={onCalendar} />
         <NavButton
@@ -110,8 +110,10 @@ export function MobileShell({
             role="dialog"
             aria-modal="true"
             aria-label="More"
-            className="max-h-[78vh] w-full overflow-y-auto rounded-t-2xl border border-b-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl"
+            data-presentation="bottom-sheet"
+            className="ui-mobile-sheet max-h-[78vh] w-full overflow-y-auto rounded-t-[var(--ui-radius-panel)] border border-b-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
           >
+            <div aria-hidden="true" className="ui-mobile-sheet-handle mx-auto mb-3 h-1 w-10 rounded-full" />
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-base font-semibold text-[var(--ui-text-primary)]">More</div>
@@ -152,7 +154,7 @@ export function MobileShell({
             </div>
 
             {filtersOpen && filterContent && (
-              <div className="ui-surface mt-3 rounded-xl border p-3">{filterContent}</div>
+              <div className="mt-3 border-t border-[var(--ui-border-subtle)] pt-3">{filterContent}</div>
             )}
           </ThemedSurface>
         </ThemedSurface>
@@ -187,7 +189,7 @@ function MoreAction({ label, icon: Icon, onClick }: ActionProps) {
     <button
       type="button"
       onClick={onClick}
-      className="ui-surface ui-focus-ring flex min-h-14 items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold active:brightness-95"
+      className="ui-control ui-focus-ring flex min-h-14 items-center gap-2 px-3 text-left text-sm font-semibold active:brightness-95"
     >
       <Icon size={18} className="shrink-0 text-[var(--ui-info)]" />
       {label}

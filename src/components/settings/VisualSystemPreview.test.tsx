@@ -12,5 +12,7 @@ describe('VisualSystemPreview', () => {
     expect(screen.getByText('Success')).toBeInTheDocument();
     expect(screen.getByText('Warning')).toBeInTheDocument();
     expect(screen.getByText('Attention')).toBeInTheDocument();
+    expect(screen.getByTestId('chrome-material-preview')).toHaveAttribute('data-material', 'control');
+    expect(screen.getByTestId('content-surface-preview')).not.toHaveAttribute('data-material');
   });
 });

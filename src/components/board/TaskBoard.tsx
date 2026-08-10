@@ -395,7 +395,7 @@ export function MobileFocusView({
           ))}
           {hiddenQueuedCount > 0 && (
             <div className="pt-1 text-center text-xs font-medium text-[var(--ui-text-secondary)]">
-              {hiddenQueuedCount} more in Board
+              {hiddenQueuedCount} more in Tasks
             </div>
           )}
           {queued.length === 0 && (

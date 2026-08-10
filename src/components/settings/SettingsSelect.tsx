@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import * as Select from '@radix-ui/react-select';
 import { Check, ChevronDown } from 'lucide-react';
 import { useSettingsContext } from '../../contexts/SettingsContext';
@@ -35,9 +36,11 @@ export function SettingsSelect({
   className = '',
   placeholder
 }: SettingsSelectProps) {
+  const [open, setOpen] = useState(false);
   const { settings, isDarkMode } = useSettingsContext();
-  const emptyOption = options.find((option) => option.id === '');
-  const selectableOptions = options.filter((option) => option.id !== '');
+  const emptyOption = useMemo(() => options.find((option) => option.id === ''), [options]);
+  const selectableOptions = useMemo(() => options.filter((option) => option.id !== ''), [options]);
+  const selectedLabel = useMemo(() => options.find((option) => option.id === value)?.label, [options, value]);
   const {
     animationsEnabled,
     themeStyle: resolvedThemeStyle,
@@ -45,48 +48,56 @@ export function SettingsSelect({
   } = useThemeStyle(settings, isDarkMode);
 
   return (
-    <Select.Root value={value} onValueChange={onValueChange} disabled={disabled}>
+    <Select.Root
+      value={value}
+      onValueChange={onValueChange}
+      open={open}
+      onOpenChange={setOpen}
+      disabled={disabled}
+    >
       <Select.Trigger
         aria-label={ariaLabel}
         className={`ui-control ui-focus-ring flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       >
         <span className="min-w-0 truncate">
-          <Select.Value placeholder={placeholder || emptyOption?.label} />
+          <Select.Value placeholder={placeholder || emptyOption?.label}>{selectedLabel}</Select.Value>
         </span>
         <Select.Icon className="shrink-0 text-[var(--ui-text-secondary)]">
           <ChevronDown size={14} />
         </Select.Icon>
       </Select.Trigger>
-      <Select.Portal>
-        <Select.Content
-          data-settings-select-content
-          data-visual-theme={settings.visualTheme}
-          data-animations-enabled={animationsEnabled ? 'true' : 'false'}
-          style={{ ...resolvedThemeStyle, ...modalEffectStyle }}
-          position="popper"
-          sideOffset={6}
-          collisionPadding={8}
-          className={themedSurfaceClassName(
-            'menu',
-            `${isDarkMode ? 'dark' : ''} z-[130] max-h-72 w-[var(--radix-select-trigger-width)] overflow-y-auto rounded-xl border border-slate-200 p-1 shadow-2xl dark:border-slate-700 dark:bg-slate-900`
-          )}
-        >
-          <Select.Viewport>
-            {selectableOptions.map((option) => (
-              <Select.Item
-                key={option.id}
-                value={option.id}
-                className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"
-              >
-                <Select.ItemText>{option.label}</Select.ItemText>
-                <Select.ItemIndicator className="text-[var(--ui-info)]">
-                  <Check size={14} />
-                </Select.ItemIndicator>
-              </Select.Item>
-            ))}
-          </Select.Viewport>
-        </Select.Content>
-      </Select.Portal>
+      {open && (
+        <Select.Portal>
+          <Select.Content
+            data-settings-select-content
+            data-visual-theme={settings.visualTheme}
+            data-animations-enabled={animationsEnabled ? 'true' : 'false'}
+            style={{ ...resolvedThemeStyle, ...modalEffectStyle }}
+            position="popper"
+            sideOffset={6}
+            collisionPadding={8}
+            className={themedSurfaceClassName(
+              'menu',
+              `${isDarkMode ? 'dark' : ''} z-[130] max-h-72 w-[var(--radix-select-trigger-width)] overflow-y-auto rounded-xl border border-slate-200 p-1 shadow-2xl dark:border-slate-700 dark:bg-slate-900`
+            )}
+          >
+            <Select.Viewport>
+              {selectableOptions.map((option) => (
+                <Select.Item
+                  key={option.id}
+                  value={option.id}
+                  className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"
+                >
+                  <Select.ItemText>{option.label}</Select.ItemText>
+                  <Select.ItemIndicator className="text-[var(--ui-info)]">
+                    <Check size={14} />
+                  </Select.ItemIndicator>
+                </Select.Item>
+              ))}
+            </Select.Viewport>
+          </Select.Content>
+        </Select.Portal>
+      )}
     </Select.Root>
   );
 }

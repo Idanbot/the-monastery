@@ -1195,7 +1195,7 @@ test('uses one navigable mobile lane while preserving focus controls and collaps
 
   const mobileShell = page.getByTestId('mobile-shell');
   await expect(page.getByRole('heading', { name: 'Board' })).toBeVisible();
-  await mobileShell.getByRole('button', { name: 'Today' }).click();
+  await mobileShell.getByRole('button', { name: 'Focus' }).click();
   const focusView = page.getByTestId('mobile-focus-view');
   await expect(focusView).toBeVisible();
   await expect(focusView).toContainText(mobileTitle);
@@ -1209,7 +1209,7 @@ test('uses one navigable mobile lane while preserving focus controls and collaps
   ).toBeVisible();
   await focusView.getByRole('button', { name: /reject current task/i }).click();
   await focusView.getByRole('button', { name: /complete current task/i }).click();
-  await mobileShell.getByRole('button', { name: 'Board' }).click();
+  await mobileShell.getByRole('button', { name: 'Tasks' }).click();
   await laneBoard.getByRole('tab', { name: /rejected, 1 task/i }).click();
   await expect(laneBoard.getByTestId('board-column-rejected')).toContainText(mobileTitle);
   await laneBoard.getByRole('tab', { name: /done, 1 task/i }).click();
@@ -1237,9 +1237,9 @@ test('uses dedicated mobile navigation and a compact more sheet', async ({ page 
   await page.goto('/');
 
   const shell = page.getByTestId('mobile-shell');
-  await shell.getByRole('button', { name: 'Today' }).click();
+  await shell.getByRole('button', { name: 'Focus' }).click();
   await expect(page.getByTestId('mobile-focus-view')).toBeVisible();
-  await shell.getByRole('button', { name: 'Board' }).click();
+  await shell.getByRole('button', { name: 'Tasks' }).click();
   await expect(page.getByTestId('mobile-lane-board')).toBeVisible();
 
   await shell.getByRole('button', { name: 'Calendar' }).click();
@@ -1277,7 +1277,7 @@ test('keeps primary mobile views readable at narrow and large phone widths', asy
     await page.goto('/');
     const shell = page.getByTestId('mobile-shell');
 
-    for (const viewName of ['Board', 'Today', 'Calendar'] as const) {
+    for (const viewName of ['Tasks', 'Focus', 'Calendar'] as const) {
       await shell.getByRole('button', { name: viewName }).click();
       await expectNoHorizontalOverflow(page);
       for (const button of await page.getByTestId('workspace-content').locator('button:visible').all()) {

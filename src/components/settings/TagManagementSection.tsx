@@ -26,6 +26,7 @@ export function TagManagementSection({
   motionEase
 }: Props) {
   const tags = useMemo(() => knownTags.filter(Boolean), [knownTags]);
+  const tagOptions = useMemo(() => tags.map((tag) => ({ id: tag, label: tag })), [tags]);
   const [selectedTag, setSelectedTag] = useState(tags[0] || '');
   const [renameValue, setRenameValue] = useState(selectedTag);
   const [mergeTarget, setMergeTarget] = useState('');
@@ -44,6 +45,10 @@ export function TagManagementSection({
   const goal = settings.tagGoals.find((item) => keyOf(item.tag) === keyOf(selectedTag));
   const aliases = Object.entries(settings.tagAliases || {}).filter(
     ([, target]) => keyOf(target) === keyOf(selectedTag)
+  );
+  const mergeOptions = useMemo(
+    () => tagOptions.filter((option) => option.id !== selectedTag),
+    [selectedTag, tagOptions]
   );
 
   return (
@@ -67,7 +72,7 @@ export function TagManagementSection({
               ariaLabel="Manage tag"
               value={selectedTag}
               onValueChange={setSelectedTag}
-              options={tags.map((tag) => ({ id: tag, label: tag }))}
+              options={tagOptions}
             />
           </div>
 
@@ -98,7 +103,7 @@ export function TagManagementSection({
               value={mergeTarget}
               onValueChange={setMergeTarget}
               className="min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-              options={tags.filter((tag) => tag !== selectedTag).map((tag) => ({ id: tag, label: tag }))}
+              options={mergeOptions}
             />
             <button
               type="button"

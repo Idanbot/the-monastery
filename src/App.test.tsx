@@ -77,7 +77,7 @@ it('keeps the desktop header focused on primary actions', () => {
   expect(screen.queryByText('Online')).not.toBeInTheDocument();
 });
 
-it('separates global actions from workspace controls and anchors current work', async () => {
+it('keeps global actions, workspace controls, and current work in one responsive toolbar', async () => {
   const user = userEvent.setup();
   seedTasks([
     makeTask({
@@ -89,8 +89,16 @@ it('separates global actions from workspace controls and anchors current work', 
   ]);
   render(<App />);
 
-  expect(screen.getByTestId('app-primary-bar')).toBeInTheDocument();
-  expect(screen.getByTestId('workspace-toolbar')).toBeInTheDocument();
+  const primaryBar = screen.getByTestId('app-primary-bar');
+  const workspaceToolbar = screen.getByTestId('workspace-toolbar');
+  expect(primaryBar).toContainElement(workspaceToolbar);
+  expect(primaryBar.closest('header')).toHaveAttribute('data-layout', 'single-row');
+  expect(within(workspaceToolbar).getByRole('group', { name: 'Workspace views' })).toBeInTheDocument();
+  expect(
+    within(workspaceToolbar).getByRole('textbox', {
+      name: 'Search tasks, notes, roles, and projects'
+    })
+  ).toBeInTheDocument();
   const currentWork = screen.getByRole('button', { name: /open current work design migration boundary/i });
   expect(currentWork).toBeInTheDocument();
 
@@ -365,15 +373,15 @@ it('shows mobile board controls that persist layout and compact lane order', asy
   expect(headings.slice(0, 2)).toEqual(['In-Progress', 'Backlog']);
 });
 
-it('uses the mobile shell for focused today, full board, and task creation', async () => {
+it('uses the mobile shell for focus, tasks, and task creation', async () => {
   const user = userEvent.setup();
   render(<App />);
 
   const shell = screen.getByTestId('mobile-shell');
-  await user.click(within(shell).getByRole('button', { name: 'Today' }));
+  await user.click(within(shell).getByRole('button', { name: 'Focus' }));
   expect(screen.getByTestId('mobile-focus-view')).toBeInTheDocument();
 
-  await user.click(within(shell).getByRole('button', { name: 'Board' }));
+  await user.click(within(shell).getByRole('button', { name: 'Tasks' }));
   expect(screen.queryByTestId('mobile-focus-view')).not.toBeInTheDocument();
   expect(screen.getByTestId('kanban-board')).toBeInTheDocument();
 

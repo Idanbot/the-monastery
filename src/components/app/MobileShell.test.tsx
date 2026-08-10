@@ -29,8 +29,8 @@ describe('MobileShell', () => {
       />
     );
 
-    await user.click(screen.getByRole('button', { name: 'Today' }));
-    await user.click(screen.getByRole('button', { name: 'Board' }));
+    await user.click(screen.getByRole('button', { name: 'Focus' }));
+    await user.click(screen.getByRole('button', { name: 'Tasks' }));
     await user.click(screen.getByRole('button', { name: 'Calendar' }));
     await user.click(screen.getByRole('button', { name: 'Create task' }));
 
@@ -41,6 +41,7 @@ describe('MobileShell', () => {
 
     await user.click(screen.getByRole('button', { name: 'More' }));
     expect(screen.getByRole('dialog', { name: 'More' })).toBeVisible();
+    expect(screen.getByRole('dialog', { name: 'More' })).toHaveAttribute('data-presentation', 'bottom-sheet');
     await user.click(screen.getByRole('button', { name: 'Projects' }));
     expect(onNavigate).toHaveBeenCalledWith('projects');
 

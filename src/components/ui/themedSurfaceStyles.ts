@@ -15,14 +15,14 @@ export type ThemedSurfaceMaterial = 'control' | 'panel' | 'sidebar' | 'modal' | 
 const themedSurfaceVariants = cva('', {
   variants: {
     variant: {
-      modal: 'modal-surface themed-modal',
+      modal: 'modal-surface themed-modal ui-dialog-surface',
       menu: 'themed-menu',
       menuTrigger: 'themed-menu-trigger',
       panel: 'themed-panel ui-surface-muted',
       card: 'ui-surface ui-elevated',
       toolbar: 'ui-toolbar',
       canvas: 'ui-canvas',
-      overlay: 'modal-overlay'
+      overlay: 'modal-overlay ui-dialog-overlay'
     }
   },
   defaultVariants: {

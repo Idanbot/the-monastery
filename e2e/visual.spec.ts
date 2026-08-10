@@ -63,6 +63,16 @@ test('customizable main workspace remains visually stable', async ({ page }) => 
   });
 });
 
+test('accessibility display preferences remain visually stable', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce', forcedColors: 'active' });
+  await page.goto('/');
+  await stabilizePage(page);
+  await expect(page.getByTestId('main-workspace')).toHaveScreenshot(
+    'accessible-main-workspace.png',
+    screenshotOptions
+  );
+});
+
 test('Kanban modal remains readable and visually stable', async ({ page }) => {
   await page.goto('/');
   await stabilizePage(page);
@@ -122,7 +132,7 @@ test('mobile Today view remains visually stable', async ({ page }) => {
   await page.getByText('Review the migration plan').first().click();
   await page.getByLabel('Status').selectOption('in-progress');
   await page.getByRole('button', { name: /save task/i }).click();
-  await page.getByTestId('mobile-shell').getByRole('button', { name: 'Today' }).click();
+  await page.getByTestId('mobile-shell').getByRole('button', { name: 'Focus' }).click();
   await expect(page.locator('.app-main')).toHaveScreenshot('mobile-today.png', screenshotOptions);
 });
 

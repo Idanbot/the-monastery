@@ -24,6 +24,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "env -u NO_COLOR playwright test",
+    "test:ui": "env -u NO_COLOR playwright test e2e/visual.spec.ts e2e/accessibility.spec.ts e2e/ui-quality.spec.ts",
     "performance:budget": "npm run build && node scripts/check-performance-budgets.mjs",
     "pets:validate": "node scripts/validate-pet-atlases.mjs",
     "test:watch": "vitest",

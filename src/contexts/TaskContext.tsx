@@ -100,26 +100,24 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useRecurringTasks(tasks, setTasks);
 
-  const tagPool = useMemo(
-    () =>
-      Array.from(
-        new Set([
-          ...allUniqueTags,
-          ...(settings.tagInventory || []),
-          ...(settings.roles || []).flatMap((role) => role.tags || []),
-          ...(settings.tagGoals || []).map((goal) => goal.tag),
-          ...defaultTagInventory,
-          ...rolePresets.flatMap((preset) => preset.tags)
-        ])
-      )
-        .filter(Boolean)
-        .filter(
-          (tag, index, tags) =>
-            tags.findIndex((candidate) => candidate.toLowerCase() === tag.toLowerCase()) === index
-        )
-        .sort((a, b) => a.localeCompare(b)),
-    [allUniqueTags, settings.roles, settings.tagGoals, settings.tagInventory]
-  );
+  const tagPool = useMemo(() => {
+    const seen = new Set<string>();
+    return [
+      ...allUniqueTags,
+      ...(settings.tagInventory || []),
+      ...(settings.roles || []).flatMap((role) => role.tags || []),
+      ...(settings.tagGoals || []).map((goal) => goal.tag),
+      ...defaultTagInventory,
+      ...rolePresets.flatMap((preset) => preset.tags)
+    ]
+      .filter((tag) => {
+        const key = tag?.trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => a.localeCompare(b));
+  }, [allUniqueTags, settings.roles, settings.tagGoals, settings.tagInventory]);
 
   const resolveTaskTags = useCallback(
     (tags: string[]) => canonicalizeTags(tags, settings.tagAliases),

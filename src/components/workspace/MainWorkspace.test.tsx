@@ -26,6 +26,7 @@ describe('MainWorkspace', () => {
     expect(screen.getByTestId('main-media-module')).toHaveAttribute('data-slot', 'bottomLeft');
     expect(screen.getByTestId('main-clock-module')).toHaveAttribute('data-slot', 'bottomRight');
     expect(screen.getByTestId('main-timeline-module')).toHaveAttribute('data-slot', 'bottomRight');
+    expect(screen.getByRole('region', { name: 'Focus session' })).toHaveAttribute('data-emphasis', 'primary');
 
     await user.click(screen.getByRole('button', { name: 'Open Kanban' }));
     const dialog = screen.getByRole('dialog', { name: 'Kanban board' });
