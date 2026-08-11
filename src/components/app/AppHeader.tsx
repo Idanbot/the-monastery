@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { autoUpdate, flip, offset, shift, useFloating } from '@floating-ui/react';
 import {
   Activity,
-  ChevronDown,
   Command,
   Filter,
   PanelRightClose,
@@ -257,16 +256,12 @@ export function AppHeader() {
                     type="button"
                     data-testid="active-profile-control"
                     data-active-profile-id={activeProfileId}
-                    title="Active profile"
+                    title={`Active profile: ${activeProfile?.name || 'Profile'}`}
                     onClick={() => setIsProfileOpen((open) => !open)}
                     aria-label="Choose active profile"
-                    className="ui-icon-button ui-control flex h-9 w-9 items-center justify-center gap-2 px-0 text-xs font-semibold 2xl:w-auto 2xl:max-w-44 2xl:px-2.5"
+                    className="ui-icon-button ui-control h-9 w-9 shrink-0"
                   >
                     <Users data-testid="active-profile-icon" size={15} className="block shrink-0" />
-                    <span className="hidden min-w-0 truncate 2xl:block">
-                      {activeProfile?.name || 'Profile'}
-                    </span>
-                    <ChevronDown size={14} className="hidden shrink-0 2xl:block" />
                     {!isProfileReady && <span className="sr-only">syncing</span>}
                   </ThemedSurface>
                   {isProfileOpen && (

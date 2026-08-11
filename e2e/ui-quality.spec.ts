@@ -55,8 +55,8 @@ test('1080px desktop toolbar remains one row without viewport overflow', async (
   await expectNoHorizontalOverflow(page);
 });
 
-test('compact profile icon stays centered in its trigger', async ({ page }) => {
-  await page.setViewportSize({ width: 1080, height: 900 });
+test('full-HD profile icon stays centered in its circular trigger', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto('/');
   await stabilizePage(page);
 
@@ -64,6 +64,7 @@ test('compact profile icon stays centered in its trigger', async ({ page }) => {
   const iconBox = await page.getByTestId('active-profile-icon').boundingBox();
   expect(triggerBox).not.toBeNull();
   expect(iconBox).not.toBeNull();
+  expect(triggerBox!.width).toBe(triggerBox!.height);
 
   const triggerCenter = {
     x: triggerBox!.x + triggerBox!.width / 2,
