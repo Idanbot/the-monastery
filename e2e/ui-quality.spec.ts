@@ -55,6 +55,28 @@ test('1080px desktop toolbar remains one row without viewport overflow', async (
   await expectNoHorizontalOverflow(page);
 });
 
+test('compact profile icon stays centered in its trigger', async ({ page }) => {
+  await page.setViewportSize({ width: 1080, height: 900 });
+  await page.goto('/');
+  await stabilizePage(page);
+
+  const triggerBox = await page.getByTestId('active-profile-control').boundingBox();
+  const iconBox = await page.getByTestId('active-profile-icon').boundingBox();
+  expect(triggerBox).not.toBeNull();
+  expect(iconBox).not.toBeNull();
+
+  const triggerCenter = {
+    x: triggerBox!.x + triggerBox!.width / 2,
+    y: triggerBox!.y + triggerBox!.height / 2
+  };
+  const iconCenter = {
+    x: iconBox!.x + iconBox!.width / 2,
+    y: iconBox!.y + iconBox!.height / 2
+  };
+  expect(Math.abs(triggerCenter.x - iconCenter.x)).toBeLessThanOrEqual(0.5);
+  expect(Math.abs(triggerCenter.y - iconCenter.y)).toBeLessThanOrEqual(0.5);
+});
+
 test('accessibility display preferences preserve the workspace', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce', forcedColors: 'active' });
   await page.goto('/');
