@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { URL } from 'node:url';
+import { fetchWithTimeout } from './docker-smoke-http.mjs';
 
 const image = process.argv[2];
 const expectedBuildNumber = process.env.THE_MONASTERY_EXPECTED_BUILD_NUMBER || '';
@@ -32,7 +33,7 @@ const waitForJson = async (url, predicate, timeoutMs = 30_000) => {
 
   while (Date.now() - startedAt < timeoutMs) {
     try {
-      const response = await fetch(url);
+      const response = await fetchWithTimeout(url);
       const body = await response.json();
       if (response.ok && predicate(body)) return body;
       lastError = new Error(`${response.status} ${JSON.stringify(body)}`);
@@ -52,7 +53,7 @@ const waitForText = async (url, predicate, timeoutMs = 30_000) => {
 
   while (Date.now() - startedAt < timeoutMs) {
     try {
-      const response = await fetch(url);
+      const response = await fetchWithTimeout(url);
       const body = await response.text();
       if (response.ok && predicate(body)) return body;
       lastError = new Error(response.status + ' ' + body.slice(0, 200));
@@ -72,7 +73,6 @@ try {
   run(['rm', '-f', name], { stdio: 'ignore' });
   run([
     'run',
-    '--rm',
     '-d',
     '--name',
     name,
