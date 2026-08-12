@@ -55,6 +55,7 @@ describe('ActivityGraph', () => {
     expect(screen.getByTestId('streak-flame-canvas')).toBeInTheDocument();
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'aurelius');
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-streak-active', 'true');
+    expect(screen.getByTestId('activity-pet-summary')).toHaveTextContent(/2d to 3-day milestone/i);
     const activityCompanionRow = screen.getByTestId('activity-companion-row');
     expect(within(activityCompanionRow).getByTestId('activity-pet')).toBeInTheDocument();
     expect(within(activityCompanionRow).getByTestId('activity-days')).toBeInTheDocument();
@@ -74,15 +75,25 @@ describe('ActivityGraph', () => {
     render(<ActivityGraph tasks={[]} now={new Date('2026-07-17T12:00:00.000Z').getTime()} compact />);
 
     const days = screen.getByTestId('activity-days');
-    expect(within(days).getAllByRole('img')).toHaveLength(28);
+    expect(within(days).getAllByRole('img')).toHaveLength(90);
     expect(screen.getByTestId('activity-weekdays')).toHaveTextContent('M');
     expect(screen.getByTestId('activity-intensity-legend')).toHaveTextContent(/less.*more/i);
     expect(screen.getByText(/no activity in this range/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /show 3 months/i }));
-    expect(within(days).getAllByRole('img')).toHaveLength(90);
+    await user.click(screen.getByRole('button', { name: /show 4 weeks/i }));
+    expect(within(days).getAllByRole('img')).toHaveLength(28);
     await user.click(screen.getByRole('button', { name: /show 1 year/i }));
     expect(within(days).getAllByRole('img')).toHaveLength(365);
+  });
+
+  it('uses a self-contained full-height surface without nested scrolling', () => {
+    render(<ActivityGraph tasks={[]} fill compact />);
+
+    const section = screen.getByRole('region', { name: 'Activity' });
+    expect(section).toHaveAttribute('data-fill', 'true');
+    expect(section).toHaveClass('h-full', 'overflow-hidden');
+    expect(section).not.toHaveClass('overflow-y-auto');
+    expect(screen.getByRole('button', { name: /show 3 months/i })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('keeps the pet sleepy and the flame static when there is no current streak', () => {
@@ -91,6 +102,7 @@ describe('ActivityGraph', () => {
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-pet-state', 'dormant');
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-animation', 'sleep');
     expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-streak-active', 'false');
+    expect(screen.getByTestId('activity-pet-summary')).toHaveTextContent(/ready to focus/i);
     expect(screen.getByTestId('streak-flame')).toHaveAttribute('data-animated', 'false');
   });
 });

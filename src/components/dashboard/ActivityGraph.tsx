@@ -28,10 +28,10 @@ const activityRanges = [
 const weekdayLabels = ['M', '', 'W', '', 'F', '', ''];
 const streakMilestones = [3, 7, 14, 30, 60, 100, 365];
 const petName = (petId: ActivityPetId) => petId.charAt(0).toUpperCase() + petId.slice(1);
-const activityCellSizes: Record<ActivityRange, { size: string; gap: string }> = {
-  28: { size: '1rem', gap: '0.375rem' },
-  90: { size: '0.75rem', gap: '0.25rem' },
-  365: { size: '0.5rem', gap: '0.1875rem' }
+const activityCellSizes: Record<ActivityRange, { sizeRem: number; gapRem: number }> = {
+  28: { sizeRem: 1, gapRem: 0.375 },
+  90: { sizeRem: 0.75, gapRem: 0.25 },
+  365: { sizeRem: 0.5, gapRem: 0.1875 }
 };
 
 export function ActivityGraph({
@@ -48,7 +48,7 @@ export function ActivityGraph({
   const [activeDay, setActiveDay] = useState<ReturnType<typeof buildActivitySummary>['days'][number] | null>(
     null
   );
-  const [rangeDays, setRangeDays] = useState<ActivityRange>(compact ? 28 : 90);
+  const [rangeDays, setRangeDays] = useState<ActivityRange>(90);
   const [petDetailsOpen, setPetDetailsOpen] = useState(false);
   const summary = useMemo(
     () => buildActivitySummary(tasks, { now, days: rangeDays, clearedBefore }),
@@ -63,9 +63,17 @@ export function ActivityGraph({
     streakMilestones.find((milestone) => milestone > summary.currentStreak) || summary.currentStreak + 100;
   const milestoneRemaining = nextMilestone - summary.currentStreak;
   const cellDimensions = activityCellSizes[rangeDays];
+  const cellSizeRem = fill ? Math.min(cellDimensions.sizeRem, 0.625) : cellDimensions.sizeRem;
+  const columnGapRem = cellDimensions.gapRem;
+  const rowGapRem = fill ? Math.min(cellDimensions.gapRem, 0.125) : cellDimensions.gapRem;
+  const weekCount = Math.ceil((firstWeekday + visibleActivity.length) / 7);
+  const gridMaxWidth = weekCount * cellSizeRem + Math.max(0, weekCount - 1) * columnGapRem;
   const heatmapStyle = {
-    '--activity-cell-size': cellDimensions.size,
-    '--activity-cell-gap': cellDimensions.gap
+    '--activity-cell-max': `${cellSizeRem}rem`,
+    '--activity-column-gap': `${columnGapRem}rem`,
+    '--activity-grid-max-width': `${gridMaxWidth}rem`,
+    '--activity-row-gap': `${rowGapRem}rem`,
+    '--activity-week-count': weekCount
   } as CSSProperties;
 
   const getColorClass = (score: number) => {
@@ -86,11 +94,16 @@ export function ActivityGraph({
 
   return (
     <section
-      className={`ui-surface w-full rounded-2xl border p-4 shadow-sm sm:rounded-xl sm:p-5 ${
-        fill ? 'custom-scrollbar h-full min-h-0 overflow-y-auto' : ''
+      aria-label="Activity"
+      data-testid="activity-section"
+      data-compact={compact ? 'true' : 'false'}
+      data-fill={fill ? 'true' : 'false'}
+      data-range={rangeDays}
+      className={`activity-section ui-surface flex w-full flex-col overflow-hidden rounded-2xl border shadow-sm sm:rounded-xl ${
+        fill ? 'h-full min-h-0 p-3 sm:p-4' : 'p-4 sm:p-5'
       }`}
     >
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="activity-header mb-3 flex shrink-0 items-center justify-between gap-3">
         <h3 className="text-base font-bold">Activity</h3>
         <span className="ui-muted-chip inline-flex items-center gap-1.5 text-sm font-medium text-[var(--ui-success)]">
           {animateFlame && summary.currentStreak > 0 ? (
@@ -103,7 +116,7 @@ export function ActivityGraph({
       </div>
       <div
         data-testid="activity-metrics"
-        className="activity-metrics mb-3 grid grid-cols-3 gap-1.5 sm:mb-4 sm:gap-2"
+        className="activity-metrics mb-3 grid shrink-0 grid-cols-3 gap-1.5 sm:gap-2"
       >
         <ActivityMetric
           testId="activity-tracked-time"
@@ -124,7 +137,7 @@ export function ActivityGraph({
           value={String(summary.completedTasks)}
         />
       </div>
-      <div className="mb-3 flex min-w-0 items-center justify-between gap-2">
+      <div className="activity-toolbar mb-3 flex min-w-0 shrink-0 items-center justify-between gap-2">
         <div
           role="group"
           aria-label="Activity range"
@@ -163,7 +176,7 @@ export function ActivityGraph({
           <span>More</span>
         </div>
       </div>
-      <div className="relative">
+      <div className="activity-body relative min-h-0 flex-1">
         {activeDay && (
           <div
             role="tooltip"
@@ -180,9 +193,13 @@ export function ActivityGraph({
             </div>
           </div>
         )}
-        <div data-testid="activity-companion-row" className="flex min-w-0 items-end gap-3">
+        <div
+          data-testid="activity-companion-row"
+          data-has-pet={showPet ? 'true' : 'false'}
+          className="activity-companion-row grid h-full min-h-0 min-w-0 gap-2"
+        >
           {showPet && (
-            <div className="relative shrink-0">
+            <div className="activity-pet-panel relative flex min-w-0 items-center gap-2 rounded-lg border border-[var(--ui-border-subtle)] bg-[var(--ui-surface-muted)] p-2">
               <button
                 type="button"
                 data-testid="activity-pet-trigger"
@@ -209,6 +226,36 @@ export function ActivityGraph({
                   animated={animatePet}
                 />
               </button>
+              <div className="activity-pet-copy min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate text-xs font-semibold text-[var(--ui-text-primary)]">
+                    {petName(petId)}
+                  </span>
+                  <span
+                    className={`size-1.5 shrink-0 rounded-full ${
+                      summary.currentStreak > 0 ? 'bg-[var(--ui-success)]' : 'bg-[var(--ui-text-secondary)]'
+                    }`}
+                    aria-hidden="true"
+                  />
+                </div>
+                <div
+                  data-testid="activity-pet-summary"
+                  className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-[var(--ui-text-secondary)]"
+                >
+                  {summary.currentStreak > 0
+                    ? `${milestoneRemaining}d to ${nextMilestone}-day milestone`
+                    : 'Ready to focus'}
+                </div>
+                <div
+                  className="mt-1.5 h-1 overflow-hidden rounded-full bg-[var(--ui-control)]"
+                  aria-hidden="true"
+                >
+                  <div
+                    className="h-full rounded-full bg-[var(--ui-success)]"
+                    style={{ width: Math.min(100, (summary.currentStreak / nextMilestone) * 100) + '%' }}
+                  />
+                </div>
+              </div>
               {petDetailsOpen && (
                 <div
                   role="status"
@@ -239,8 +286,8 @@ export function ActivityGraph({
               )}
             </div>
           )}
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-start gap-1">
+          <div className="activity-heatmap-panel flex min-h-0 min-w-0 flex-col justify-center rounded-lg border border-[var(--ui-border-subtle)] bg-[var(--ui-surface-muted)] p-2">
+            <div className="activity-heatmap-layout grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-1">
               <div
                 data-testid="activity-weekdays"
                 aria-hidden="true"
@@ -253,14 +300,14 @@ export function ActivityGraph({
                   </span>
                 ))}
               </div>
-              <div className="custom-scrollbar min-w-0 flex-1 overflow-x-auto">
+              <div className="activity-heatmap-shell flex min-w-0 items-center justify-start">
                 <div
-                  className="activity-heatmap-grid grid w-max grid-flow-col"
+                  className="activity-heatmap-grid grid min-w-0 grid-flow-col"
                   data-testid="activity-days"
                   style={heatmapStyle}
                 >
                   {Array.from({ length: firstWeekday }, (_, index) => (
-                    <span key={'empty-' + index} aria-hidden="true" />
+                    <span key={'empty-' + index} aria-hidden="true" className="activity-day" />
                   ))}
                   {visibleActivity.map((day) => (
                     <span
@@ -269,7 +316,7 @@ export function ActivityGraph({
                       tabIndex={day.score > 0 ? 0 : -1}
                       aria-label={detailLabel(day)}
                       className={
-                        'size-[var(--activity-cell-size)] rounded-[3px] transition-colors focus:outline-2 focus:outline-offset-1 focus:outline-[var(--ui-focus-ring)] ' +
+                        'activity-day rounded-[3px] transition-colors focus:outline-2 focus:outline-offset-1 focus:outline-[var(--ui-focus-ring)] ' +
                         getColorClass(day.score)
                       }
                       title={detailLabel(day)}
@@ -283,7 +330,7 @@ export function ActivityGraph({
               </div>
             </div>
             {summary.days.every((day) => day.score === 0) && (
-              <div className="mt-1 text-right text-[10px] text-[var(--ui-text-secondary)]">
+              <div className="activity-empty-label mt-1 text-right text-[10px] text-[var(--ui-text-secondary)]">
                 No activity in this range
               </div>
             )}

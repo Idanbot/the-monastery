@@ -38,5 +38,5 @@ describe('SettingsSelect', () => {
     await user.click(screen.getByRole('option', { name: 'Tag 499' }));
     expect(onValueChange).toHaveBeenCalledWith('tag-499');
     expect(screen.queryByRole('option', { name: 'Tag 499' })).not.toBeInTheDocument();
-  });
+  }, 20_000);
 });

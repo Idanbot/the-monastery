@@ -47,6 +47,49 @@ const readFlamePixels = (canvas: Locator) =>
     return { visiblePixels, hash: hash >>> 0 };
   });
 
+const expectActivityToFitWithoutInnerScrolling = async (activity: Locator) => {
+  const layout = await activity.evaluate((surface) => {
+    const surfaceBounds = surface.getBoundingClientRect();
+    const innerScrollers = [surface, ...surface.querySelectorAll('*')]
+      .filter((element) => {
+        const styles = getComputedStyle(element);
+        return [styles.overflowX, styles.overflowY].some((value) => value === 'auto' || value === 'scroll');
+      })
+      .map((element) => ({
+        className: element.className,
+        testId: element.getAttribute('data-testid')
+      }));
+    const outsideSurface = ['activity-pet', 'activity-days'].filter((testId) => {
+      const element = surface.querySelector(`[data-testid="${testId}"]`);
+      if (!element) return true;
+      const bounds = element.getBoundingClientRect();
+      return (
+        bounds.left < surfaceBounds.left - 1 ||
+        bounds.right > surfaceBounds.right + 1 ||
+        bounds.top < surfaceBounds.top - 1 ||
+        bounds.bottom > surfaceBounds.bottom + 1
+      );
+    });
+
+    const contentOverflow =
+      surface.scrollWidth > surface.clientWidth + 1 || surface.scrollHeight > surface.clientHeight + 1;
+
+    return { contentOverflow, innerScrollers, outsideSurface };
+  });
+
+  expect(layout.contentOverflow).toBe(false);
+  expect(layout.innerScrollers).toEqual([]);
+  expect(layout.outsideSurface).toEqual([]);
+};
+
+const expectEveryActivityRangeToFit = async (page: Page) => {
+  const activity = page.getByRole('region', { name: 'Activity' });
+  for (const name of ['Show 4 weeks', 'Show 3 months', 'Show 1 year']) {
+    await page.getByRole('button', { name }).click();
+    await expectActivityToFitWithoutInnerScrolling(activity);
+  }
+};
+
 const verifyActivityVisuals = async (page: Page, testInfo: TestInfo, expectedPetSize: number) => {
   const flame = page.getByTestId('streak-flame');
   const canvas = page.getByTestId('streak-flame-canvas');
@@ -60,6 +103,7 @@ const verifyActivityVisuals = async (page: Page, testInfo: TestInfo, expectedPet
   await expect(pet).toHaveCSS('width', `${expectedPetSize}px`);
   await expect(pet).toHaveCSS('height', `${expectedPetSize}px`);
   await expect(canvas).toHaveCSS('pointer-events', 'none');
+  await expectActivityToFitWithoutInnerScrolling(activityMetrics.locator('..'));
   expect(await activityMetrics.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   const metricRows = await activityMetrics
     .locator(':scope > *')
@@ -83,7 +127,7 @@ const verifyActivityVisuals = async (page: Page, testInfo: TestInfo, expectedPet
   expect(activityDaysBox).not.toBeNull();
   expect(petBox!.x + petBox!.width).toBeLessThanOrEqual(activityDaysBox!.x);
   expect(
-    Math.abs(petBox!.y + petBox!.height - (activityDaysBox!.y + activityDaysBox!.height))
+    Math.abs(petBox!.y + petBox!.height / 2 - (activityDaysBox!.y + activityDaysBox!.height / 2))
   ).toBeLessThanOrEqual(1);
   const overlaps =
     flameBox!.x < petBox!.x + petBox!.width &&
@@ -119,6 +163,7 @@ test('desktop activity renders a live Three.js flame and framed Aurelius pet', a
   await page.goto('/');
   await expect(page.getByTestId('main-activity-module')).toBeVisible();
   await verifyActivityVisuals(page, testInfo, 80);
+  await expectEveryActivityRangeToFit(page);
 
   await page.getByRole('button', { name: 'Customize main view' }).click();
   const petSelect = page.getByRole('combobox', { name: 'Activity pet' });
@@ -155,6 +200,14 @@ test('desktop activity renders a live Three.js flame and framed Aurelius pet', a
   await expect(page.getByTestId('activity-tasks-completed')).toContainText('0');
   await expect(page.getByTestId('streak-flame')).toHaveAttribute('data-animated', 'false');
 
+  await expect
+    .poll(async () => {
+      const response = await page.request.get(api(`/api/profiles/${profileId}/settings`));
+      await expectStatus(response, 200);
+      return (await response.json()).settings.activityClearedBefore;
+    })
+    .toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
   const settingsResponse = await page.request.get(api(`/api/profiles/${profileId}/settings`));
   await expectStatus(settingsResponse, 200);
   const savedSettings = (await settingsResponse.json()).settings;
@@ -181,4 +234,5 @@ test('mobile activity keeps the live flame and pet framed without overlap', asyn
   await page.getByTestId('mobile-shell').getByRole('button', { name: 'More' }).click();
   await page.getByRole('dialog', { name: 'More' }).getByRole('button', { name: 'Analytics' }).click();
   await verifyActivityVisuals(page, testInfo, 56);
+  await expectEveryActivityRangeToFit(page);
 });
