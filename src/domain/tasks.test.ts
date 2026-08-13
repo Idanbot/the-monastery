@@ -245,6 +245,10 @@ describe('task domain helpers', () => {
     expect(mergeSettings({ activityPetId: 'puppy' }).activityPetId).toBe('puppy');
   });
 
+  it('keeps the red panda activity pet selection', () => {
+    expect(mergeSettings({ activityPetId: 'red-panda' }).activityPetId).toBe('red-panda');
+  });
+
   it('migrates removed activity pets to Aurelius', () => {
     expect(mergeSettings({ activityPetId: 'owl' as never }).activityPetId).toBe('aurelius');
     expect(mergeSettings({ activityPetId: 'rabbit' as never }).activityPetId).toBe('aurelius');

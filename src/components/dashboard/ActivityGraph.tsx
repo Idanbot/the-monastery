@@ -27,7 +27,11 @@ const activityRanges = [
 ] as const satisfies readonly { days: ActivityRange; shortLabel: string; label: string }[];
 const weekdayLabels = ['M', '', 'W', '', 'F', '', ''];
 const streakMilestones = [3, 7, 14, 30, 60, 100, 365];
-const petName = (petId: ActivityPetId) => petId.charAt(0).toUpperCase() + petId.slice(1);
+const petName = (petId: ActivityPetId) =>
+  petId
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 const activityCellSizes: Record<ActivityRange, { sizeRem: number; gapRem: number }> = {
   28: { sizeRem: 1, gapRem: 0.375 },
   90: { sizeRem: 0.75, gapRem: 0.25 },

@@ -2,6 +2,7 @@ import type { ActivityPetId } from './types';
 import aureliusAtlas from './generated/aureliusAtlas.json';
 import kittenAtlas from './generated/kittenAtlas.json';
 import puppyAtlas from './generated/puppyAtlas.json';
+import redPandaAtlas from './generated/red-pandaAtlas.json';
 
 export type ActivityPetState = 'dormant' | 'calm' | 'engaged' | 'energized' | 'powered';
 export type ActivityPetAnimationCategory = 'loop' | 'one-shot' | 'transition' | 'ambient';
@@ -134,13 +135,15 @@ function buildManifest(id: ActivityPetId, label: string, atlas: GeneratedAtlas):
 export const activityPetManifests = {
   aurelius: buildManifest('aurelius', 'Aurelius', aureliusAtlas),
   kitten: buildManifest('kitten', 'Kitten', kittenAtlas),
-  puppy: buildManifest('puppy', 'Puppy', puppyAtlas)
+  puppy: buildManifest('puppy', 'Puppy', puppyAtlas),
+  'red-panda': buildManifest('red-panda', 'Red Panda', redPandaAtlas)
 } as const satisfies Record<ActivityPetId, ActivityPetManifest>;
 
 export const activityPetOptions = [
   { id: 'aurelius', label: activityPetManifests.aurelius.label },
   { id: 'kitten', label: activityPetManifests.kitten.label },
-  { id: 'puppy', label: activityPetManifests.puppy.label }
+  { id: 'puppy', label: activityPetManifests.puppy.label },
+  { id: 'red-panda', label: activityPetManifests['red-panda'].label }
 ] as const satisfies readonly { id: ActivityPetId; label: string }[];
 
 export const activityPetEventAnimations = {

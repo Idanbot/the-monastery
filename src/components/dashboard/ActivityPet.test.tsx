@@ -77,6 +77,18 @@ describe('ActivityPet', () => {
     expect(activityPetManifests.puppy.src).toMatch(/^\/pets\/puppy\/puppy-spritesheet\.webp\?v=.+/);
   });
 
+  it('renders the red panda pet with its own normalized atlas', () => {
+    render(<ActivityPet petId="red-panda" streakActive />);
+
+    expect(screen.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'red-panda');
+    expect(screen.getByTestId('activity-pet-sprite')).toHaveStyle({
+      backgroundImage: `url(${activityPetManifests['red-panda'].src})`
+    });
+    expect(activityPetManifests['red-panda'].src).toMatch(
+      /^\/pets\/red-panda\/red-panda-spritesheet\.webp\?v=.+/
+    );
+  });
+
   it('returns to the persistent loop after a one-shot reaction', () => {
     vi.useFakeTimers();
     render(<ActivityPet petId="aurelius" streakActive reaction="streak-started" />);

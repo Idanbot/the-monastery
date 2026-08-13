@@ -9,6 +9,7 @@ anchored; only the sprite inside it changes.
 - `aurelius/aurelius-spritesheet.webp` - marble bust.
 - `kitten/kitten-spritesheet.webp` - ginger kitten.
 - `puppy/puppy-spritesheet.webp` - golden retriever puppy.
+- `red-panda/red-panda-spritesheet.webp` - red panda.
 
 All runtime atlases are transparent, lossless 2048 x 2048 WebP images generated from the raw PNG
 exports in `assets/pets/` by `scripts/normalize-pet-atlas.py`. WebP reduces the current atlas payloads

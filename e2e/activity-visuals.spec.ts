@@ -193,6 +193,15 @@ test('desktop activity renders a live Three.js flame and framed Aurelius pet', a
     contentType: 'image/png'
   });
 
+  await petSelect.click();
+  await page.getByRole('option', { name: 'Red Panda' }).click();
+  await expect(page.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'red-panda');
+  await expect(page.getByTestId('activity-pet')).toHaveAttribute('data-atlas-loaded', 'true');
+  await testInfo.attach('red-panda-80px.png', {
+    body: await page.getByTestId('activity-pet').screenshot(),
+    contentType: 'image/png'
+  });
+
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Clear activity' }).click();
   await page.getByRole('button', { name: 'Close settings' }).click();
@@ -211,7 +220,7 @@ test('desktop activity renders a live Three.js flame and framed Aurelius pet', a
   const settingsResponse = await page.request.get(api(`/api/profiles/${profileId}/settings`));
   await expectStatus(settingsResponse, 200);
   const savedSettings = (await settingsResponse.json()).settings;
-  expect(savedSettings.activityPetId).toBe('puppy');
+  expect(savedSettings.activityPetId).toBe('red-panda');
   expect(new Date(savedSettings.activityClearedBefore).getTime()).toBeGreaterThan(0);
 });
 

@@ -105,4 +105,11 @@ describe('ActivityGraph', () => {
     expect(screen.getByTestId('activity-pet-summary')).toHaveTextContent(/ready to focus/i);
     expect(screen.getByTestId('streak-flame')).toHaveAttribute('data-animated', 'false');
   });
+
+  it('uses a readable name for the red panda companion', () => {
+    render(<ActivityGraph tasks={[]} petId="red-panda" />);
+
+    expect(screen.getByText('Red Panda')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /show red panda streak progress/i })).toBeInTheDocument();
+  });
 });

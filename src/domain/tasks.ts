@@ -353,7 +353,7 @@ export const mergeSettings = (saved) => ({
       )
     )
   ) as AppSettings['collapsedMainViewSlots'],
-  activityPetId: ['aurelius', 'kitten', 'puppy'].includes(saved?.activityPetId)
+  activityPetId: ['aurelius', 'kitten', 'puppy', 'red-panda'].includes(saved?.activityPetId)
     ? saved.activityPetId
     : defaultSettings.activityPetId,
   activityPetVisible:
