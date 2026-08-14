@@ -8,6 +8,7 @@ import { themedSurfaceClassName } from '../ui/themedSurfaceStyles';
 type SettingsSelectOption = {
   id: string;
   label: string;
+  group?: string;
 };
 
 type SettingsSelectProps = {
@@ -40,6 +41,14 @@ export function SettingsSelect({
   const { settings, isDarkMode } = useSettingsContext();
   const emptyOption = useMemo(() => options.find((option) => option.id === ''), [options]);
   const selectableOptions = useMemo(() => options.filter((option) => option.id !== ''), [options]);
+  const optionGroups = useMemo(() => {
+    const groups = new Map<string, SettingsSelectOption[]>();
+    for (const option of selectableOptions) {
+      const group = option.group ?? '';
+      groups.set(group, [...(groups.get(group) ?? []), option]);
+    }
+    return [...groups.entries()];
+  }, [selectableOptions]);
   const selectedLabel = useMemo(() => options.find((option) => option.id === value)?.label, [options, value]);
   const {
     animationsEnabled,
@@ -82,17 +91,29 @@ export function SettingsSelect({
             )}
           >
             <Select.Viewport>
-              {selectableOptions.map((option) => (
-                <Select.Item
-                  key={option.id}
-                  value={option.id}
-                  className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"
-                >
-                  <Select.ItemText>{option.label}</Select.ItemText>
-                  <Select.ItemIndicator className="text-[var(--ui-info)]">
-                    <Check size={14} />
-                  </Select.ItemIndicator>
-                </Select.Item>
+              {optionGroups.map(([group, groupOptions], groupIndex) => (
+                <Select.Group key={group || 'ungrouped'}>
+                  {group && (
+                    <>
+                      {groupIndex > 0 && <Select.Separator className="my-1 h-px bg-[var(--ui-border)]" />}
+                      <Select.Label className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wide text-[var(--ui-text-secondary)]">
+                        {group}
+                      </Select.Label>
+                    </>
+                  )}
+                  {groupOptions.map((option) => (
+                    <Select.Item
+                      key={option.id}
+                      value={option.id}
+                      className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm outline-none data-[highlighted]:bg-slate-100 dark:data-[highlighted]:bg-slate-800"
+                    >
+                      <Select.ItemText>{option.label}</Select.ItemText>
+                      <Select.ItemIndicator className="text-[var(--ui-info)]">
+                        <Check size={14} />
+                      </Select.ItemIndicator>
+                    </Select.Item>
+                  ))}
+                </Select.Group>
               ))}
             </Select.Viewport>
           </Select.Content>

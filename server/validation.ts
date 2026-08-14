@@ -155,7 +155,9 @@ export const appSettingsSchema = z.object({
   mainViewColumnSplit: z.number().min(20).max(80).optional(),
   mainViewRowSplit: z.number().min(20).max(80).optional(),
   collapsedMainViewSlots: z.array(z.enum(['topLeft', 'topRight', 'bottomLeft', 'bottomRight'])).optional(),
-  activityPetId: z.enum(['aurelius', 'kitten', 'puppy', 'red-panda']).optional(),
+  activityPetId: z
+    .enum(['aurelius', 'socrates', 'hypatia', 'kitten', 'puppy', 'red-panda', 'raven', 'tortoise'])
+    .optional(),
   activityPetVisible: z.boolean().optional(),
   activityFlameAnimationEnabled: z.boolean().optional(),
   activityClearedBefore: z.iso.datetime().optional(),

@@ -146,7 +146,7 @@ const verifyActivityVisuals = async (page: Page, testInfo: TestInfo, expectedPet
   });
 };
 
-test('desktop activity renders a live Three.js flame and framed Aurelius pet', async ({
+test('desktop activity renders a live Three.js flame and switchable framed companions', async ({
   page,
   request
 }, testInfo) => {
@@ -202,6 +202,17 @@ test('desktop activity renders a live Three.js flame and framed Aurelius pet', a
     contentType: 'image/png'
   });
 
+  await petSelect.click();
+  await expect(page.getByText('Thinkers')).toBeVisible();
+  await expect(page.getByText('Creatures')).toBeVisible();
+  await page.getByRole('option', { name: 'Raven' }).click();
+  await expect(page.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'raven');
+  await expect(page.getByTestId('activity-pet')).toHaveAttribute('data-atlas-loaded', 'true');
+  await testInfo.attach('raven-80px.png', {
+    body: await page.getByTestId('activity-pet').screenshot(),
+    contentType: 'image/png'
+  });
+
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Clear activity' }).click();
   await page.getByRole('button', { name: 'Close settings' }).click();
@@ -220,7 +231,7 @@ test('desktop activity renders a live Three.js flame and framed Aurelius pet', a
   const settingsResponse = await page.request.get(api(`/api/profiles/${profileId}/settings`));
   await expectStatus(settingsResponse, 200);
   const savedSettings = (await settingsResponse.json()).settings;
-  expect(savedSettings.activityPetId).toBe('red-panda');
+  expect(savedSettings.activityPetId).toBe('raven');
   expect(new Date(savedSettings.activityClearedBefore).getTime()).toBeGreaterThan(0);
 });
 

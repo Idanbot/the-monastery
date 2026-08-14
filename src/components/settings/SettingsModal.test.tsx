@@ -280,9 +280,12 @@ describe('SettingsModal', () => {
     });
 
     await user.click(screen.getByRole('combobox', { name: 'Activity pet' }));
-    await user.click(screen.getByRole('option', { name: 'Kitten' }));
+    expect(screen.getByText('Thinkers')).toBeInTheDocument();
+    expect(screen.getByText('Creatures')).toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: 'Hypatia' }));
     const petUpdate = props.setSettings.mock.lastCall?.[0];
-    expect(petUpdate(props.settings)).toEqual({ ...props.settings, activityPetId: 'kitten' });
+    expect(petUpdate(props.settings)).toEqual({ ...props.settings, activityPetId: 'hypatia' });
+    expect(screen.getByText(/8 companions react to focus and streaks/i)).toBeInTheDocument();
 
     await user.click(screen.getByLabelText('Animate streak flame'));
     const flameUpdate = props.setSettings.mock.lastCall?.[0];

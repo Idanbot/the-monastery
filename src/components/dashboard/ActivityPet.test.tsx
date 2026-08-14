@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activityPetManifests } from '../../domain/activityPets';
+import { activityPetManifests, activityPetOptions } from '../../domain/activityPets';
 import { ActivityPet } from './ActivityPet';
 
 describe('ActivityPet', () => {
@@ -87,6 +87,23 @@ describe('ActivityPet', () => {
     expect(activityPetManifests['red-panda'].src).toMatch(
       /^\/pets\/red-panda\/red-panda-spritesheet\.webp\?v=.+/
     );
+  });
+
+  it('offers the complete thinker and creature roster with dedicated atlases', () => {
+    expect(activityPetOptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'socrates', group: 'Thinkers' }),
+        expect.objectContaining({ id: 'hypatia', group: 'Thinkers' }),
+        expect.objectContaining({ id: 'raven', group: 'Creatures' }),
+        expect.objectContaining({ id: 'tortoise', group: 'Creatures' })
+      ])
+    );
+
+    for (const id of ['socrates', 'hypatia', 'raven', 'tortoise'] as const) {
+      expect(activityPetManifests[id].src).toMatch(
+        new RegExp(`^/pets/${id}/${id}-spritesheet\\.webp\\?v=.+`)
+      );
+    }
   });
 
   it('returns to the persistent loop after a one-shot reaction', () => {

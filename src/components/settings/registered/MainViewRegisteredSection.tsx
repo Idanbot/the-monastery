@@ -96,6 +96,9 @@ export default function MainViewRegisteredSection(props: RegisteredSectionProps)
             options={activityPetOptions}
             className="font-normal"
           />
+          <span className="font-normal text-[11px] text-[var(--ui-text-secondary)]">
+            {activityPetOptions.length} companions react to focus and streaks
+          </span>
         </label>
         <label className="flex min-h-10 items-center gap-2 text-sm font-medium">
           <input

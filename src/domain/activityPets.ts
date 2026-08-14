@@ -1,8 +1,12 @@
 import type { ActivityPetId } from './types';
 import aureliusAtlas from './generated/aureliusAtlas.json';
+import hypatiaAtlas from './generated/hypatiaAtlas.json';
 import kittenAtlas from './generated/kittenAtlas.json';
 import puppyAtlas from './generated/puppyAtlas.json';
+import ravenAtlas from './generated/ravenAtlas.json';
 import redPandaAtlas from './generated/red-pandaAtlas.json';
+import socratesAtlas from './generated/socratesAtlas.json';
+import tortoiseAtlas from './generated/tortoiseAtlas.json';
 
 export type ActivityPetState = 'dormant' | 'calm' | 'engaged' | 'energized' | 'powered';
 export type ActivityPetAnimationCategory = 'loop' | 'one-shot' | 'transition' | 'ambient';
@@ -134,17 +138,25 @@ function buildManifest(id: ActivityPetId, label: string, atlas: GeneratedAtlas):
 
 export const activityPetManifests = {
   aurelius: buildManifest('aurelius', 'Aurelius', aureliusAtlas),
+  socrates: buildManifest('socrates', 'Socrates', socratesAtlas),
+  hypatia: buildManifest('hypatia', 'Hypatia', hypatiaAtlas),
   kitten: buildManifest('kitten', 'Kitten', kittenAtlas),
   puppy: buildManifest('puppy', 'Puppy', puppyAtlas),
-  'red-panda': buildManifest('red-panda', 'Red Panda', redPandaAtlas)
+  'red-panda': buildManifest('red-panda', 'Red Panda', redPandaAtlas),
+  raven: buildManifest('raven', 'Raven', ravenAtlas),
+  tortoise: buildManifest('tortoise', 'Tortoise', tortoiseAtlas)
 } as const satisfies Record<ActivityPetId, ActivityPetManifest>;
 
 export const activityPetOptions = [
-  { id: 'aurelius', label: activityPetManifests.aurelius.label },
-  { id: 'kitten', label: activityPetManifests.kitten.label },
-  { id: 'puppy', label: activityPetManifests.puppy.label },
-  { id: 'red-panda', label: activityPetManifests['red-panda'].label }
-] as const satisfies readonly { id: ActivityPetId; label: string }[];
+  { id: 'aurelius', label: activityPetManifests.aurelius.label, group: 'Thinkers' },
+  { id: 'socrates', label: activityPetManifests.socrates.label, group: 'Thinkers' },
+  { id: 'hypatia', label: activityPetManifests.hypatia.label, group: 'Thinkers' },
+  { id: 'kitten', label: activityPetManifests.kitten.label, group: 'Creatures' },
+  { id: 'puppy', label: activityPetManifests.puppy.label, group: 'Creatures' },
+  { id: 'red-panda', label: activityPetManifests['red-panda'].label, group: 'Creatures' },
+  { id: 'raven', label: activityPetManifests.raven.label, group: 'Creatures' },
+  { id: 'tortoise', label: activityPetManifests.tortoise.label, group: 'Creatures' }
+] as const satisfies readonly { id: ActivityPetId; label: string; group: 'Thinkers' | 'Creatures' }[];
 
 export const activityPetEventAnimations = {
   'task-completed': 'small_success',

@@ -39,4 +39,28 @@ describe('SettingsSelect', () => {
     expect(onValueChange).toHaveBeenCalledWith('tag-499');
     expect(screen.queryByRole('option', { name: 'Tag 499' })).not.toBeInTheDocument();
   }, 20_000);
+
+  it('groups related options without changing selection behavior', async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+
+    render(
+      <SettingsSelect
+        ariaLabel="Activity pet"
+        value="aurelius"
+        onValueChange={onValueChange}
+        options={[
+          { id: 'aurelius', label: 'Aurelius', group: 'Thinkers' },
+          { id: 'socrates', label: 'Socrates', group: 'Thinkers' },
+          { id: 'raven', label: 'Raven', group: 'Creatures' }
+        ]}
+      />
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Activity pet' }));
+    expect(screen.getByText('Thinkers')).toBeInTheDocument();
+    expect(screen.getByText('Creatures')).toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: 'Raven' }));
+    expect(onValueChange).toHaveBeenCalledWith('raven');
+  });
 });
