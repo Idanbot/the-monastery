@@ -285,7 +285,7 @@ describe('SettingsModal', () => {
     await user.click(screen.getByRole('option', { name: 'Hypatia' }));
     const petUpdate = props.setSettings.mock.lastCall?.[0];
     expect(petUpdate(props.settings)).toEqual({ ...props.settings, activityPetId: 'hypatia' });
-    expect(screen.getByText(/8 companions react to focus and streaks/i)).toBeInTheDocument();
+    expect(screen.getByText(/14 companions react to focus and streaks/i)).toBeInTheDocument();
 
     await user.click(screen.getByLabelText('Animate streak flame'));
     const flameUpdate = props.setSettings.mock.lastCall?.[0];

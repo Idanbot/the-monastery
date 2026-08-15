@@ -355,13 +355,19 @@ export const mergeSettings = (saved) => ({
   ) as AppSettings['collapsedMainViewSlots'],
   activityPetId: [
     'aurelius',
+    'plato',
+    'aristotle',
+    'diogenes',
     'socrates',
     'hypatia',
     'kitten',
     'puppy',
     'red-panda',
     'raven',
-    'tortoise'
+    'tortoise',
+    'owl',
+    'fox',
+    'axolotl'
   ].includes(saved?.activityPetId)
     ? saved.activityPetId
     : defaultSettings.activityPetId,

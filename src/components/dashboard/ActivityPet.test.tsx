@@ -90,16 +90,34 @@ describe('ActivityPet', () => {
   });
 
   it('offers the complete thinker and creature roster with dedicated atlases', () => {
+    expect(activityPetOptions).toHaveLength(14);
     expect(activityPetOptions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'socrates', group: 'Thinkers' }),
         expect.objectContaining({ id: 'hypatia', group: 'Thinkers' }),
         expect.objectContaining({ id: 'raven', group: 'Creatures' }),
-        expect.objectContaining({ id: 'tortoise', group: 'Creatures' })
+        expect.objectContaining({ id: 'tortoise', group: 'Creatures' }),
+        expect.objectContaining({ id: 'plato', group: 'Thinkers' }),
+        expect.objectContaining({ id: 'aristotle', group: 'Thinkers' }),
+        expect.objectContaining({ id: 'diogenes', group: 'Thinkers' }),
+        expect.objectContaining({ id: 'owl', group: 'Creatures' }),
+        expect.objectContaining({ id: 'fox', group: 'Creatures' }),
+        expect.objectContaining({ id: 'axolotl', group: 'Creatures' })
       ])
     );
 
-    for (const id of ['socrates', 'hypatia', 'raven', 'tortoise'] as const) {
+    for (const id of [
+      'socrates',
+      'hypatia',
+      'raven',
+      'tortoise',
+      'plato',
+      'aristotle',
+      'diogenes',
+      'owl',
+      'fox',
+      'axolotl'
+    ] as const) {
       expect(activityPetManifests[id].src).toMatch(
         new RegExp(`^/pets/${id}/${id}-spritesheet\\.webp\\?v=.+`)
       );

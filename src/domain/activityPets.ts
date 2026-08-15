@@ -1,7 +1,13 @@
 import type { ActivityPetId } from './types';
 import aureliusAtlas from './generated/aureliusAtlas.json';
+import aristotleAtlas from './generated/aristotleAtlas.json';
+import axolotlAtlas from './generated/axolotlAtlas.json';
+import diogenesAtlas from './generated/diogenesAtlas.json';
+import foxAtlas from './generated/foxAtlas.json';
 import hypatiaAtlas from './generated/hypatiaAtlas.json';
 import kittenAtlas from './generated/kittenAtlas.json';
+import owlAtlas from './generated/owlAtlas.json';
+import platoAtlas from './generated/platoAtlas.json';
 import puppyAtlas from './generated/puppyAtlas.json';
 import ravenAtlas from './generated/ravenAtlas.json';
 import redPandaAtlas from './generated/red-pandaAtlas.json';
@@ -138,24 +144,36 @@ function buildManifest(id: ActivityPetId, label: string, atlas: GeneratedAtlas):
 
 export const activityPetManifests = {
   aurelius: buildManifest('aurelius', 'Aurelius', aureliusAtlas),
+  plato: buildManifest('plato', 'Plato', platoAtlas),
+  aristotle: buildManifest('aristotle', 'Aristotle', aristotleAtlas),
+  diogenes: buildManifest('diogenes', 'Diogenes', diogenesAtlas),
   socrates: buildManifest('socrates', 'Socrates', socratesAtlas),
   hypatia: buildManifest('hypatia', 'Hypatia', hypatiaAtlas),
   kitten: buildManifest('kitten', 'Kitten', kittenAtlas),
   puppy: buildManifest('puppy', 'Puppy', puppyAtlas),
   'red-panda': buildManifest('red-panda', 'Red Panda', redPandaAtlas),
   raven: buildManifest('raven', 'Raven', ravenAtlas),
-  tortoise: buildManifest('tortoise', 'Tortoise', tortoiseAtlas)
+  tortoise: buildManifest('tortoise', 'Tortoise', tortoiseAtlas),
+  owl: buildManifest('owl', 'Owl', owlAtlas),
+  fox: buildManifest('fox', 'Fox', foxAtlas),
+  axolotl: buildManifest('axolotl', 'Axolotl', axolotlAtlas)
 } as const satisfies Record<ActivityPetId, ActivityPetManifest>;
 
 export const activityPetOptions = [
   { id: 'aurelius', label: activityPetManifests.aurelius.label, group: 'Thinkers' },
+  { id: 'plato', label: activityPetManifests.plato.label, group: 'Thinkers' },
+  { id: 'aristotle', label: activityPetManifests.aristotle.label, group: 'Thinkers' },
+  { id: 'diogenes', label: activityPetManifests.diogenes.label, group: 'Thinkers' },
   { id: 'socrates', label: activityPetManifests.socrates.label, group: 'Thinkers' },
   { id: 'hypatia', label: activityPetManifests.hypatia.label, group: 'Thinkers' },
   { id: 'kitten', label: activityPetManifests.kitten.label, group: 'Creatures' },
   { id: 'puppy', label: activityPetManifests.puppy.label, group: 'Creatures' },
   { id: 'red-panda', label: activityPetManifests['red-panda'].label, group: 'Creatures' },
   { id: 'raven', label: activityPetManifests.raven.label, group: 'Creatures' },
-  { id: 'tortoise', label: activityPetManifests.tortoise.label, group: 'Creatures' }
+  { id: 'tortoise', label: activityPetManifests.tortoise.label, group: 'Creatures' },
+  { id: 'owl', label: activityPetManifests.owl.label, group: 'Creatures' },
+  { id: 'fox', label: activityPetManifests.fox.label, group: 'Creatures' },
+  { id: 'axolotl', label: activityPetManifests.axolotl.label, group: 'Creatures' }
 ] as const satisfies readonly { id: ActivityPetId; label: string; group: 'Thinkers' | 'Creatures' }[];
 
 export const activityPetEventAnimations = {

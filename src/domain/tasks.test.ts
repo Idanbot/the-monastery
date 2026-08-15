@@ -249,16 +249,24 @@ describe('task domain helpers', () => {
     expect(mergeSettings({ activityPetId: 'red-panda' }).activityPetId).toBe('red-panda');
   });
 
-  it.each(['socrates', 'hypatia', 'raven', 'tortoise'] as const)(
-    'keeps the %s activity pet selection',
-    (activityPetId) => {
-      expect(mergeSettings({ activityPetId }).activityPetId).toBe(activityPetId);
-    }
-  );
+  it.each([
+    'socrates',
+    'hypatia',
+    'raven',
+    'tortoise',
+    'plato',
+    'aristotle',
+    'diogenes',
+    'owl',
+    'fox',
+    'axolotl'
+  ] as const)('keeps the %s activity pet selection', (activityPetId) => {
+    expect(mergeSettings({ activityPetId }).activityPetId).toBe(activityPetId);
+  });
 
   it('migrates removed activity pets to Aurelius', () => {
-    expect(mergeSettings({ activityPetId: 'owl' as never }).activityPetId).toBe('aurelius');
     expect(mergeSettings({ activityPetId: 'rabbit' as never }).activityPetId).toBe('aurelius');
+    expect(mergeSettings({ activityPetId: 'hamster' as never }).activityPetId).toBe('aurelius');
   });
 
   it('normalizes auto promotion setting', () => {

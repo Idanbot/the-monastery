@@ -7,6 +7,9 @@ anchored; only the sprite inside it changes.
 ## Pets
 
 - `aurelius/aurelius-spritesheet.webp` - marble bust.
+- `plato/plato-spritesheet.webp` - Plato marble bust.
+- `aristotle/aristotle-spritesheet.webp` - Aristotle marble bust.
+- `diogenes/diogenes-spritesheet.webp` - Diogenes marble bust.
 - `socrates/socrates-spritesheet.webp` - Socrates marble bust.
 - `hypatia/hypatia-spritesheet.webp` - Hypatia marble bust.
 - `kitten/kitten-spritesheet.webp` - ginger kitten.
@@ -14,6 +17,9 @@ anchored; only the sprite inside it changes.
 - `red-panda/red-panda-spritesheet.webp` - red panda.
 - `raven/raven-spritesheet.webp` - raven.
 - `tortoise/tortoise-spritesheet.webp` - Mediterranean tortoise.
+- `owl/owl-spritesheet.webp` - tawny owl.
+- `fox/fox-spritesheet.webp` - red fox.
+- `axolotl/axolotl-spritesheet.webp` - pink axolotl.
 
 All runtime atlases are transparent, lossless 2048 x 2048 WebP images generated from the raw PNG
 exports in `assets/pets/` by `scripts/normalize-pet-atlas.py`. WebP reduces the current atlas payloads

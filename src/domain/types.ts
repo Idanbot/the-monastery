@@ -118,13 +118,19 @@ export type MainViewSlotContentId =
 export type MainViewSlots = Record<MainViewSlotId, MainViewSlotContentId>;
 export type ActivityPetId =
   | 'aurelius'
+  | 'plato'
+  | 'aristotle'
+  | 'diogenes'
   | 'socrates'
   | 'hypatia'
   | 'kitten'
   | 'puppy'
   | 'red-panda'
   | 'raven'
-  | 'tortoise';
+  | 'tortoise'
+  | 'owl'
+  | 'fox'
+  | 'axolotl';
 
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';

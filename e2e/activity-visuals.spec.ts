@@ -170,6 +170,7 @@ test('desktop activity renders a live Three.js flame and switchable framed compa
   await petSelect.click();
   const puppyOption = page.getByRole('option', { name: 'Puppy' });
   await expect(puppyOption).toBeVisible();
+  await puppyOption.scrollIntoViewIfNeeded();
   expect(
     await puppyOption.evaluate((option) =>
       Number(getComputedStyle(option.closest('[role="listbox"]') as HTMLElement).zIndex)
@@ -213,6 +214,15 @@ test('desktop activity renders a live Three.js flame and switchable framed compa
     contentType: 'image/png'
   });
 
+  await petSelect.click();
+  await page.getByRole('option', { name: 'Axolotl' }).click();
+  await expect(page.getByTestId('activity-pet')).toHaveAttribute('data-pet-id', 'axolotl');
+  await expect(page.getByTestId('activity-pet')).toHaveAttribute('data-atlas-loaded', 'true');
+  await testInfo.attach('axolotl-80px.png', {
+    body: await page.getByTestId('activity-pet').screenshot(),
+    contentType: 'image/png'
+  });
+
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Clear activity' }).click();
   await page.getByRole('button', { name: 'Close settings' }).click();
@@ -231,7 +241,7 @@ test('desktop activity renders a live Three.js flame and switchable framed compa
   const settingsResponse = await page.request.get(api(`/api/profiles/${profileId}/settings`));
   await expectStatus(settingsResponse, 200);
   const savedSettings = (await settingsResponse.json()).settings;
-  expect(savedSettings.activityPetId).toBe('raven');
+  expect(savedSettings.activityPetId).toBe('axolotl');
   expect(new Date(savedSettings.activityClearedBefore).getTime()).toBeGreaterThan(0);
 });
 
