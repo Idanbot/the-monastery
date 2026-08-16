@@ -1,13 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { mergeSettings, normalizeTasksPayload } from '../domain/tasks';
-import { apiRequest, shouldUseBackend, ApiError } from '../lib/api';
+import { apiRequest, shouldUseBackend } from '../lib/api';
 import { deepEqual } from '../lib/deepEqual';
 import { activeProfileStorageKey } from '../lib/storage';
 import { createProfileSyncQueue, type ProfileSyncQueue } from '../domain/profileSyncQueue';
 import {
   getPendingProfileMutation,
-  queueProfileMutation,
   removeProfileMutation,
   removeProfileMutationFor,
   type PendingProfileMutation,
@@ -23,25 +21,23 @@ import {
   tasksResponseSchema
 } from '../../shared/apiContracts';
 import type { AppSettings, Profile, Task } from '../domain/types';
+import {
+  combinePersistenceStatuses,
+  getPersistenceErrorMessage as getErrorMessage,
+  isProfileConflictError as isConflictError,
+  useProfileResourceSave
+} from './useProfileResourceSave';
+
+export type { PersistenceStatus } from './useProfileResourceSave';
 
 export type ProfileAction = 'reset' | 'remove';
 
 export type ProfileSummary = Profile;
 
-export type PersistenceStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error' | 'offline';
-
 export type SyncConflict = {
   resource: ProfileMutationResource;
   entry: PendingProfileMutation;
   message: string;
-};
-
-const getErrorMessage = (error: unknown, fallback: string): string =>
-  error instanceof Error ? error.message : fallback;
-
-const isConflictError = (error: unknown): boolean => {
-  if (error instanceof ApiError) return error.status === 409;
-  return /conflict|changed elsewhere/i.test(getErrorMessage(error, ''));
 };
 
 function useProfileBootstrap({
@@ -308,143 +304,79 @@ function useDebouncedProfileSave({
   syncQueue,
   reloadVersion
 }) {
-  const [persistenceStatus, setPersistenceStatus] = useState('idle');
-  const [lastSavedAt, setLastSavedAt] = useState(null);
-  const tasksBaselineRef = useRef(null);
-  const settingsBaselineRef = useRef(null);
-  const pendingWritesRef = useRef(0);
-  const saveGenerationRef = useRef(0);
-
-  useEffect(() => {
-    tasksBaselineRef.current = null;
-    settingsBaselineRef.current = null;
-    pendingWritesRef.current = 0;
-    saveGenerationRef.current += 1;
-    setPersistenceStatus(isBackendAvailable ? 'loading' : 'offline');
-  }, [activeProfileId, isBackendAvailable, reloadVersion]);
-
-  useEffect(() => {
-    if (!isBackendAvailable) setPersistenceStatus('offline');
-  }, [isBackendAvailable]);
-
-  useEffect(() => {
-    if (!isBackendAvailable || !activeProfileId || !isProfileReady) return;
-    if (tasksBaselineRef.current === null) {
-      tasksBaselineRef.current = tasks;
-      setPersistenceStatus('saved');
-      return;
-    }
-    if (tasksEqual(tasksBaselineRef.current, tasks)) {
-      setPersistenceStatus('saved');
-      return;
-    }
-
-    setPersistenceStatus('saving');
-    const saveTimer = window.setTimeout(() => {
-      const previousTasks = tasksBaselineRef.current || [];
-      const generation = saveGenerationRef.current;
-      const queuedMutation = queueProfileMutation(activeProfileId, 'tasks', tasks);
-      pendingWritesRef.current += 1;
-      syncQueue
-        .enqueueTask((baseRevision) => saveTasksDelta(activeProfileId, previousTasks, tasks, baseRevision))
-        .then(() => {
-          if (generation !== saveGenerationRef.current) return;
-          pendingWritesRef.current -= 1;
-          tasksBaselineRef.current = tasks;
-          removeProfileMutation(queuedMutation);
-          setLastSavedAt(new Date());
-          setPersistenceStatus(pendingWritesRef.current > 0 ? 'saving' : 'saved');
-          setProfileError('');
-        })
-        .catch((error) => {
-          if (generation !== saveGenerationRef.current) return;
-          pendingWritesRef.current -= 1;
-          const message = getErrorMessage(error, 'Could not save tasks.');
-          if (isConflictError(error)) {
-            setSyncConflict({ resource: 'tasks', entry: queuedMutation, message });
-          }
-          setPersistenceStatus('error');
-          setProfileError(message);
-          toast.error(message);
-        });
-    }, 350);
-
-    return () => window.clearTimeout(saveTimer);
-  }, [
-    tasks,
-    activeProfileId,
-    isBackendAvailable,
-    isProfileReady,
-    setProfileError,
-    setSyncConflict,
-    syncQueue
-  ]);
-
-  useEffect(() => {
-    if (!isBackendAvailable || !activeProfileId || !isProfileSettingsReady) return;
-    if (settingsBaselineRef.current === null) {
-      settingsBaselineRef.current = settings;
-      setPersistenceStatus((status) => (status === 'saving' ? status : 'saved'));
-      return;
-    }
-    if (tasksEqual(settingsBaselineRef.current, settings)) {
-      setPersistenceStatus((status) => (status === 'saving' ? status : 'saved'));
-      return;
-    }
-
-    setPersistenceStatus('saving');
-    const saveTimer = window.setTimeout(() => {
-      const generation = saveGenerationRef.current;
-      const queuedMutation = queueProfileMutation(activeProfileId, 'settings', settings);
-      pendingWritesRef.current += 1;
-      syncQueue
-        .enqueueSettings((baseRevision) =>
-          apiRequest(
-            apiPaths.settings(activeProfileId),
-            {
-              method: 'PUT',
-              body: JSON.stringify({ settings, baseRevision })
-            },
-            mutationResponseSchema
-          )
+  const saveTasks = useCallback(
+    (previousTasks, nextTasks) =>
+      syncQueue.enqueueTask((baseRevision) =>
+        saveTasksDelta(activeProfileId, previousTasks, nextTasks, baseRevision)
+      ),
+    [activeProfileId, syncQueue]
+  );
+  const saveSettings = useCallback(
+    (_previousSettings, nextSettings) =>
+      syncQueue.enqueueSettings((baseRevision) =>
+        apiRequest(
+          apiPaths.settings(activeProfileId),
+          {
+            method: 'PUT',
+            body: JSON.stringify({ settings: nextSettings, baseRevision })
+          },
+          mutationResponseSchema
         )
-        .then(() => {
-          if (generation !== saveGenerationRef.current) return;
-          pendingWritesRef.current -= 1;
-          settingsBaselineRef.current = settings;
-          removeProfileMutation(queuedMutation);
-          setLastSavedAt(new Date());
-          setPersistenceStatus(pendingWritesRef.current > 0 ? 'saving' : 'saved');
-          setProfileError('');
-        })
-        .catch((error) => {
-          if (generation !== saveGenerationRef.current) return;
-          pendingWritesRef.current -= 1;
-          const message = getErrorMessage(error, 'Could not save settings.');
-          if (isConflictError(error)) {
-            setSyncConflict({ resource: 'settings', entry: queuedMutation, message });
-          }
-          setPersistenceStatus('error');
-          setProfileError(message);
-          toast.error(message);
-        });
-    }, 450);
+      ),
+    [activeProfileId, syncQueue]
+  );
+  const onTaskConflict = useCallback(
+    (entry, message) => setSyncConflict({ resource: 'tasks', entry, message }),
+    [setSyncConflict]
+  );
+  const onSettingsConflict = useCallback(
+    (entry, message) => setSyncConflict({ resource: 'settings', entry, message }),
+    [setSyncConflict]
+  );
 
-    return () => window.clearTimeout(saveTimer);
-  }, [
-    settings,
+  const taskPersistence = useProfileResourceSave({
     activeProfileId,
+    resource: 'tasks',
+    value: tasks,
+    ready: isProfileReady,
     isBackendAvailable,
-    isProfileSettingsReady,
-    setProfileError,
-    setSyncConflict,
-    syncQueue
-  ]);
+    reloadVersion,
+    delayMs: 350,
+    save: saveTasks,
+    errorMessage: 'Could not save tasks.',
+    onError: setProfileError,
+    onConflict: onTaskConflict
+  });
+  const settingsPersistence = useProfileResourceSave({
+    activeProfileId,
+    resource: 'settings',
+    value: settings,
+    ready: isProfileSettingsReady,
+    isBackendAvailable,
+    reloadVersion,
+    delayMs: 450,
+    save: saveSettings,
+    errorMessage: 'Could not save settings.',
+    onError: setProfileError,
+    onConflict: onSettingsConflict
+  });
+
+  const persistenceStatus = combinePersistenceStatuses(
+    [taskPersistence.status, settingsPersistence.status],
+    isBackendAvailable
+  );
+  const lastSavedAt = useMemo(() => {
+    const timestamps = [taskPersistence.lastSavedAt, settingsPersistence.lastSavedAt].filter(
+      (timestamp): timestamp is number => timestamp !== null
+    );
+    return timestamps.length ? Math.max(...timestamps) : null;
+  }, [settingsPersistence.lastSavedAt, taskPersistence.lastSavedAt]);
 
   const keepLocalChanges = useCallback(async () => {
     if (!syncConflict || !activeProfileId) return;
     const { resource, entry } = syncConflict;
-    setPersistenceStatus('saving');
+    const persistence = resource === 'tasks' ? taskPersistence : settingsPersistence;
+    persistence.markStatus('saving');
     try {
       const latest =
         resource === 'tasks'
@@ -463,7 +395,7 @@ function useDebouncedProfileSave({
             mutationResponseSchema
           )
         );
-        tasksBaselineRef.current = localTasks;
+        taskPersistence.acceptSavedValue(localTasks);
       } else {
         syncQueue.setSettingsRevision(latest.revision);
         const localSettings = mergeSettings(entry.payload);
@@ -477,19 +409,25 @@ function useDebouncedProfileSave({
             mutationResponseSchema
           )
         );
-        settingsBaselineRef.current = localSettings;
+        settingsPersistence.acceptSavedValue(localSettings);
       }
       removeProfileMutation(entry);
       setSyncConflict(null);
       setProfileError('');
-      setLastSavedAt(new Date());
-      setPersistenceStatus('saved');
     } catch (error) {
       const message = getErrorMessage(error, 'Could not resolve the sync conflict.');
       setProfileError(message);
-      setPersistenceStatus('error');
+      persistence.markStatus('error');
     }
-  }, [activeProfileId, setProfileError, setSyncConflict, syncConflict, syncQueue]);
+  }, [
+    activeProfileId,
+    setProfileError,
+    setSyncConflict,
+    settingsPersistence,
+    syncConflict,
+    syncQueue,
+    taskPersistence
+  ]);
 
   const discardLocalConflict = useCallback(() => {
     if (!syncConflict || !activeProfileId) return;

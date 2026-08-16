@@ -3,17 +3,22 @@ import { settingsSectionRegistry, settingsSectionIds } from './settingsSectionRe
 
 it('registers every extracted settings section once', () => {
   expect(settingsSectionIds).toEqual([
+    'appearance',
     'main',
     'media',
     'time',
     'board',
     'tags',
+    'roles',
     'projects',
     'sidebar',
-    'integrations'
+    'profiles',
+    'integrations',
+    'data'
   ]);
   expect(new Set(settingsSectionRegistry.map((section) => section.id)).size).toBe(
     settingsSectionRegistry.length
   );
   expect(settingsSectionRegistry.every((section) => typeof section.load === 'function')).toBe(true);
+  expect(settingsSectionRegistry.every((section) => section.label && section.description)).toBe(true);
 });

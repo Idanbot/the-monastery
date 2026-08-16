@@ -3,4 +3,5 @@ export type RegisteredSectionProps = {
   toggleSection: (id: string) => void;
   motionDuration: number;
   motionEase: string | readonly [number, number, number, number];
+  onClose?: () => void;
 };

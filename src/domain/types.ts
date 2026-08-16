@@ -1,20 +1,15 @@
-export type TaskStatus = 'backlog' | 'in-progress' | 'done' | 'rejected';
+import type { ActivityPetId } from '../../shared/activityPets';
+import type {
+  MainViewModuleId as PersistedMainViewModuleId,
+  MainViewSlotContentId as PersistedMainViewSlotContentId,
+  MainViewSlotId as PersistedMainViewSlotId,
+  TaskStatusId,
+  VisualThemeId
+} from '../../shared/settingsContract';
+
+export type TaskStatus = TaskStatusId;
 export type TaskRecurrence = 'none' | 'daily' | 'weekly' | 'monthly';
-export type VisualTheme =
-  | 'default'
-  | 'zen'
-  | 'tokyo-night'
-  | 'liquid-glass'
-  | 'obsidian-glass'
-  | 'terminal'
-  | 'terminal-white'
-  | 'catppuccin'
-  | 'gruvbox'
-  | 'dracula'
-  | 'github-light'
-  | 'github-dark'
-  | 'nord'
-  | 'night-owl';
+export type VisualTheme = VisualThemeId;
 export type ThemeColorScheme = {
   main: string;
   secondary: string;
@@ -99,39 +94,16 @@ export type Project = {
 
 export type WebhookProviderPreference = { enabled: boolean; template: string };
 export type WebhookProviderSettings = Record<'discord' | 'slack' | 'telegram', WebhookProviderPreference>;
-export type MainViewModuleId = 'focus' | 'activity' | 'calendar' | 'media' | 'clock';
+export type MainViewModuleId = PersistedMainViewModuleId;
 export type MainViewArea = 'center' | 'right';
 export type MainViewModule = {
   id: MainViewModuleId;
   area: MainViewArea;
   visible: boolean;
 };
-export type MainViewSlotId = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
-export type MainViewSlotContentId =
-  | MainViewModuleId
-  | 'timeline'
-  | 'calendar-media'
-  | 'clock-timeline'
-  | 'focus-current'
-  | 'activity-current'
-  | 'clock-media-timeline';
+export type MainViewSlotId = PersistedMainViewSlotId;
+export type MainViewSlotContentId = PersistedMainViewSlotContentId;
 export type MainViewSlots = Record<MainViewSlotId, MainViewSlotContentId>;
-export type ActivityPetId =
-  | 'aurelius'
-  | 'plato'
-  | 'aristotle'
-  | 'diogenes'
-  | 'socrates'
-  | 'hypatia'
-  | 'kitten'
-  | 'puppy'
-  | 'red-panda'
-  | 'raven'
-  | 'tortoise'
-  | 'owl'
-  | 'fox'
-  | 'axolotl';
-
 export type AppSettings = {
   theme: 'system' | 'light' | 'dark';
   visualTheme: VisualTheme;
@@ -242,3 +214,4 @@ export type LocalBackup = {
   settings: AppSettings;
   tasks: Task[];
 };
+export type { ActivityPetId } from '../../shared/activityPets';

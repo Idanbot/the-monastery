@@ -1,4 +1,5 @@
 import type { ActivityPetId } from './types';
+import { activityPetCatalog } from '../../shared/activityPets';
 import aureliusAtlas from './generated/aureliusAtlas.json';
 import aristotleAtlas from './generated/aristotleAtlas.json';
 import axolotlAtlas from './generated/axolotlAtlas.json';
@@ -159,22 +160,7 @@ export const activityPetManifests = {
   axolotl: buildManifest('axolotl', 'Axolotl', axolotlAtlas)
 } as const satisfies Record<ActivityPetId, ActivityPetManifest>;
 
-export const activityPetOptions = [
-  { id: 'aurelius', label: activityPetManifests.aurelius.label, group: 'Thinkers' },
-  { id: 'plato', label: activityPetManifests.plato.label, group: 'Thinkers' },
-  { id: 'aristotle', label: activityPetManifests.aristotle.label, group: 'Thinkers' },
-  { id: 'diogenes', label: activityPetManifests.diogenes.label, group: 'Thinkers' },
-  { id: 'socrates', label: activityPetManifests.socrates.label, group: 'Thinkers' },
-  { id: 'hypatia', label: activityPetManifests.hypatia.label, group: 'Thinkers' },
-  { id: 'kitten', label: activityPetManifests.kitten.label, group: 'Creatures' },
-  { id: 'puppy', label: activityPetManifests.puppy.label, group: 'Creatures' },
-  { id: 'red-panda', label: activityPetManifests['red-panda'].label, group: 'Creatures' },
-  { id: 'raven', label: activityPetManifests.raven.label, group: 'Creatures' },
-  { id: 'tortoise', label: activityPetManifests.tortoise.label, group: 'Creatures' },
-  { id: 'owl', label: activityPetManifests.owl.label, group: 'Creatures' },
-  { id: 'fox', label: activityPetManifests.fox.label, group: 'Creatures' },
-  { id: 'axolotl', label: activityPetManifests.axolotl.label, group: 'Creatures' }
-] as const satisfies readonly { id: ActivityPetId; label: string; group: 'Thinkers' | 'Creatures' }[];
+export const activityPetOptions = activityPetCatalog.map(({ id, label, group }) => ({ id, label, group }));
 
 export const activityPetEventAnimations = {
   'task-completed': 'small_success',

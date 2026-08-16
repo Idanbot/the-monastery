@@ -118,23 +118,20 @@ should collapse rather than queue indefinitely.
 
 ## Adding a pet
 
-1. Save the raw export (an unevenly packed AI sheet on a light background is fine) as
+1. Add the pet to `shared/activityPets.ts` and save its raw export (an unevenly packed AI sheet on a
+   light background is fine) as
    `assets/pets/<pet-id>.png`.
-2. Map the standard animations to its rows in `assets/pets/<pet-id>.animations.json`
-   (`{"name", "row", "startFrame", "frameCount"}` per animation; several animations may share one
-   source row). Rows and frames index the auto-detected grid, top to bottom, left to right.
+2. Select the shared `thinker` or `creature` atlas preset in the catalog. Add a named preset under
+   `assets/pets/presets/` only when the source layout genuinely differs, as Fox does.
 3. Regenerate the atlas and manifest:
 
    ```sh
-     python3 scripts/normalize-pet-atlas.py assets/pets/<pet-id>.png \
-       --pet <pet-id> --animations assets/pets/<pet-id>.animations.json \
-     --out public/pets/<pet-id>/<pet-id>-spritesheet.webp \
-     --manifest src/domain/generated/<pet-id>Atlas.json
+   npm run pets:build -- --pet <pet-id>
    ```
 
-4. Extend `ActivityPetId` in `src/domain/types.ts`, the settings schema in `server/validation.ts`,
-   the merge allow-list in `src/domain/tasks.ts`, and the registry in `src/domain/activityPets.ts`.
-   Unknown stored IDs keep migrating to `aurelius`.
+4. Import the generated manifest in `src/domain/activityPets.ts`. The catalog automatically drives
+   the ID type, server validation, persistence allow-list, and settings picker. Unknown stored IDs
+   keep migrating to `aurelius`.
 5. Run `npm run pets:validate` and add manifest, frame progression, reduced-motion, and visual
    framing tests.
 6. Verify the desktop 80 px and mobile 56 px frames without clipping or layout overlap.

@@ -1,5 +1,8 @@
 import '@testing-library/jest-dom/vitest';
+import { configure } from '@testing-library/react';
 import { vi } from 'vitest';
+
+configure({ asyncUtilTimeout: 5000 });
 
 if (typeof window !== 'undefined') {
   if (typeof globalThis.localStorage?.clear !== 'function') {

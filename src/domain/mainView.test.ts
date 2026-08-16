@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   defaultMainViewModules,
   defaultMainViewSlots,
+  mainViewContentCompositions,
   normalizeMainViewModules,
   normalizeMainViewSlots,
   moveMainViewSlot,
@@ -107,6 +108,15 @@ describe('main view layout', () => {
       ...defaultMainViewSlots,
       topLeft: 'activity',
       topRight: 'focus'
+    });
+  });
+
+  it('defines composite quarter layouts in one renderer-neutral registry', () => {
+    expect(mainViewContentCompositions).toMatchObject({
+      'calendar-media': { children: ['calendar', 'media'] },
+      'clock-timeline': { children: ['clock', 'timeline'] },
+      'activity-current': { children: ['activity', 'current'] },
+      'clock-media-timeline': { children: ['clock', 'media', 'timeline'] }
     });
   });
 });

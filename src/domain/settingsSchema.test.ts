@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { appSettingsSchema } from '../../shared/settingsContract';
 import { defaultSettings } from './tasks';
 import { normalizeSchemaSettings, settingDefinitions } from './settingsSchema';
 
@@ -23,5 +24,14 @@ describe('settings schema', () => {
       resizeHandleThickness: 1,
       showSeconds: false
     });
+  });
+
+  it('keeps the shared persisted settings contract aligned with normalized settings', () => {
+    expect(appSettingsSchema.parse(defaultSettings)).toEqual(defaultSettings);
+    expect(Object.keys(defaultSettings).every((key) => key in appSettingsSchema.shape)).toBe(true);
+
+    for (const [key, schema] of Object.entries(appSettingsSchema.shape)) {
+      if (!(key in defaultSettings)) expect(schema.safeParse(undefined).success).toBe(true);
+    }
   });
 });

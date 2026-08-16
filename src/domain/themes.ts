@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { visualThemeIds as persistedVisualThemeIds } from '../../shared/settingsContract';
 import type { VisualTheme } from './types';
 
 type ThemeTokens = {
@@ -398,7 +399,7 @@ export const visualThemeOptions: Array<{ id: VisualTheme; label: string }> = Obj
   themeContracts
 ).map(({ id, label }) => ({ id, label }));
 
-export const visualThemeIds = visualThemeOptions.map((theme) => theme.id);
+export const visualThemeIds: readonly VisualTheme[] = persistedVisualThemeIds;
 
 export const getThemeContract = (visualTheme: VisualTheme, isDarkMode: boolean) => {
   const contract = themeContracts[visualTheme] || themeContracts.default;

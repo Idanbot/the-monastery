@@ -189,7 +189,9 @@ describe('SettingsModal', () => {
     expect(dialog.style.getPropertyValue('--modal-surface-alpha')).toBe('0.72');
     expect(dialog.style.getPropertyValue('--modal-surface-blur')).toBe('1px');
 
-    fireEvent.change(screen.getByLabelText(/main color/i), { target: { value: '#123456' } });
+    fireEvent.change(await screen.findByLabelText(/main color/i, {}, { timeout: 5000 }), {
+      target: { value: '#123456' }
+    });
     const colorUpdate = props.setSettings.mock.lastCall?.[0];
     expect(colorUpdate(props.settings)).toEqual({
       ...props.settings,

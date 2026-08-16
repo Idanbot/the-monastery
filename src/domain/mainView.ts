@@ -46,6 +46,32 @@ export const mainViewSlotContentDefinitions = [
   { id: 'timeline', label: 'Timeline' }
 ] as const satisfies readonly { id: MainViewSlotContentId; label: string }[];
 
+export type MainViewLeafContentId = MainViewModuleId | 'timeline' | 'current';
+export type MainViewContentComposition = {
+  children: readonly MainViewLeafContentId[];
+  rowTemplate: string;
+};
+
+export const mainViewContentCompositions: Partial<Record<MainViewSlotContentId, MainViewContentComposition>> =
+  {
+    'calendar-media': {
+      children: ['calendar', 'media'],
+      rowTemplate: 'minmax(0,1fr) auto'
+    },
+    'clock-timeline': {
+      children: ['clock', 'timeline'],
+      rowTemplate: 'minmax(0,1fr) minmax(0,1fr)'
+    },
+    'activity-current': {
+      children: ['activity', 'current'],
+      rowTemplate: 'minmax(0,1fr) minmax(7rem,1fr)'
+    },
+    'clock-media-timeline': {
+      children: ['clock', 'media', 'timeline'],
+      rowTemplate: 'minmax(5rem,0.8fr) auto minmax(7rem,1fr)'
+    }
+  };
+
 export const defaultMainViewSlots: MainViewSlots = {
   topLeft: 'focus',
   topRight: 'activity',
